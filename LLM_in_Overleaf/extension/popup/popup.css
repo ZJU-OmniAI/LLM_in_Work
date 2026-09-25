@@ -1,0 +1,25 @@
+* { box-sizing: border-box; }
+body { width: 328px; margin: 0; padding: 24px; font: 13px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; background: #fdfefc; color: #25352f; }
+.brand { display: flex; align-items: center; gap: 7px; font-size: 20px; font-weight: 650; letter-spacing: -.7px; }
+.brand span { display: inline-grid; place-items: center; width: 32px; height: 32px; background: #217566; color: white; border-radius: 9px; margin-right: 3px; }
+.brand i { font-style: normal; font-weight: 400; color: #76817b; }
+.subtitle { color: #76817b; font-size: 11px; letter-spacing: 2px; margin: 10px 0 20px; }
+.status { font-size: 12px; padding: 12px; border: 1px solid #e0e6dc; border-radius: 9px; background: #f1f4ee; color: #68776d; margin-bottom: 20px; overflow-wrap: anywhere; }
+.status.ok { background: #edf5f1; color: #217566; border-color: #d7e5dc; }
+.status.bad { background: #fff2ec; color: #963e2d; border-color: #edcfc3; }
+.row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.row label { width: 34px; color: #68776d; font-size: 12px; }
+.row select { flex: 1; min-width: 0; padding: 9px; border: 1px solid #dbe3d8; border-radius: 8px; background: #fff; color: #25352f; }
+#open-panel { display: flex; justify-content: space-between; width: 100%; padding: 12px 14px; border: 0; background: #217566; color: white; border-radius: 9px; cursor: pointer; font-weight: 600; }
+#open-panel:hover { background: #18594e; }
+#open-panel:disabled { opacity: .65; cursor: wait; }
+#page-status { margin: 8px 0 16px; font-size: 11px; line-height: 1.7; color: #68776d; }
+#page-status.error { color: #963e2d; }
+#refresh { width: 100%; margin: 4px 0 8px; padding: 9px; border: 1px solid #dbe3d8; background: white; color: #365e51; border-radius: 8px; cursor: pointer; }
+#refresh:hover { background: #edf5f1; }
+button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid #86b3a6; outline-offset: 2px; }
+.tip { font-size: 11px; color: #76817b; line-height: 1.85; margin-top: 12px; padding-top: 14px; border-top: 1px solid #e4e9e3; }
+.tip a { color: #217566; }
+.install { margin-top: 12px; padding: 10px; font-size: 11px; background: #fff5e6; border-radius: 8px; color: #7a5b12; }
+.install code { overflow-wrap: anywhere; }
+.hidden { display: none; }

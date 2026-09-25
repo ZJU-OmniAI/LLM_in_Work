@@ -1,0 +1,38 @@
+{
+  "name": "llm-in-overleaf",
+  "version": "0.8.1",
+  "private": true,
+  "type": "module",
+  "description": "Overleaf AI 改写 Chrome 插件：选中 LaTeX → claude/codex CLI 改写 → diff 预览 → 一键应用",
+  "scripts": {
+    "icons": "node tools/make-icons.js",
+    "test": "npm run test:unit",
+    "test:codex": "node tools/test-native-host.js --codex",
+    "test:wrapper": "node tools/test-native-host.js --wrapper",
+    "test:unit": "node --test tools/*.test.js",
+    "test:ui": "node tools/test-selection.cjs && node tools/test-ui.cjs",
+    "test:ui:cn": "node tools/test-selection.cjs https://cn.overleaf.com",
+    "test:live": "node tools/test-native-host.js",
+    "test:live:codex": "node tools/test-native-host.js --codex"
+  },
+  "devDependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/state": "^6.7.5",
+    "@codemirror/view": "^6.43.12",
+    "esbuild": "^0.28.2",
+    "playwright-core": "^1.63.0"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZJU-OmniAI/LLM_in_Work.git",
+    "directory": "LLM_in_Overleaf"
+  },
+  "homepage": "https://github.com/ZJU-OmniAI/LLM_in_Work/tree/main/LLM_in_Overleaf#readme",
+  "bugs": {
+    "url": "https://github.com/ZJU-OmniAI/LLM_in_Work/issues"
+  }
+}

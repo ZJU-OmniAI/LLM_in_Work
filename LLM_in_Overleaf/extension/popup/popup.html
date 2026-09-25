@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="brand"><span>✦</span> LLM_in_Overleaf</div><p class="subtitle">你的论文写作助手</p>
+  <button id="open-panel" type="button">打开写作助手 <span>↗</span></button>
+  <p id="page-status" role="status">在 Overleaf 项目中打开，有选区时会自动读取。</p>
+  <div id="status" role="status" class="status">检查本机桥…</div>
+  <div class="row">
+    <label for="backend">助手</label>
+    <select id="backend">
+      <option value="claude">Claude</option>
+      <option value="codex">Codex</option>
+    </select>
+  </div>
+  <div class="row">
+    <label for="model">模型</label>
+    <select id="model"></select>
+  </div>
+  <div class="row">
+    <label for="effort">思考</label>
+    <select id="effort"></select>
+  </div>
+  <button id="refresh" type="button">重新检查连接</button>
+  <div class="tip">
+    在 <a href="https://www.overleaf.com/project" target="_blank" rel="noopener noreferrer">Overleaf 项目</a>的编辑器里
+    切换到 Code Editor，选中一段 LaTeX，点「✦ 改这段」开始。
+    没有浮标？点上方「打开写作助手」，再点面板里的「添加选段」。可依次添加同一文件中的多个不连续段落。
+    快捷键 ⌘⇧E（Windows / Linux：Ctrl⇧E）。
+  </div>
+  <div id="install-tip" class="install hidden">
+    本机桥未安装/未就绪。在下载的 LLM_in_Work 仓库目录执行：<br>
+    <code>cd LLM_in_Overleaf && ./install.sh</code>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

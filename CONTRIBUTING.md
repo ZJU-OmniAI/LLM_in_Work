@@ -1,27 +1,30 @@
-# 参与开发
+# 参与开发 / Contributing
 
-感谢帮助改进 LLM_in_Word。请用合成文档描述问题，避免上传真实客户文件、未发表论文、账户信息或日志中的凭证。
+LLM_in_Work 包含两个独立子项目。请在 Issue 和 Pull Request 中说明涉及 `LLM_in_Word`、`LLM_in_Overleaf`，还是仓库公共文档 / CI。
 
-## 开发环境
+使用 Node.js 22.12+（22.x）或 24+。以下命令在仓库根目录运行：
 
-- Node.js 22.12+（22.x）或 24+
-- `npm ci` 安装开发依赖
-- `npm test` 运行格式、表格、后端和界面回归测试
-- `npm run preview` 打开本地 HTTP 预览；实际读取与写回文档需在 Windows 或 macOS Word 加载项中测试
+```bash
+npm --prefix LLM_in_Word ci
+npm --prefix LLM_in_Word test
+npm --prefix LLM_in_Overleaf ci
+npm --prefix LLM_in_Overleaf test
+npm --prefix LLM_in_Overleaf run test:ui
+npm --prefix LLM_in_Overleaf run test:ui:cn
+```
 
-自动测试使用 `tools/fixtures/mock-cli.cjs`，不需要安装 Claude Code / Codex，也不调用真实模型。真实调用需自行登录相应 CLI，使用 `npm run test:live` 或 `npm run test:live:codex`；请勿把账户凭证加入 CI。
+Overleaf 浏览器测试默认使用 macOS 的 Google Chrome；可通过 `CHROME_BIN` 指定浏览器，或在子目录执行 `npx playwright-core install chromium` 安装测试浏览器。测试使用真实 CodeMirror 编辑器、合成页面和模拟模型回复，不连接真实 Overleaf 项目。
+
+CI 在 Linux、macOS、Windows 上测试 Word；Windows 还测试安装和服务生命周期，但不包含桌面 Word 交互。Overleaf 的离线测试在 Linux / macOS 上运行，Linux 另跑主站和中文站地址下的浏览器回归。
+
+`npm test` 对两个子项目都只运行离线测试。真实模型调用使用各自的 `npm run test:live` 或 `npm run test:live:codex`，需要登录且可能消耗额度，不在 CI 中运行。
 
 ## 修改约定
 
-- 保持原生 JavaScript 与现有两空格缩进，不引入无必要的构建步骤。
-- 目标内容控件、格式迁移、修订写入、表格更新是核心兼容性边界；修改时验证相应回归用例。
-- 新增 CLI 参数时核对本机 `--help`，并覆盖失败、取消、异常退出和空结果。
-- 修改流式协议时同时更新服务端与面板，失败的部分输出不得作为可应用结果。
-- UI 文案使用 `taskpane/i18n.js` 的 `t`（字符串或带参数模板），静态 HTML 使用 `data-i18n`；新增文案同时补英文映射和占位符。服务端已有提示用 `known` 翻译，禁止把文档正文、用户输入或模型回复交给该函数。
-- 新功能或行为变动同步更新英文 README.md、中文 README.zh-CN.md 与 CHANGELOG。
+- 保持原生 JavaScript 和两空格缩进，不引入无必要的构建步骤。
+- 保留扩展 / 加载项 ID、旧数据路径和会话键的兼容性；改动时说明迁移方式。
+- 修改写回流程时，验证选区校验、失败结果不可应用、撤销 / 修订和多目标行为。
+- 功能和安装方式变动时，同步更新根目录导航和对应子项目的中英文文档。
+- Word 界面翻译及格式迁移约定见 [Word 开发指南](LLM_in_Word/CONTRIBUTING.md)。
 
-## 提交与 Pull Request
-
-请说明解决的问题、修改后的行为，以及执行的测试。界面调整可附使用合成内容的截图，并检查 320px 窄栏。提交前运行 `npm test` 和 `bash -n install.sh`。
-
-不要提交 `node_modules/`、`.backups/`、`.env`、证书、CLI 会话、日志或个人文档。提交贡献表示你有权提供相应代码，并同意以仓库的 MIT 许可证分发。
+请使用合成文档和去除敏感信息的日志复现问题。不要提交凭证、私钥、证书、CLI 会话、个人文档、`node_modules/` 或本机生成的配置。提交贡献表示你有权提供相应代码，并同意以本仓库的 [MIT 许可证](LICENSE) 分发。

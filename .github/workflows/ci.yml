@@ -14,10 +14,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Test (${{ matrix.os }}, Node 22)
+  word:
+    name: Word (${{ matrix.os }}, Node 22)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: LLM_in_Word
     strategy:
       fail-fast: false
       matrix:
@@ -28,6 +31,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+          cache-dependency-path: LLM_in_Word/package-lock.json
       - run: npm ci
       - name: Validate scripts
         shell: bash
@@ -41,3 +45,37 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: ./tools/test-windows-install.ps1
+
+  overleaf:
+    name: Overleaf (${{ matrix.os }}, Node 22)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: LLM_in_Overleaf
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: LLM_in_Overleaf/package-lock.json
+      - run: npm ci
+      - name: Validate scripts
+        run: |
+          bash -n install.sh
+          for file in server/*.js extension/content/*.js extension/background/*.js extension/popup/*.js tools/*.js tools/*.cjs; do node --check "$file"; done
+      - name: Run offline regression tests
+        run: npm test
+      - name: Install browser for regression tests
+        if: runner.os == 'Linux'
+        run: npx playwright-core install --with-deps chromium
+      - name: Test editor, panel and Chinese-site integration
+        if: runner.os == 'Linux'
+        run: |
+          npm run test:ui
+          npm run test:ui:cn

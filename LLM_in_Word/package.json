@@ -3,7 +3,7 @@
   "version": "0.7.0",
   "private": true,
   "type": "module",
-  "description": "LLM_in_Word \u2014 Review and apply AI edits in desktop Microsoft Word with your local Claude Code or Codex CLI.",
+  "description": "LLM_in_Word — Review and apply AI edits in desktop Microsoft Word with your local Claude Code or Codex CLI.",
   "scripts": {
     "server": "node server/server.js",
     "test": "node tools/test-format.js && node tools/test-table.js && node --test tools/test-backend.js tools/test-ui.js tools/test-platform.js",
@@ -29,10 +29,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ZJU-OmniAI/LLM_in_Word.git"
+    "url": "git+https://github.com/ZJU-OmniAI/LLM_in_Work.git",
+    "directory": "LLM_in_Word"
   },
-  "homepage": "https://github.com/ZJU-OmniAI/LLM_in_Word#readme",
+  "homepage": "https://github.com/ZJU-OmniAI/LLM_in_Work/tree/main/LLM_in_Word#readme",
   "bugs": {
-    "url": "https://github.com/ZJU-OmniAI/LLM_in_Word/issues"
+    "url": "https://github.com/ZJU-OmniAI/LLM_in_Work/issues"
   }
 }

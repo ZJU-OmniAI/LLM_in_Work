@@ -14,8 +14,10 @@ labels: bug
 
 ### 环境
 
-- macOS / Word 版本：
-- word_edit 版本：
+- 子项目：LLM_in_Word / LLM_in_Overleaf
+- 操作系统版本：
+- Word / 浏览器版本：
+- 子项目版本：
 - Node.js 版本：
 - Claude Code / Codex 版本：
 - 是否可在 CLI 中复现：

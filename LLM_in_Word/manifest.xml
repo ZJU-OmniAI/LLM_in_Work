@@ -20,7 +20,7 @@
   </Description>
   <IconUrl DefaultValue="https://localhost:8377/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://localhost:8377/assets/icon-80.png"/>
-  <SupportUrl DefaultValue="https://github.com/ZJU-OmniAI/LLM_in_Word/issues"/>
+  <SupportUrl DefaultValue="https://github.com/ZJU-OmniAI/LLM_in_Work/issues"/>
   <Hosts>
     <Host Name="Document"/>
   </Hosts>
