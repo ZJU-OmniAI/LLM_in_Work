@@ -24,6 +24,22 @@
 
 当前界面为**简体中文**，支持 Overleaf 主站和 `cn.overleaf.com` 中文站。随项目提供的安装器面向 **macOS 的 Chrome / Chromium 浏览器**；Windows / Linux 暂无受支持的安装流程。修改需要在 **Code Editor（源码编辑）**中进行，不能通过 PDF 预览或可视化编辑器选区写回。
 
+## 使用截图
+
+**第一步：选中源码，输入要求。** 将要修改的段落加入助手，在文稿旁输入具体的改写要求。
+
+![选中 LaTeX 源码并输入改写要求](docs/images/overleaf-selection.png)
+
+**第二步：查看差异，再决定是否应用。** 左侧源码保持原样，右侧展示真实 Claude Code 回复中的新增和删除内容。
+
+![查看真实模型改写结果的差异](docs/images/overleaf-diff.png)
+
+**第三步：应用修改，检查结果。** 扩展将新文本写回编辑器并显示成功提示，未选中的方法段落和公式保持不变，可通过 Cmd+Z 撤销。
+
+![改写应用后的 LaTeX 源码和成功提示](docs/images/overleaf-applied.png)
+
+截图来自本地演示页面中的真实扩展界面和 CodeMirror 编辑器，使用演示文稿与真实 CLI 回复，并非 Overleaf 官网实机截图。[截图说明](docs/images/README.md)。
+
 ## 安装（macOS）
 
 准备 Node.js **22.12+（22.x）或 24+**，安装至少一个本机后端，并通过 `claude auth login` 或 `codex login` 登录。
@@ -59,18 +75,6 @@ Chrome 打开 `chrome://extensions` → 开启**开发者模式** → **加载�
 
 会话按 Overleaf 项目保存在浏览器扩展存储中，CLI 也可能保存提示和回复。桥在本机运行，模型推理通常连接相应服务商。详见[安全与数据说明](../SECURITY.md)。
 
-## 从 overleaf_edit 迁移
-
-扩展现在显示为 **LLM_in_Overleaf**。为兼容已有安装，manifest 公钥和扩展 ID 保持不变，本机桥名 `com.overleaf_edit.host`、运行目录 `~/.overleaf_edit`、`OVERLEAF_EDIT_*` 环境变量和会话键继续沿用。
-
-源码合并到本仓库后：
-
-1. 在 `LLM_in_Work/LLM_in_Overleaf` 中运行 `./install.sh`，更新本机桥所指向的源码路径。
-2. 在 `chrome://extensions` 使用 **加载已解压的扩展程序**，选择新的 `LLM_in_Overleaf/extension` 目录，然后刷新 Overleaf。希望保留历史时，不要先删除旧扩展。
-3. 后续同路径更新，执行 `git pull --ff-only`，重新加载扩展并刷新网页即可。源码路径、Node / CLI 路径或代理变化时，重新运行安装器。
-
-仓库不分发扩展打包私钥，加载和运行解压扩展不需要该私钥。
-
 ## 常见问题
 
 | 症状 | 处理 |
@@ -100,7 +104,7 @@ macOS 默认使用标准路径下的 Google Chrome，可用 `CHROME_BIN` 指定�
 ```bash
 npm run test:live
 npm run test:live:codex
-npm run test:wrapper       # 通过 ~/.overleaf_edit/host.sh 验证已安装桥
+npm run test:wrapper       # 通过 ~/.llm_in_overleaf/host.sh 验证已安装桥
 ```
 
 技术结构：`extension/content/bridge.js` 在页面 MAIN world 访问 CodeMirror；`content.js` 提供面板；`background/service-worker.js` 通过原生消息连接 `server/native-host.js`，再调用选定的 CLI。
@@ -110,8 +114,8 @@ npm run test:wrapper       # 通过 ~/.overleaf_edit/host.sh 验证已安装桥
 在浏览器中移除扩展。移除 Chrome 消息桥注册和本地启动目录：
 
 ```bash
-rm "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.overleaf_edit.host.json"
-rm -rf "$HOME/.overleaf_edit"
+rm "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.llm_in_overleaf.host.json"
+rm -rf "$HOME/.llm_in_overleaf"
 ```
 
 如同时安装了其他 Chromium 浏览器，还需删除对应的本机桥注册文件。CLI 管理的会话历史独立存在。

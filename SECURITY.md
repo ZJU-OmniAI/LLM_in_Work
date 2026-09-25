@@ -14,7 +14,7 @@
 | 子项目 | 连接方式 | 本机配置 |
 | --- | --- | --- |
 | LLM_in_Word | 仅回环地址的 HTTPS，默认 `127.0.0.1:8377` | macOS 使用 `~/.llm_in_word`，旧安装沿用 `~/.word_edit`；Windows 使用 `%LOCALAPPDATA%\LLM_in_Word` |
-| LLM_in_Overleaf | 浏览器 Native Messaging，不监听端口 | 保留 `~/.overleaf_edit` 和 `com.overleaf_edit.host`，仅允许固定扩展 ID 连接 |
+| LLM_in_Overleaf | 浏览器 Native Messaging，不监听端口 | 使用 `~/.llm_in_overleaf` 和 `com.llm_in_overleaf.host`，仅允许固定扩展 ID 连接 |
 
 Word 详细说明见 [Word 数据与安全文档](LLM_in_Word/SECURITY.md)。Overleaf 的 Claude 调用禁止执行和编辑等工具，Codex 使用只读沙箱；这些限制不等于禁用本机配置中的一切工具。两个项目均面向单用户本机使用。
 

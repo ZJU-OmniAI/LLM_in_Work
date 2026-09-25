@@ -1,6 +1,6 @@
 {
   "name": "llm-in-overleaf",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "private": true,
   "type": "module",
   "description": "Overleaf AI 改写 Chrome 插件：选中 LaTeX → claude/codex CLI 改写 → diff 预览 → 一键应用",

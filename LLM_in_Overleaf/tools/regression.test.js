@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { access } from 'node:fs/promises';
 const fixture = fileURLToPath(new URL('./fixtures/codex.cjs', import.meta.url));
-process.env.OVERLEAF_EDIT_CODEX_BIN = fixture;
+process.env.LLM_IN_OVERLEAF_CODEX_BIN = fixture;
 const { runCodex } = await import('../server/cli.js');
 const { getModels } = await import('../server/models.js');
 const { getHealth } = await import('../server/health.js');

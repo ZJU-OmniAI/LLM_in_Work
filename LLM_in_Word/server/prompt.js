@@ -3,7 +3,7 @@
 // 两种模式：
 //   edit：改写选中的 Word 正文，要求模型把替换文本放进唯一的 ```text 围栏（前端解析后做 diff/应用）
 //   ask ：针对选中片段或全文答疑，普通 Markdown 回答
-// 与 overleaf_edit 的区别：这里处理的是 Word 纯文本正文，不是 LaTeX——
+// 与 LLM_in_Overleaf 的区别：这里处理的是 Word 纯文本正文，不是 LaTeX——
 // 围栏里的内容会被"按字面"写进 Word 文档，所以必须禁止模型输出 Markdown 记号。
 
 import { MAX_FULLTEXT_CHARS } from './config.js';

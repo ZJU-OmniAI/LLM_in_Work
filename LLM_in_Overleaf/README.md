@@ -24,6 +24,22 @@ Select one or more passages in the same `.tex` file, give an instruction, review
 
 The interface is currently **Simplified Chinese**. Both the main Overleaf site and `cn.overleaf.com` are supported. The supplied installer targets **macOS with Chrome / Chromium browsers**; Windows and Linux do not yet have supported installers. Editing requires Overleaf's **Code Editor**, not the PDF preview or visual editor.
 
+## See the workflow
+
+**1. Select a passage and describe the change.** Add source text to the assistant and enter your instruction alongside the document.
+
+![Select LaTeX source and enter a rewrite instruction](docs/images/overleaf-selection.png)
+
+**2. Review the diff before applying.** The source stays unchanged while the assistant shows additions and deletions from a real Claude Code response.
+
+![Review the real model's proposed changes](docs/images/overleaf-diff.png)
+
+**3. Apply the revision.** The extension writes the accepted text into the editor and confirms success. The unselected method and equation remain unchanged; Cmd+Z can undo the edit.
+
+![Edited LaTeX source after applying the revision](docs/images/overleaf-applied.png)
+
+These screenshots show the actual extension UI and CodeMirror editor in a local demo page, using sample text and a real CLI response. They are not screenshots of the hosted Overleaf website. [Screenshot details](docs/images/README.md).
+
 ## Installation (macOS)
 
 Install Node.js **22.12+ (22.x) or 24+**, plus at least one local backend, and sign in with `claude auth login` or `codex login`.
@@ -59,18 +75,6 @@ The first turn includes the current `.tex` file, not just the selection. Very lo
 
 Conversations are saved per Overleaf project in browser extension storage. The CLI may also retain prompts and replies. The bridge is local, but model inference usually uses the provider's service. See [data and security](../SECURITY.md).
 
-## Updating from overleaf_edit
-
-The extension is now named **LLM_in_Overleaf**. Its public manifest key and extension ID remain unchanged, as do the native host name `com.overleaf_edit.host`, `~/.overleaf_edit` runtime directory, `OVERLEAF_EDIT_*` environment variables and conversation keys.
-
-After moving the source into this repository:
-
-1. Run `./install.sh` from `LLM_in_Work/LLM_in_Overleaf` to update the host's source path.
-2. In `chrome://extensions`, use **Load unpacked** with the new `LLM_in_Overleaf/extension` directory, then refresh Overleaf. Avoid removing the old extension first if you want to preserve its stored history.
-3. For later updates at the same path, run `git pull --ff-only`, reload the extension and refresh the page. Rerun the installer whenever the source path, Node / CLI paths or proxy settings change.
-
-The corresponding private packaging key is not distributed and is not required to load or run the extension.
-
 ## Troubleshooting
 
 | Symptom | What to check |
@@ -100,7 +104,7 @@ Optional live tests use your model account and may consume quota:
 ```bash
 npm run test:live
 npm run test:live:codex
-npm run test:wrapper       # Exercise the installed ~/.overleaf_edit/host.sh
+npm run test:wrapper       # Exercise the installed ~/.llm_in_overleaf/host.sh
 ```
 
 Architecture: `extension/content/bridge.js` connects to CodeMirror in the page's MAIN world; `content.js` handles the panel; `background/service-worker.js` connects to `server/native-host.js`, which invokes the selected CLI.
@@ -110,8 +114,8 @@ Architecture: `extension/content/bridge.js` connects to CodeMirror in the page's
 Remove the extension in your browser. To remove the Chrome host registration and local launcher:
 
 ```bash
-rm "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.overleaf_edit.host.json"
-rm -rf "$HOME/.overleaf_edit"
+rm "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.llm_in_overleaf.host.json"
+rm -rf "$HOME/.llm_in_overleaf"
 ```
 
 If you installed it in other Chromium browsers, remove the matching host manifest from those browsers too. CLI-managed session history is separate.

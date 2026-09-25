@@ -1,7 +1,7 @@
 // 桥程序测试：不开 Chrome，直接模拟 Chrome 的原生消息协议
 // （4字节小端长度前缀 + JSON）验证 ping / 改写 / 问答 / 退出 四条链路。
 // 用法：node tools/test-native-host.js [--wrapper] [--codex]
-//   --wrapper 走 ~/.overleaf_edit/host.sh 测真实安装；--codex 用 codex 后端测
+//   --wrapper 走 ~/.llm_in_overleaf/host.sh 测真实安装；--codex 用 codex 后端测
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -12,7 +12,7 @@ const imageOnly = process.argv.includes('--image-only');
 const useCodex = process.argv.includes('--codex');
 const proj = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cmd = useWrapper
-  ? { bin: path.join(os.homedir(), '.overleaf_edit', 'host.sh'), args: [] }
+  ? { bin: path.join(os.homedir(), '.llm_in_overleaf', 'host.sh'), args: [] }
   : { bin: process.execPath, args: [path.join(proj, 'server', 'native-host.js')] };
 
 console.log(`启动桥: ${cmd.bin} ${cmd.args.join(' ')}`);

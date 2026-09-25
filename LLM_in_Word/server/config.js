@@ -1,6 +1,6 @@
 // LLM_in_Word 后端配置
 // 说明（大白话）：集中放"可调参数"。改这里就能改行为，不用翻代码。
-// （从 overleaf_edit 移植，改了环境变量前缀。）
+// （从 LLM_in_Overleaf 移植，改了环境变量前缀。）
 
 import os from 'node:os';
 import path from 'node:path';

@@ -13,7 +13,7 @@ export async function getHealth(backend) {
   const bin = name === 'codex' ? CODEX_BIN : CLAUDE_BIN;
   const version = await probe(bin, ['--version']);
   if (!version.ok) return { ok: false, backend: name, error: version.missing
-    ? `找不到 ${name} CLI。请安装 CLI 或设置 OVERLEAF_EDIT_${name.toUpperCase()}_BIN 后重新运行 install.sh。`
+    ? `找不到 ${name} CLI。请安装 CLI 或设置 LLM_IN_OVERLEAF_${name.toUpperCase()}_BIN 后重新运行 install.sh。`
     : `${name} CLI 无法启动或响应超时，请在终端运行 ${name} --version 检查。` };
   if (name === 'codex') {
     const auth = await probe(bin, ['login', 'status']);

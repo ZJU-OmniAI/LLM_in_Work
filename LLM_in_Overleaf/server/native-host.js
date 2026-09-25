@@ -12,7 +12,7 @@ import { buildPrompt, buildTurnPrompt } from './prompt.js';
 import { getModels } from './models.js';
 import { getHealth } from './health.js';
 
-const VERSION = '0.8.1';
+const VERSION = '0.8.2';
 
 // 二进制附件（图片/PDF）先写进临时目录，再把路径写进 prompt / 传给 codex -i
 const MAX_ATTACH = 8;
@@ -22,7 +22,7 @@ function safeName(name, i) {
   return base || `file${i}`;
 }
 async function writeAttachments(attachments) {
-  const dir = await mkdtemp(path.join(os.tmpdir(), 'overleaf_edit-att-'));
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'llm_in_overleaf-att-'));
   const files = [];
   const seen = new Set();
   for (let i = 0; i < Math.min(attachments.length, MAX_ATTACH); i++) {

@@ -5,10 +5,10 @@
 // 与内容脚本（isolated world）之间用 window.postMessage 一问一答通信。
 (() => {
   'use strict';
-  if (window.__overleafEditBridge) return;
-  window.__overleafEditBridge = true;
+  if (window.__llmInOverleafBridge) return;
+  window.__llmInOverleafBridge = true;
 
-  const NS = 'OVERLEAF_EDIT_BRIDGE';
+  const NS = 'LLM_IN_OVERLEAF_BRIDGE';
 
   let lastView = null;
   function findView() {

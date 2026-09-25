@@ -41,6 +41,5 @@ runtime.json
 pfx-password.txt
 
 # Overleaf local runtime and extension packaging secrets
-.overleaf_edit/
 .llm_in_overleaf/
 *.crx

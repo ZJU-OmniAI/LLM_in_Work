@@ -1,5 +1,5 @@
 // LLM_in_Word 本机服务：给 Word 加载项的任务窗格提供页面和 AI 接口。
-// 与 overleaf_edit 的区别：Office 加载项没有 Chrome 那种 Native Messaging，
+// 与 LLM_in_Overleaf 的区别：Office 加载项没有 Chrome 那种 Native Messaging，
 // 所以这里起一个只听本机回环地址（127.0.0.1）的小 HTTPS 服务，面板页面和 API 同源。
 //   GET  /                → 跳转 /taskpane.html
 //   GET  /taskpane.html…  → 任务窗格静态文件

@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const project = path.resolve(__dirname, '..');
 const origin = process.argv[2] || 'https://www.overleaf.com';
-const outputDir = process.env.OVERLEAF_EDIT_TEST_OUTPUT || fs.mkdtempSync(path.join(os.tmpdir(), 'overleaf-edit-selection-'));
+const outputDir = process.env.LLM_IN_OVERLEAF_TEST_OUTPUT || fs.mkdtempSync(path.join(os.tmpdir(), 'llm-in-overleaf-selection-'));
 fs.mkdirSync(outputDir, { recursive: true });
 
 (async () => {
@@ -19,7 +19,7 @@ fs.mkdirSync(outputDir, { recursive: true });
       await page.locator('#ole-context-summary').click();
       await page.locator('#ole-target-clear').click();
     };
-    const waitTarget = (text) => page.waitForFunction((expected) => document.querySelector('#overleaf-edit-host').shadowRoot.querySelector('#ole-target-prev').textContent.includes(expected), text);
+    const waitTarget = (text) => page.waitForFunction((expected) => document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelector('#ole-target-prev').textContent.includes(expected), text);
     const errors = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.route(`${origin}/**`, (route) => route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head><title>Sample paper - Overleaf</title><style>
@@ -46,12 +46,12 @@ fs.mkdirSync(outputDir, { recursive: true });
       window.rpc = (op, args = {}) => new Promise((resolve) => {
         const id = 'test-' + Math.random();
         const cb = (e) => {
-          if (e.data?.ns === 'OVERLEAF_EDIT_BRIDGE' && e.data.dir === 'resp' && e.data.id === id) {
+          if (e.data?.ns === 'LLM_IN_OVERLEAF_BRIDGE' && e.data.dir === 'resp' && e.data.id === id) {
             window.removeEventListener('message', cb); resolve(e.data.resp);
           }
         };
         window.addEventListener('message', cb);
-        window.postMessage({ ns: 'OVERLEAF_EDIT_BRIDGE', dir: 'req', id, op, args }, '*');
+        window.postMessage({ ns: 'LLM_IN_OVERLEAF_BRIDGE', dir: 'req', id, op, args }, '*');
       });
     });
     await page.addScriptTag({ content: fixture.outputFiles[0].text });
@@ -85,7 +85,7 @@ fs.mkdirSync(outputDir, { recursive: true });
     });
     await float.waitFor({ state: 'visible' });
     await float.click();
-    await page.waitForFunction(() => document.querySelector('#overleaf-edit-host').shadowRoot.querySelector('#ole-target-prev').textContent === 'D');
+    await page.waitForFunction(() => document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelector('#ole-target-prev').textContent === 'D');
     assert.equal(await page.locator('#ole-target-prev').innerText(), 'D');
     await page.evaluate(() => { window.getSelection = window.savedGetSelection; });
 
@@ -99,7 +99,7 @@ fs.mkdirSync(outputDir, { recursive: true });
     await page.locator('#ole-context-summary').click();
     await page.locator('#ole-target-clear').click();
     await page.locator('#ole-capture').click();
-    await page.waitForFunction(() => document.querySelector('#overleaf-edit-host').shadowRoot.querySelector('#ole-selection-hint').textContent.includes('没有读取到选区'));
+    await page.waitForFunction(() => document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelector('#ole-selection-hint').textContent.includes('没有读取到选区'));
     assert.match(await page.locator('#ole-selection-hint').innerText(), /没有读取到选区/);
     await page.locator('#ole-close').click();
 

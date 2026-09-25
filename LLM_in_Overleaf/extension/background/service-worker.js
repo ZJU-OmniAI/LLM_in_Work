@@ -1,7 +1,7 @@
 // 后台脚本：Chrome 原生消息中转（Chrome 按需自动拉起本机桥程序，零后端零端口）。
 // 内容脚本 ↔ 这里 ↔ 原生桥（node server/native-host.js）↔ claude/codex CLI。
 
-const HOST_NAME = 'com.overleaf_edit.host';
+const HOST_NAME = 'com.llm_in_overleaf.host';
 
 let reqSeq = 0;
 

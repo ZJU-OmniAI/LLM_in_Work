@@ -2,7 +2,7 @@
 // 选中正文 → 🎯 添加为目标（用隐形内容控件锚定，可多段分散；文档再怎么编辑位置都不丢）→
 // 下指令 → 本机服务流式回复 → 每个目标一张 diff 预览卡 → ✅ 应用替换（可走 Word 修订模式，
 // 应用时做逐字格式迁移，尽量保留原格式）。
-// UI 流程从 overleaf_edit 的 content.js 移植，编辑器操作从 CM6 换成 Office.js。
+// UI 流程从 LLM_in_Overleaf 的 content.js 移植，编辑器操作从 CM6 换成 Office.js。
 (() => {
   'use strict';
 

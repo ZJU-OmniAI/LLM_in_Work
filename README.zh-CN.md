@@ -55,12 +55,6 @@ LLM_in_Work/
 └── LLM_in_Overleaf/       # Overleaf 浏览器扩展和原生消息桥
 ```
 
-## 已有安装如何更新
-
-本仓库原名 **LLM_in_Word**。Word 代码现位于 `LLM_in_Word/` 子目录；原 **overleaf_edit** 改名为 **LLM_in_Overleaf**。更新源码后，进入对应子目录再运行安装器。Overleaf 源码目录如果移动了，需要重新运行安装器，并从新的 `extension/` 目录加载扩展。
-
-加载项 / 扩展 ID、会话存储键和旧运行数据目录保留兼容，具体迁移方式见各子项目指南。
-
 ## 开发与数据说明
 
 两个项目运行时均无需额外 npm 依赖；开发测试使用模拟 CLI 和合成文档。[参与开发](CONTRIBUTING.md) 列出了独立测试命令和 CI 范围。

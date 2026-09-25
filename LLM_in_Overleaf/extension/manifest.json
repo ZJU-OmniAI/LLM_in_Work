@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LLM_in_Overleaf",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "在 Overleaf 编辑器里选中 LaTeX 让 AI 改写：整份文件做上下文，可附加项目其他文件和本地 PDF/图片，diff 预览、一键应用。后端接本机 Claude Code / Codex CLI，可选模型和 effort。",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAldRa/aeHuYs3/HFlPhLx6ahJ+l/5xlzJshGfnu6Cc/In5U1jNHOb9l46tekoD7qK+Jg005/8m2NMhIrvv1wLlo+Z3jjvG8UANMy3V8KiJHTQhIVWcTFBa6UWOXiYBcN4oZQgWw6mLqXkF4Om1EoLpoYq9toKlTuRfPpnuL5xslNSF6/XVudPSPTi+oC0RLjl4oxhVYPHqwjam0phMgAkKBP/UlQkleMWMc8B8CUCOccW/Nwv5dIZ+WCy0BjsBrHDDO7wa1gF1X2zpCtQ9EAIANxuTWTLWQlDvaPQyLW/BuxyKixOF+na355b8I5cZvWslp1rgByJ98lWvxarhfDCBQIDAQAB",
   "permissions": [

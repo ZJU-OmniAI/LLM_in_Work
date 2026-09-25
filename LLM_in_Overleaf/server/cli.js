@@ -11,7 +11,7 @@ import path from 'node:path';
 import { CLAUDE_BIN, CODEX_BIN, spawnEnv, codexEffort } from './config.js';
 
 // claude 的会话按"工作目录"归档存盘，首轮和续轮必须用同一个 cwd 才能找到会话
-const CLAUDE_SESSION_CWD = path.join(os.homedir(), '.overleaf_edit');
+const CLAUDE_SESSION_CWD = path.join(os.homedir(), '.llm_in_overleaf');
 
 
 // 按行切 JSON 流的小工具：喂进来的 chunk 可能半行，攒够一整行再回调。
@@ -134,7 +134,7 @@ export async function runCodex({ prompt, model, effort, images, signal, resume }
   if (signal?.aborted) return;
   let workdir;
   try {
-    workdir = await mkdtemp(path.join(os.tmpdir(), 'overleaf_edit-codex-'));
+    workdir = await mkdtemp(path.join(os.tmpdir(), 'llm_in_overleaf-codex-'));
   } catch (e) {
     onEvent({ kind: 'error', data: `创建临时目录失败：${e.message}` });
     return;
@@ -222,7 +222,7 @@ export async function runCodex({ prompt, model, effort, images, signal, resume }
     if (signal?.aborted) onAbort();
 
     child.on('error', (e) => {
-      reportError(e.code === 'ENOENT' ? '找不到 Codex CLI，请安装 Codex 或设置 OVERLEAF_EDIT_CODEX_BIN 后重试。' : `codex 进程错误：${e.message}`);
+      reportError(e.code === 'ENOENT' ? '找不到 Codex CLI，请安装 Codex 或设置 LLM_IN_OVERLEAF_CODEX_BIN 后重试。' : `codex 进程错误：${e.message}`);
     });
     child.on('close', async (code) => {
       clearTimeout(killTimer);

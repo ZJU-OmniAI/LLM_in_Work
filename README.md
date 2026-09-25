@@ -55,12 +55,6 @@ LLM_in_Work/
 └── LLM_in_Overleaf/       # Browser extension and native messaging host
 ```
 
-## Existing installations
-
-This repository was previously named **LLM_in_Word**. The Word project now lives in `LLM_in_Word/`; **overleaf_edit** is now **LLM_in_Overleaf**. After updating a checkout, enter the appropriate subdirectory before running its installer. If you moved an Overleaf checkout, rerun its installer and load the extension from its new `extension/` directory.
-
-Stable add-in / extension IDs, conversation storage keys and legacy runtime directories are preserved. See the individual guides for migration details.
-
 ## Development and data
 
 Both projects run without additional npm runtime dependencies. Development tests use mock CLIs and synthetic documents. See [Contributing](CONTRIBUTING.md) for per-project test commands and CI coverage.

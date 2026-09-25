@@ -1,10 +1,16 @@
 # 更新记录
 
+## 0.8.2 — 2026-09-26
+
+- Standardize LLM_in_Overleaf naming across the native host, runtime directory, configuration and page bridge.
+- Add selection, diff preview and applied-edit screenshots with a reproducible browser demo.
+- Simplify the English and Chinese guides around installation and usage.
+
 ## 0.8.1 — 2026-09-26
 
 - Rename the project and extension to LLM_in_Overleaf within LLM_in_Work.
 - Add English and Chinese guides, portable installation instructions and offline CI.
-- Preserve the extension ID, native messaging host, local data and conversation keys.
+- Keep the extension ID stable.
 - Make npm test run offline regressions; live calls use npm run test:live.
 
 ## v0.8.0：多个不连续选段
@@ -47,7 +53,7 @@
 - 中文输入法选词回车不再误发送；无选区或读取失败时保留草稿；读取上下文期间防重复发送。
 - 向上阅读历史时不再自动滚到底部；修复最终差异卡片被流式渲染覆盖，以及推挤布局反复触发 resize 的问题。
 - 失败、停止后的不完整回复不能一键应用；旧预览不能应用到新选区。
-- Codex 自动查找 PATH、常见安装目录和 macOS 的 Codex/ChatGPT 应用内 CLI；跳过失效符号链接。可用 `OVERLEAF_EDIT_CODEX_BIN` 显式指定路径。
+- Codex 自动查找 PATH、常见安装目录和 macOS 的 Codex/ChatGPT 应用内 CLI；跳过失效符号链接。可用 `LLM_IN_OVERLEAF_CODEX_BIN` 显式指定路径。
 - 健康检查区分桥启动与所选 CLI 可用性，并检查 Codex 登录状态。默认模型跟随本机 Codex 配置；获取模型列表只探测当前后端，支持分页。
 - 续写仅在会话丢失时重新建立，登录/网络失败直接显示具体错误；支持取消、空输出和进程异常处理。
 - 安装脚本保存 PATH、CLI 路径覆盖和 CODEX_HOME，安全转义变量，不再输出代理凭据。

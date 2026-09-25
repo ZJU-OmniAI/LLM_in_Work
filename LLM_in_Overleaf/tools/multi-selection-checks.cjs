@@ -6,7 +6,7 @@ module.exports = async (page, outputDir) => {
   const first = { from: 0, to: 'First paragraph.'.length };
   const last = { from: source.indexOf('Last'), to: source.length };
   const waitCount = (n) => page.waitForFunction((n) => {
-    const root = document.querySelector('#overleaf-edit-host').shadowRoot;
+    const root = document.querySelector('#llm-in-overleaf-host').shadowRoot;
     return root.querySelectorAll('.ole-selected-range').length === n && !root.querySelector('#ole-capture').disabled;
   }, n);
   const choose = (ranges) => page.evaluate((ranges) => {
@@ -32,7 +32,7 @@ module.exports = async (page, outputDir) => {
   };
   const reply = async (text) => {
     await page.evaluate((text) => { const fn = fakeListeners.at(-1); fn({ type: 'delta', text }); fn({ type: 'done' }); }, text);
-    await page.waitForFunction(() => document.querySelector('#overleaf-edit-host').shadowRoot.querySelector('#ole-panel').getAttribute('aria-busy') === 'false');
+    await page.waitForFunction(() => document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelector('#ole-panel').getAttribute('aria-busy') === 'false');
   };
   const validReply = (payload) => {
     const [a, b] = payload.doc.selections;
@@ -112,7 +112,7 @@ module.exports = async (page, outputDir) => {
   await page.evaluate((r) => editor.dispatch({ changes: { from: r.from, to: r.to, insert: 'Changed by collaborator.' } }), last);
   const modified = await page.evaluate(() => editor.state.doc.toString());
   await page.locator('.ole-apply').last().click();
-  await page.waitForFunction(() => [...document.querySelector('#overleaf-edit-host').shadowRoot.querySelectorAll('.ole-card-status')].at(-1).textContent.includes('无法唯一定位'));
+  await page.waitForFunction(() => [...document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelectorAll('.ole-card-status')].at(-1).textContent.includes('无法唯一定位'));
   assert.equal(await page.evaluate(() => editor.state.doc.toString()), modified);
 
   // Restore source with fresh undo history; the group applies as one transaction.

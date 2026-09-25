@@ -4,7 +4,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const os = require('node:os');
 const project = path.resolve(__dirname, '..');
-const outputDir = process.env.OVERLEAF_EDIT_TEST_OUTPUT || fs.mkdtempSync(path.join(os.tmpdir(), 'overleaf-edit-ui-'));
+const outputDir = process.env.LLM_IN_OVERLEAF_TEST_OUTPUT || fs.mkdtempSync(path.join(os.tmpdir(), 'llm-in-overleaf-ui-'));
 fs.mkdirSync(outputDir, { recursive: true });
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN || (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : undefined), headless: true });
@@ -27,7 +27,7 @@ fs.mkdirSync(outputDir, { recursive: true });
       }
     };
     window.addEventListener('message', ({ data }) => {
-      if (data.ns !== 'OVERLEAF_EDIT_BRIDGE' || data.dir !== 'req') return;
+      if (data.ns !== 'LLM_IN_OVERLEAF_BRIDGE' || data.dir !== 'req') return;
       const text = 'Deep learning have revolutionized many field.';
       if (data.op === 'merge_targets') {
         const ranges = [...data.args.existing];
@@ -45,7 +45,7 @@ fs.mkdirSync(outputDir, { recursive: true });
   });
   await page.addScriptTag({ path: path.join(project, 'extension/content/content.js') });
   await page.locator('#ole-launcher').click();
-  await page.waitForFunction(() => document.querySelector('#overleaf-edit-host').shadowRoot.querySelector('#ole-status-text').textContent.includes('Codex 就绪'));
+  await page.waitForFunction(() => document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelector('#ole-status-text').textContent.includes('Codex 就绪'));
   await page.screenshot({ path: path.join(outputDir, 'panel-welcome.png') });
   const input = page.locator('#ole-input');
   await input.fill('请润色');

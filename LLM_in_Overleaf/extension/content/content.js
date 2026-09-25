@@ -4,11 +4,11 @@
 // 用 Shadow DOM 把 UI 和 Overleaf 页面隔离，互不干扰。
 (() => {
   'use strict';
-  if (window.__overleafEditInjected) return;
-  window.__overleafEditInjected = true;
+  if (window.__llmInOverleafInjected) return;
+  window.__llmInOverleafInjected = true;
   if (!/^\/project\/[0-9a-z]{6,}/i.test(location.pathname)) return; // 只在项目编辑页生效
 
-  const NS = 'OVERLEAF_EDIT_BRIDGE';
+  const NS = 'LLM_IN_OVERLEAF_BRIDGE';
 
   // 项目 id（会话按项目分开存）
   const PID = (location.pathname.match(/^\/project\/([0-9a-z]+)/i) || [])[1] || 'unknown';
@@ -555,7 +555,7 @@
 
   // ---------- 构建 UI ----------
   const host = document.createElement('div');
-  host.id = 'overleaf-edit-host';
+  host.id = 'llm-in-overleaf-host';
   host.style.cssText = 'all:initial;';
   const shadow = host.attachShadow({ mode: 'open' });
   document.documentElement.appendChild(host);

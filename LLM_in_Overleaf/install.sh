@@ -11,8 +11,7 @@ PROJ="$(pwd)"
 
 # 插件 ID 由 extension/manifest.json 里的 key 固定，改 key 才会变
 EXT_ID="fabclfbbpmgoojaccbpmopjfkocoaoik"
-# Keep the native host ID and data path compatible with existing installations.
-HOST_NAME="com.overleaf_edit.host"
+HOST_NAME="com.llm_in_overleaf.host"
 
 NODE_BIN="$(command -v node || true)"
 if [ -z "$NODE_BIN" ]; then
@@ -21,7 +20,7 @@ if [ -z "$NODE_BIN" ]; then
 fi
 
 # 1) 桥的启动垫片放在纯 ASCII 路径下（项目路径含中文，垫片里再指回去，稳妥）
-WRAP_DIR="$HOME/.overleaf_edit"
+WRAP_DIR="$HOME/.llm_in_overleaf"
 mkdir -p "$WRAP_DIR"
 
 # 关键：Chrome 拉起桥进程时不会带 shell 里的代理变量（那些写在 ~/.zshrc 里），
@@ -29,7 +28,7 @@ mkdir -p "$WRAP_DIR"
 # 以后代理端口变了，重跑一次 ./install.sh 即可刷新。
 # Shell-quote captured values; never print proxy credentials to the terminal.
 ENV_EXPORTS="$(printf 'export PATH=%q\n' "$PATH")"
-for v in http_proxy https_proxy all_proxy no_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY OVERLEAF_EDIT_CODEX_BIN OVERLEAF_EDIT_CLAUDE_BIN CODEX_HOME; do
+for v in http_proxy https_proxy all_proxy no_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY LLM_IN_OVERLEAF_CODEX_BIN LLM_IN_OVERLEAF_CLAUDE_BIN CODEX_HOME; do
   val="${!v}"
   if [ -n "$val" ]; then
     ENV_EXPORTS="$ENV_EXPORTS
@@ -79,4 +78,4 @@ echo "  1. Chrome 打开 chrome://extensions → 开发者模式 → 加载已�
 echo "     （已装过的话点一下扩展的「重新加载」即可）"
 echo "  2. 打开 overleaf.com 任意项目，在编辑器里选中一段 LaTeX，点浮标「✦ 改这段」即可"
 echo ""
-echo "卸载：rm -rf ~/.overleaf_edit 以及各浏览器 NativeMessagingHosts/$HOST_NAME.json"
+echo "卸载：rm -rf ~/.llm_in_overleaf 以及各浏览器 NativeMessagingHosts/$HOST_NAME.json"
