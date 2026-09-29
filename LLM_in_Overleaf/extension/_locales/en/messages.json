@@ -1,0 +1,11 @@
+{
+  "extDescription": {
+    "message": "Select LaTeX in Overleaf, let your local Claude Code or Codex CLI revise it, review the diff and apply it in place."
+  },
+  "actionTitle": {
+    "message": "LLM_in_Overleaf writing assistant"
+  },
+  "cmdToggle": {
+    "message": "Open or close the LLM_in_Overleaf panel"
+  }
+}

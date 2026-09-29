@@ -18,14 +18,14 @@ const EDIT_SYSTEM = `你是嵌入 Overleaf 网页编辑器的 LaTeX 修改助手
    - 保留原有的 \\label、\\cite、\\ref、\\eqref 等键名不动，除非用户明确要求改；
    - 公式、表格、图片等环境的结构不要无故改变；
    - 缩进和换行风格与原文保持一致，不要把多段并成一行。
-3. 代码块外可以加一两句简短中文说明改了什么（可选，别长篇大论）。
-4. 如果指令无法执行（比如和选中内容无关），就不要输出代码块，直接用中文说明原因。`;
+3. 代码块外可以加一两句简短说明改了什么（可选，别长篇大论；用什么语言见下方【回复语言】）。
+4. 如果指令无法执行（比如和选中内容无关），就不要输出代码块，直接说明原因。`;
 
 const MULTI_EDIT_SYSTEM = `你是 Overleaf 的 LaTeX 修改助手。用户选中了同一文件中多个不连续的片段，每个片段有独立 ID。全文仅作为上下文，按用户指令分别修改这些片段，保持全文的术语和风格一致。
 - 每段只输出替换该片段的文本；不要合并片段，不要包含两段之间未选中的内容，也不要改动选区外的内容。
 - 保留 LaTeX 结构、缩进和换行；保持标签、引用等键名不变，只使用已有宏包和命令，除非用户明确要求修改。
 - 每个 ID 都必须输出一段替换稿；无需改动的片段原样返回。各片段使用各自带 ID 的 latex 围栏。
-- 围栏外可用一两句中文说明。无法执行时只说明原因，不输出替换代码块。`;
+- 围栏外可用一两句说明（语言见【回复语言】）。无法执行时只说明原因，不输出替换代码块。`;
 
 function hasMultipleSelections(doc) { return Array.isArray(doc.selections) && doc.selections.length > 1; }
 function pushSelections(parts, doc, isEdit) {
@@ -45,9 +45,17 @@ function multiFormat(doc) {
 
 const ASK_SYSTEM = `你是嵌入 Overleaf 网页编辑器的 LaTeX 写作助手，帮用户理解和改进他们的文档。请遵守：
 - 只依据提供的文档内容和你已有的知识回答；文档里没有的信息就说"文中未提及"，不要编造。
-- 回答默认用中文；用户用英文提问则用英文。
 - 涉及公式用 $...$ / $$...$$ 的 LaTeX 写法；给出的 LaTeX 示例放进 \`\`\`latex 代码块。
 - 用 Markdown 组织，简明清晰。`;
+
+// 回复语言：说明文字跟随用户本轮指令的语言；判断不了时跟随面板界面语言。
+// 替换内容本身保持原文语言（除非用户要求翻译），避免英文界面收到中文说明、或论文被顺手翻译。
+export function languageRule(mode, uiLanguage) {
+  const fallback = uiLanguage === 'en' ? '英文（English）' : '中文';
+  return mode === 'edit'
+    ? `【回复语言】代码块外的说明、以及无法执行时的解释，使用用户本轮指令所用的语言；难以判断时使用${fallback}。替换内容本身保持原文的语言，除非用户明确要求翻译。`
+    : `【回复语言】使用用户本轮提问所用的语言回答；难以判断时使用${fallback}。`;
+}
 
 // 二进制附件（图片/PDF，已写到本地磁盘）的说明段，首轮/续轮共用
 function pushBinFilesSection(parts, files, backend) {
@@ -71,7 +79,7 @@ function pushBinFilesSection(parts, files, backend) {
 
 // 续轮的短 prompt：CLI 会话里已有系统规则、全文和此前对话（走服务端缓存），
 // 本轮只发：新选中片段（权威版本）+ 新增附件 + 指令 + 一句输出格式提醒。
-export function buildTurnPrompt({ mode, backend = 'claude', doc = {}, instruction = '', files = [] }) {
+export function buildTurnPrompt({ mode, backend = 'claude', uiLanguage = 'zh-CN', doc = {}, instruction = '', files = [] }) {
   const isEdit = mode === 'edit';
   const parts = [];
   pushSelections(parts, doc, isEdit);
@@ -95,8 +103,9 @@ export function buildTurnPrompt({ mode, backend = 'claude', doc = {}, instructio
   pushBinFilesSection(parts, files, backend);
   parts.push(`\n用户本轮的指令：\n${instruction}`);
   parts.push(isEdit
-    ? (hasMultipleSelections(doc) ? multiFormat(doc) : '\n本轮为单段改写，覆盖之前的多段格式：唯一一个 ```latex 围栏放替换内容（整体替换本轮选中段，保持合法可编译、标签引用不动），围栏外最多一两句中文说明；无法执行就不出围栏、直接说明原因。')
+    ? (hasMultipleSelections(doc) ? multiFormat(doc) : '\n本轮为单段改写，覆盖之前的多段格式：唯一一个 ```latex 围栏放替换内容（整体替换本轮选中段，保持合法可编译、标签引用不动），围栏外最多一两句说明；无法执行就不出围栏、直接说明原因。')
     : '\n请直接用 Markdown 回答。');
+  parts.push(languageRule(mode === 'edit' ? 'edit' : 'ask', uiLanguage));
   return parts.join('\n');
 }
 
@@ -112,10 +121,11 @@ function pushDocInfo(parts, doc) {
 // doc: { projectName, fileName, docChars, selection, selLine1/2, fullText, truncated,
 //        extraFiles: [{name, text, truncated}] }  ← 用户附加的项目内/本地文本文件
 // files: [{name, path, mime}]  ← 已落盘的二进制附件（图片/PDF），backend 决定提示读法
-export function buildPrompt({ mode, backend = 'claude', doc = {}, messages = [], files = [] }) {
+export function buildPrompt({ mode, backend = 'claude', uiLanguage = 'zh-CN', doc = {}, messages = [], files = [] }) {
   const isEdit = mode === 'edit';
   const parts = [];
   parts.push(isEdit ? (hasMultipleSelections(doc) ? MULTI_EDIT_SYSTEM : EDIT_SYSTEM) : ASK_SYSTEM);
+  parts.push(languageRule(isEdit ? 'edit' : 'ask', uiLanguage));
   parts.push('');
   pushDocInfo(parts, doc);
 

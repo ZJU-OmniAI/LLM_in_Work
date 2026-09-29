@@ -8,6 +8,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const project = path.resolve(__dirname, '..');
+const lang = process.argv.includes('--lang=zh-CN') ? 'zh-CN' : 'en';
+const instruction = lang === 'en'
+  ? 'Fix the grammar and remove redundancy. Keep the meaning. Explain the change in one sentence.'
+  : '修正这段英文的语法，精简重复表达，保留原意。用一句中文说明修改。';
 const output = path.join(project, 'docs/images');
 const original = 'Large language models has become useful tools for academic writing. However, their output often contain grammatical errors and redundant expressions. We evaluate a simple review workflow that help authors inspect each change before applying it.';
 const source = [
@@ -82,8 +86,8 @@ function nativeRequest(message, onEvent = () => {}) {
       } catch (error) { generationErrors.push(String(error)); }
     });
     await page.goto('https://llm-in-overleaf.demo/project/documentation');
-    await page.evaluate(() => {
-      const saved = { backend: 'claude', model_claude: 'sonnet', effort: 'low', width: 460, layout: 'push' };
+    await page.evaluate((uiLanguage) => {
+      const saved = { backend: 'claude', model_claude: 'sonnet', effort: 'low', width: 460, layout: 'push', uiLanguage };
       window.chrome = {
         storage: { local: { get: async () => saved, set: async () => {}, remove: async () => {} }, onChanged: { addListener() {} } },
         runtime: {
@@ -96,18 +100,19 @@ function nativeRequest(message, onEvent = () => {}) {
           },
         },
       };
-    });
+    }, lang);
     await page.addScriptTag({ content: fixture.outputFiles[0].text });
     await page.evaluate((text) => resetEditor(text), source);
     await page.addScriptTag({ path: path.join(project, 'extension/content/bridge.js') });
+    await page.addScriptTag({ path: path.join(project, 'extension/shared/i18n.js') });
     await page.addScriptTag({ path: path.join(project, 'extension/content/content.js') });
     await page.evaluate(({ text, target }) => {
       const from = text.indexOf(target);
       editor.focus(); editor.dispatch({ selection: { anchor: from, head: from + target.length } });
     }, { text: source, target: original });
     await page.locator('#ole-launcher').click();
-    await page.waitForFunction(() => document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelector('#ole-status-text').textContent.includes('Claude 就绪'));
-    await page.locator('#ole-input').fill('修正这段英文的语法，精简重复表达，保留原意。用一句中文说明修改。');
+    await page.waitForFunction(() => document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelector('#ole-status-text').textContent.includes('Claude'));
+    await page.locator('#ole-input').fill(instruction);
     await page.evaluate(({ text, target }) => {
       const from = text.indexOf(target);
       editor.focus(); editor.dispatch({ selection: { anchor: from, head: from + target.length } });
@@ -123,7 +128,7 @@ function nativeRequest(message, onEvent = () => {}) {
     await page.screenshot({ path: path.join(output, 'overleaf-diff.png') });
     await page.locator('.ole-apply').first().click();
     await page.waitForFunction((before) => editor.state.doc.toString() !== before, source);
-    await page.locator('.ole-card-status').first().filter({ hasText: '已应用' }).waitFor();
+    await page.locator('.ole-card-status').first().filter({ hasText: lang === 'en' ? 'Applied' : '已应用' }).waitFor();
     await page.screenshot({ path: path.join(output, 'overleaf-applied.png') });
     const revised = await page.evaluate(() => editor.state.doc.toString());
     assert.ok(revised.includes('y = f(x)'), 'Unselected equation must be unchanged.');

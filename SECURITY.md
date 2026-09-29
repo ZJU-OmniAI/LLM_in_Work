@@ -1,29 +1,65 @@
-# 安全与数据说明
+# Security and data / 安全与数据说明
 
-两个子项目都通过本机 Claude Code / Codex CLI 调用模型。桥在本机运行，但推理通常连接模型服务商，并非完全离线；账户、代理、额度和数据处理受对应 CLI 及其服务方设置约束。
+English · [中文](#中文)
 
-## 文档与附件
+Both assistants call a model through the **Claude Code or Codex CLI on your own computer**. The bridge runs locally, but inference normally happens on the provider's service, so this is not an offline tool. Your CLI's account, proxy, usage limits and data-handling settings apply.
 
-- 选区决定可写回的目标，不限制模型只读取选区。Word 会发送文档正文，Overleaf 会发送当前 `.tex` 文件，超长内容按各自策略截取。
-- 添加的项目文件和本地附件会作为上下文提供给 CLI。二进制附件临时落盘并在请求收尾时清理。
-- Word 侧栏历史保存在网页视图的本地存储；Overleaf 历史保存在浏览器扩展存储。CLI 自身也可能保存提示、正文和模型回复。
-- 改写先提供差异预览，由用户点击应用。模型输出仍需核对事实、公式、引用和格式。
+## What is sent to the model
 
-## 本机连接
+- **The selection decides where edits may be written, not what the model can read.** LLM_in_Word sends the document text; LLM_in_Overleaf sends the current `.tex` file. Very long documents are trimmed around your selections.
+- Project files and local attachments you add are passed to the CLI. Images and PDFs are written to a temporary folder and deleted when the request ends.
+- Word pane history is stored in the Word web view; Overleaf history is stored in the browser extension's storage. The CLI may also keep prompts, document text and replies in its own session files.
+- Every edit is shown as a preview first and is written only when you click Apply. Check facts, formulas, citations and formatting yourself.
 
-| 子项目 | 连接方式 | 本机配置 |
+## Local boundary
+
+| Project | Connection | Local data |
 | --- | --- | --- |
-| LLM_in_Word | 仅回环地址的 HTTPS，默认 `127.0.0.1:8377` | macOS 使用 `~/.llm_in_word`，旧安装沿用 `~/.word_edit`；Windows 使用 `%LOCALAPPDATA%\LLM_in_Word` |
-| LLM_in_Overleaf | 浏览器 Native Messaging，不监听端口 | 使用 `~/.llm_in_overleaf` 和 `com.llm_in_overleaf.host`，仅允许固定扩展 ID 连接 |
+| LLM_in_Word | HTTPS on the loopback address only, `127.0.0.1:8377` | macOS: `~/.llm_in_word` (older installs keep `~/.word_edit`); Windows: `%LOCALAPPDATA%\LLM_in_Word` |
+| LLM_in_Overleaf | Browser native messaging; no listening port | macOS / Linux: `~/.llm_in_overleaf`; Windows: `%LOCALAPPDATA%\LLM_in_Overleaf`. Only the fixed extension ID may start the host. |
 
-Word 详细说明见 [Word 数据与安全文档](LLM_in_Word/SECURITY.md)。Overleaf 的 Claude 调用禁止执行和编辑等工具，Codex 使用只读沙箱；这些限制不等于禁用本机配置中的一切工具。两个项目均面向单用户本机使用。
+**Tools the model may use.** Both projects start Claude Code with an empty MCP configuration (`--strict-mcp-config`), so your own MCP servers are not loaded. Text-only turns run with no tools; turns with attachments may use only `Read`, restricted to those files. Codex runs in a read-only sandbox with approvals disabled; it may still load tools from your Codex configuration.
 
-## 仓库内容
+Do not forward or expose the Word port. Neither project is an authentication gateway for shared or remote use.
 
-仓库不包含本机私钥、证书、凭证、真实文档或 CLI 会话。Overleaf manifest 内的 `key` 是用于保持扩展 ID 的**公钥**，不是登录凭证；运行解压扩展无需对应私钥。`.gitignore` 会排除常见凭证和本机文件，但不能替代提交审查。
+## Repository contents
 
-## 报告问题
+The repository contains no private keys, certificates, credentials, real documents or CLI sessions. The `key` in the Overleaf manifest is the **public** key that keeps the extension ID stable; running the unpacked extension needs no private key. `.gitignore` excludes common secrets and local files, but it does not replace reviewing what you commit.
 
-不要在公开 Issue 中粘贴密钥、真实文档或带凭证的日志。如仓库启用了 GitHub Private Vulnerability Reporting，可在 Security 页面私下报告；否则请通过已有的私有协作渠道联系维护者。
+## Reporting a vulnerability
 
-报告请包含子项目名称、版本、操作系统、合成复现步骤、影响和已去除敏感信息的日志。
+Do not paste keys, real documents or logs with credentials into a public issue. If GitHub Private Vulnerability Reporting is enabled, use **Security → Report a vulnerability**; otherwise contact the maintainers through an existing private channel. Include the project, version, OS, synthetic reproduction steps, impact and redacted logs.
+
+---
+
+## 中文
+
+两个子项目都通过**你电脑上的 Claude Code / Codex CLI** 调用模型。桥接程序在本机运行，但推理通常发生在服务商那边，并非离线工具；账户、代理、额度和数据处理规则以对应 CLI 及服务商的设置为准。
+
+### 哪些内容会交给模型
+
+- **选区决定可以写回的位置，不限制模型能读到的内容。** Word 会发送文档正文，Overleaf 会发送当前 `.tex` 文件；超长内容按选区附近截取。
+- 你添加的项目文件和本地附件会交给 CLI。图片 / PDF 先写入临时目录，请求结束后删除。
+- Word 侧栏历史保存在 Word 网页视图的本地存储，Overleaf 历史保存在浏览器扩展存储。CLI 自身也可能把提示、正文和回复保存在它的会话文件里。
+- 所有改动先显示预览，点「应用」后才写回。事实、公式、引用和格式仍需自行核对。
+
+### 本机边界
+
+| 子项目 | 连接方式 | 本机数据 |
+| --- | --- | --- |
+| LLM_in_Word | 仅回环地址的 HTTPS，`127.0.0.1:8377` | macOS：`~/.llm_in_word`（旧安装沿用 `~/.word_edit`）；Windows：`%LOCALAPPDATA%\LLM_in_Word` |
+| LLM_in_Overleaf | 浏览器原生消息（Native Messaging），不监听端口 | macOS / Linux：`~/.llm_in_overleaf`；Windows：`%LOCALAPPDATA%\LLM_in_Overleaf`。只允许固定 ID 的扩展启动本机桥。 |
+
+**模型能用哪些工具。** 两个子项目启动 Claude Code 时都使用空的 MCP 配置（`--strict-mcp-config`），不会加载你自己配置的 MCP 服务器。纯文字轮不开放任何工具；带附件的轮次只允许 `Read`，且只针对本轮附件。Codex 在只读沙箱中运行、不请求审批，但仍可能加载你本机 Codex 配置里的工具。
+
+不要转发或暴露 Word 的端口。两个项目都不是面向多人或远程使用的认证网关。
+
+### 仓库内容
+
+仓库不包含私钥、证书、凭证、真实文档或 CLI 会话。Overleaf manifest 里的 `key` 是用于固定扩展 ID 的**公钥**，运行解压扩展不需要私钥。`.gitignore` 会排除常见凭证和本机文件，但不能代替提交前的检查。
+
+### 报告安全问题
+
+不要在公开 Issue 中粘贴密钥、真实文档或带凭证的日志。如仓库启用了 GitHub Private Vulnerability Reporting，请在 **Security → Report a vulnerability** 私下报告；否则通过已有私有渠道联系维护者。请写明子项目、版本、操作系统、合成复现步骤、影响和已脱敏的日志。
+
+Details for Word / Word 细节：[LLM_in_Word/SECURITY.md](LLM_in_Word/SECURITY.md)

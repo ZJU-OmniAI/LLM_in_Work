@@ -1,256 +1,128 @@
 // CLI 适配层：把拼好的 prompt 交给本机的 claude 或 codex 命令行跑，
-// 并把它们的"流式输出"解析成统一的事件回调 onEvent({ kind, data })。
-// kind 取值：'text'（正文增量）| 'thinking'（思考增量）| 'model'（真实模型ID）| 'error'。
-// 返回一个 Promise，进程结束时 resolve（出错时也会先发 error 事件再 resolve）。
-// （从 paper_read 移植，逻辑已在生产验证过。）
+// 并把它们的流式输出统一成事件 onEvent({ kind, data })：
+// text（正文增量）| thinking（思考增量）| model（真实模型 ID）| session（codex 会话 ID）| status | error。
+// 返回结果明确区分完成、错误、取消和超时，不把部分文本当成成功。
+// 与 LLM_in_Word 的 server/cli.js 保持同一套安全约束：不加载用户的 MCP 服务器、
+// 不开放执行/编辑/联网工具；只有附件轮才允许 Read，并且只列出本轮附件路径。
 
-import { spawn } from 'node:child_process';
 import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { CLAUDE_BIN, CODEX_BIN, spawnEnv, codexEffort } from './config.js';
+import { CLAUDE_BIN, CODEX_BIN, DATA_DIR, codexEffort } from './config.js';
+import { runProcess, classifyError } from './process.js';
 
-// claude 的会话按"工作目录"归档存盘，首轮和续轮必须用同一个 cwd 才能找到会话
-const CLAUDE_SESSION_CWD = path.join(os.homedir(), '.llm_in_overleaf');
-
-
-// 按行切 JSON 流的小工具：喂进来的 chunk 可能半行，攒够一整行再回调。
-function makeLineParser(onLine) {
-  let buf = '';
+function eventCollector(onEvent) {
+  let sawText = false;
+  const errors = [];
   return {
-    push(chunk) {
-      buf += chunk;
-      let idx;
-      while ((idx = buf.indexOf('\n')) >= 0) {
-        const line = buf.slice(0, idx);
-        buf = buf.slice(idx + 1);
-        if (line.trim()) onLine(line);
-      }
+    emit(kind, data) {
+      if (kind === 'text' && data) sawText = true;
+      if (kind === 'error') errors.push(String(data));
+      else onEvent({ kind, data });
     },
-    flush() {
-      if (buf.trim()) onLine(buf);
-      buf = '';
+    get sawText() { return sawText; },
+    finish(result, backend) {
+      if (result.aborted) return { ok: false, aborted: true, errors: [] };
+      if (result.timedOut) errors.push('请求超时：模型超过时限仍未完成，请降低思考强度或缩小选段范围。');
+      else if (result.error) errors.push(`${backend} 启动失败：${result.error.message}`);
+      else if (result.code !== 0 && !errors.length) errors.push(`${backend} 退出码 ${result.code}\n${result.stderr.slice(-1200)}`);
+      if (!sawText && !errors.length) errors.push(`${backend} 没有返回可用内容，请重试。`);
+      const unique = [...new Set(errors)].map(classifyError);
+      for (const error of unique) onEvent({ kind: 'error', data: error.error, ...error });
+      return { ok: !unique.length && sawText, errors: unique, timedOut: result.timedOut };
     },
   };
 }
 
-// ---------------- claude 适配 ----------------
-// 用 -p 打印模式 + stream-json 流式，靠 --include-partial-messages 拿到逐字增量。
+// claude：-p 打印模式 + stream-json，靠 --include-partial-messages 拿到逐字增量。
 // sessionId：首轮用 --session-id 建立可续写的会话；resume：续轮用 --resume 接着聊（走服务端缓存）。
-export async function runClaude({ prompt, model, effort, signal, sessionId, resume }, onEvent) {
-  if (signal?.aborted) return;
-  await mkdir(CLAUDE_SESSION_CWD, { recursive: true });
-  return new Promise((resolve) => {
-    const args = [
-      '-p',
-      '--output-format', 'stream-json',
-      '--include-partial-messages',
-      '--verbose',
-      '--model', model || 'sonnet',
-      '--effort', effort || 'medium',
-      '--dangerously-skip-permissions',
-      // 纯文本改写：把联网/执行/改文件这类工具禁掉，防它乱跑
-      '--disallowed-tools', 'Bash', 'Edit', 'Write', 'NotebookEdit', 'WebSearch', 'WebFetch', 'Task', 'Agent',
-    ];
-    if (resume) args.push('--resume', resume);
-    else if (sessionId) args.push('--session-id', sessionId);
-
-    let child;
-    try {
-      child = spawn(CLAUDE_BIN, args, { env: spawnEnv(), cwd: CLAUDE_SESSION_CWD, stdio: ['pipe', 'pipe', 'pipe'] });
-    } catch (e) {
-      onEvent({ kind: 'error', data: `启动 claude 失败：${e.message}` });
-      return resolve();
-    }
-
-    let sawText = false;
-    let finalResult = '';
-    let stderr = '';
-
-    const parser = makeLineParser((line) => {
-      let obj;
-      try { obj = JSON.parse(line); } catch { return; }
-      if (obj.type === 'stream_event' && obj.event) {
+// files：本轮落盘的图片/PDF，允许 Read 这些路径；没有附件时不加载任何工具。
+export async function runClaude({ prompt, model, effort, signal, sessionId, resume, files = [] }, onEvent) {
+  const events = eventCollector(onEvent);
+  if (signal?.aborted) return { ok: false, aborted: true, errors: [] };
+  await mkdir(DATA_DIR, { recursive: true });
+  const args = ['-p', '--output-format', 'stream-json', '--include-partial-messages', '--verbose',
+    '--model', model || 'sonnet', '--effort', effort || 'medium',
+    '--permission-mode', 'dontAsk', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}',
+    '--disable-slash-commands', '--tools', files.length ? 'Read' : ''];
+  if (files.length) args.push('--allowedTools', ...files.map((file) => `Read(${file.path})`));
+  if (resume) args.push('--resume', resume);
+  else if (sessionId) args.push('--session-id', sessionId);
+  let finalResult = '', resultError = false;
+  const result = await runProcess(CLAUDE_BIN, args, {
+    cwd: DATA_DIR, input: prompt, signal,
+    onSpawn: () => events.emit('status', '模型已启动，正在生成'),
+    onLine(line) {
+      let obj; try { obj = JSON.parse(line); } catch { return; }
+      if (obj.type === 'system' && obj.model) events.emit('model', obj.model);
+      if (obj.type === 'stream_event') {
         const ev = obj.event;
-        // message_start 里有真实模型 ID（如 claude-fable-5），上报给前端展示
-        if (ev.type === 'message_start' && ev.message?.model) {
-          onEvent({ kind: 'model', data: ev.message.model });
-        }
-        if (ev.type === 'content_block_delta' && ev.delta) {
-          if (ev.delta.type === 'text_delta' && ev.delta.text) {
-            sawText = true;
-            onEvent({ kind: 'text', data: ev.delta.text });
-          } else if (ev.delta.type === 'thinking_delta' && ev.delta.thinking) {
-            onEvent({ kind: 'thinking', data: ev.delta.thinking });
-          }
+        // message_start 里有真实模型 ID（如 claude-sonnet-5），上报给前端展示
+        if (ev?.type === 'message_start' && ev.message?.model) events.emit('model', ev.message.model);
+        if (ev?.type === 'content_block_delta') {
+          if (ev.delta?.type === 'text_delta') events.emit('text', ev.delta.text);
+          else if (ev.delta?.type === 'thinking_delta') events.emit('thinking', ev.delta.thinking);
         }
       } else if (obj.type === 'result') {
-        if (typeof obj.result === 'string') finalResult = obj.result;
-        if (obj.is_error) onEvent({ kind: 'error', data: obj.result || 'claude 返回错误' });
+        resultError = !!obj.is_error;
+        finalResult = typeof obj.result === 'string' ? obj.result : '';
+        if (resultError) events.emit('error', finalResult || obj.errors?.join('\n') || 'Claude 返回错误');
       }
-    });
-
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (d) => parser.push(d));
-    child.stderr.setEncoding('utf8');
-    child.stderr.on('data', (d) => { stderr = (stderr + d).slice(-16000); });
-    child.stdin.on('error', () => {});
-
-    let killTimer;
-    const onAbort = () => {
-      try { child.kill('SIGTERM'); } catch {}
-      killTimer = setTimeout(() => { try { child.kill('SIGKILL'); } catch {} }, 1500);
-      killTimer.unref();
-    };
-    if (signal) signal.addEventListener('abort', onAbort, { once: true });
-    if (signal?.aborted) onAbort();
-
-    child.on('error', (e) => {
-      onEvent({ kind: 'error', data: `claude 进程错误：${e.message}` });
-    });
-    child.on('close', (code) => {
-      clearTimeout(killTimer);
-      parser.flush();
-      if (signal) signal.removeEventListener('abort', onAbort);
-      // 万一没走增量（比如版本差异），用最终结果兜底发一次
-      if (!sawText && finalResult) onEvent({ kind: 'text', data: finalResult });
-      if (!sawText && !finalResult && code !== 0) {
-        onEvent({ kind: 'error', data: `claude 退出码 ${code}\n${stderr.slice(-800)}` });
-      }
-      resolve();
-    });
-
-    try { child.stdin.write(prompt); child.stdin.end(); } catch {}
+    },
   });
+  // 万一没走增量（比如 CLI 版本差异），用最终结果兜底发一次
+  if (!events.sawText && finalResult && !resultError && !result.aborted && !result.timedOut) events.emit('text', finalResult);
+  return events.finish(result, 'Claude Code');
 }
 
-// ---------------- codex 适配 ----------------
-// 用 exec --json 非交互模式，prompt 通过 stdin（"-"）喂进去避免超长命令行；
-// 写完立刻 end() 关闭 stdin，否则 codex 会一直等输入而卡死。
-// images: 本地图片路径数组，用 -i 直接附给模型（codex 原生多模态入口）。
-// resume: 续轮走 `codex exec resume <id>`（注意该子命令不吃 -s/-C/--color，沙箱用 -c 传）；
+// codex：exec --json 非交互模式，prompt 走 stdin（"-"），只读沙箱、永不请求审批。
+// images：本地图片路径，用 -i 直接附给模型；resume：续轮走 `codex exec resume <id>`。
 // 首轮从 --json 事件流的 thread.started 抓 thread_id，经 onEvent({kind:'session'}) 上报。
-export async function runCodex({ prompt, model, effort, images, signal, resume }, onEvent) {
-  if (signal?.aborted) return;
-  let workdir;
+export async function runCodex({ prompt, model, effort, images = [], signal, resume }, onEvent) {
+  if (signal?.aborted) return { ok: false, aborted: true, errors: [] };
+  const workdir = await mkdtemp(path.join(os.tmpdir(), 'llm_in_overleaf-codex-'));
   try {
-    workdir = await mkdtemp(path.join(os.tmpdir(), 'llm_in_overleaf-codex-'));
-  } catch (e) {
-    onEvent({ kind: 'error', data: `创建临时目录失败：${e.message}` });
-    return;
-  }
-  const lastMsgFile = path.join(workdir, 'last.txt');
-
-  const args = resume
-    ? [
-        'exec', 'resume', resume, '--json',
-        '--skip-git-repo-check',
-        '-c', 'sandbox_mode="read-only"',
-        '-c', `model_reasoning_effort="${codexEffort(effort)}"`,
-        '-o', lastMsgFile,
-      ]
-    : [
-        'exec', '--json',
-        '-s', 'read-only',
-        '--skip-git-repo-check',
-        '--color', 'never',
-        '-C', workdir,
-        '-c', `model_reasoning_effort="${codexEffort(effort)}"`,
-        '-o', lastMsgFile,
-      ];
-  if (model && model !== '(default)' && model !== 'default') args.push('-m', model);
-  for (const img of Array.isArray(images) ? images : []) args.push('-i', img);
-  args.push('-'); // 从 stdin 读 prompt
-
-  await new Promise((resolve) => {
-    let child;
-    try {
-      child = spawn(CODEX_BIN, args, { env: spawnEnv(), cwd: workdir, stdio: ['pipe', 'pipe', 'pipe'] });
-    } catch (e) {
-      onEvent({ kind: 'error', data: `启动 codex 失败：${e.message}` });
-      return resolve();
-    }
-
-    let sawText = false;
-    let failed = false;
-    const reportError = (message) => { if (!failed && !signal?.aborted) onEvent({ kind: 'error', data: message }); failed = true; };
-    let stderr = '';
-    // 记录每个 item 已经发出的文本长度，支持增量（updated）或一次性（completed）两种情况
+    const events = eventCollector(onEvent);
+    const output = path.join(workdir, 'last.txt');
+    const args = resume ? ['exec', 'resume', resume, '--json'] : ['exec', '--json', '--color', 'never', '-C', workdir];
+    args.push('--skip-git-repo-check', '-c', 'sandbox_mode="read-only"', '-c', 'approval_policy="never"',
+      '-c', `model_reasoning_effort="${codexEffort(effort)}"`, '-o', output);
+    if (model && !['(default)', 'default'].includes(model)) args.push('-m', model);
+    for (const img of Array.isArray(images) ? images : []) args.push('-i', img);
+    args.push('-');
     const emitted = new Map();
-
-    const emitItemText = (item, isThinking) => {
-      if (!item || typeof item.text !== 'string') return;
-      const id = item.id || 'default';
-      const prev = emitted.get(id) || 0;
-      if (item.text.length > prev) {
-        const delta = item.text.slice(prev);
-        emitted.set(id, item.text.length);
-        if (isThinking) onEvent({ kind: 'thinking', data: delta });
-        else { sawText = true; onEvent({ kind: 'text', data: delta }); }
-      }
-    };
-
-    const parser = makeLineParser((line) => {
-      let obj;
-      try { obj = JSON.parse(line); } catch { return; }
-      const t = obj.type || '';
-      if ((t === 'item.completed' || t === 'item.updated' || t === 'item.started') && obj.item) {
-        const it = obj.item;
-        if (it.type === 'agent_message') emitItemText(it, false);
-        else if (it.type === 'reasoning') emitItemText(it, true);
-      } else if (t === 'thread.started' && obj.thread_id) {
-        onEvent({ kind: 'session', data: String(obj.thread_id) });
-      } else if (t === 'error' || t === 'turn.failed') {
-        const msg = (obj.error && (obj.error.message || obj.error)) || obj.message || 'codex 返回错误';
-        reportError(String(msg));
-      }
+    let turnFailed = false;
+    const result = await runProcess(CODEX_BIN, args, {
+      cwd: workdir, input: prompt, signal,
+      onSpawn: () => events.emit('status', '模型已启动，正在生成'),
+      onLine(line) {
+        let obj; try { obj = JSON.parse(line); } catch { return; }
+        if (['item.completed', 'item.updated', 'item.started'].includes(obj.type) && obj.item) {
+          const item = obj.item;
+          if (!['agent_message', 'reasoning'].includes(item.type) || typeof item.text !== 'string') return;
+          const key = `${item.type}:${item.id || 'default'}`, prev = emitted.get(key) || '';
+          if (item.text.startsWith(prev) && item.text.length > prev.length) {
+            events.emit(item.type === 'reasoning' ? 'thinking' : 'text', item.text.slice(prev.length));
+            emitted.set(key, item.text);
+          }
+        } else if (obj.type === 'thread.started' && obj.thread_id) events.emit('session', String(obj.thread_id));
+        else if (obj.type === 'error' || obj.type === 'turn.failed') {
+          // Codex 会在连接重试时发 error；只有 turn.failed 才是终止失败。
+          const msg = obj.error?.message || obj.message || obj.error || 'Codex 返回错误';
+          if (obj.type === 'error' && /reconnecting|retrying|retry\s+\d/i.test(String(msg))) events.emit('status', '模型正在重新连接');
+          else { turnFailed = true; events.emit('error', String(msg)); }
+        }
+      },
     });
-
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (d) => parser.push(d));
-    child.stderr.setEncoding('utf8');
-    child.stderr.on('data', (d) => { stderr = (stderr + d).slice(-16000); });
-    child.stdin.on('error', () => {});
-
-    let killTimer;
-    const onAbort = () => {
-      try { child.kill('SIGTERM'); } catch {}
-      killTimer = setTimeout(() => { try { child.kill('SIGKILL'); } catch {} }, 1500);
-      killTimer.unref();
-    };
-    if (signal) signal.addEventListener('abort', onAbort, { once: true });
-    if (signal?.aborted) onAbort();
-
-    child.on('error', (e) => {
-      reportError(e.code === 'ENOENT' ? '找不到 Codex CLI，请安装 Codex 或设置 LLM_IN_OVERLEAF_CODEX_BIN 后重试。' : `codex 进程错误：${e.message}`);
-    });
-    child.on('close', async (code) => {
-      clearTimeout(killTimer);
-      parser.flush();
-      if (signal) signal.removeEventListener('abort', onAbort);
-      // 没解析到正文 → 用 -o 落盘的最终答案兜底
-      if (!sawText && !failed && !signal?.aborted && code === 0) {
-        try {
-          const last = (await readFile(lastMsgFile, 'utf8')).trim();
-          if (last) { onEvent({ kind: 'text', data: last }); sawText = true; }
-        } catch {}
-      }
-      if (code !== 0 && !signal?.aborted) {
-        // 过滤掉 codex 常见的无关噪声（比如某些 MCP 鉴权告警）
-        const noise = stderr.split('\n').filter((l) => l && !/rmcp::|worker quit|AuthRequired/i.test(l)).join('\n');
-        reportError(`codex 退出码 ${code}\n${(noise || stderr).slice(-1200)}`);
-      }
-      if (!sawText && code === 0 && !signal?.aborted) reportError('Codex 未返回正文，请检查登录、模型和网络后重试。');
-      try { await rm(workdir, { recursive: true, force: true }); } catch {}
-      resolve();
-    });
-
-    try { child.stdin.write(prompt); child.stdin.end(); } catch {}
-  });
+    // 没解析到正文 → 用 -o 落盘的最终答案兜底
+    if (!events.sawText && !turnFailed && !result.aborted && !result.timedOut && result.code === 0) {
+      try { const last = (await readFile(output, 'utf8')).trim(); if (last) events.emit('text', last); } catch {}
+    }
+    return events.finish(result, 'Codex');
+  } finally { await rm(workdir, { recursive: true, force: true }); }
 }
 
 // 统一入口
 export function runModel(backend, opts, onEvent) {
-  if (backend === 'codex') return runCodex(opts, onEvent);
-  return runClaude(opts, onEvent);
+  return backend === 'codex' ? runCodex(opts, onEvent) : runClaude(opts, onEvent);
 }

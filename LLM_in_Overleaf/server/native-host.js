@@ -11,8 +11,9 @@ import { runModel } from './cli.js';
 import { buildPrompt, buildTurnPrompt } from './prompt.js';
 import { getModels } from './models.js';
 import { getHealth } from './health.js';
+import { classifyError } from './process.js';
 
-const VERSION = '0.8.2';
+const VERSION = '0.9.0';
 
 // 二进制附件（图片/PDF）先写进临时目录，再把路径写进 prompt / 传给 codex -i
 const MAX_ATTACH = 8;
@@ -94,27 +95,28 @@ async function handle(msg) {
   const t = msg?.type;
 
   if (t === 'ping') {
-    send({ type: 'pong', version: VERSION, ...(msg.backend ? await getHealth(msg.backend) : { ok: true }) });
+    send({ type: 'pong', ...(msg.backend ? await getHealth(msg.backend) : { ok: true }), version: VERSION, platform: process.platform });
     return;
   }
 
   if (t === 'models') {
     // 实测探测当前可用模型（claude 别名解析 + codex model/list），见 models.js
-    const r = await getModels(msg.backend);
-    send({ type: 'models', reqId: msg.reqId, ok: !!(r.claude || r.codex), claude: r.claude, codex: r.codex, fetchedAt: r.fetchedAt, error: r.error });
+    const r = await getModels(msg.backend, !!msg.force);
+    send({ type: 'models', reqId: msg.reqId, ok: !!(r.claude || r.codex), ...r });
     return;
   }
 
   if (t === 'chat_start') {
     const p = msg.payload || {};
     const backend = p.backend === 'codex' ? 'codex' : 'claude';
-    const model = p.model || (backend === 'codex' ? '(default)' : 'sonnet');
-    const effort = p.effort || 'medium';
+    const model = typeof p.model === 'string' && p.model.length <= 200 ? p.model : (backend === 'codex' ? '(default)' : 'sonnet');
+    const effort = typeof p.effort === 'string' ? p.effort : 'medium';
     const mode = p.mode === 'ask' ? 'ask' : 'edit';
-    const messages = Array.isArray(p.messages) ? p.messages : [];
+    const uiLanguage = p.uiLanguage === 'en' ? 'en' : 'zh-CN';
+    const messages = Array.isArray(p.messages) ? p.messages.filter((m) => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string') : [];
     if (!messages.length) {
       send({ type: 'error', reqId: msg.reqId, error: '缺少 messages' });
-      send({ type: 'done', reqId: msg.reqId });
+      send({ type: 'done', reqId: msg.reqId, ok: false });
       return;
     }
     // 二进制附件（图片/PDF）→ 临时目录落盘
@@ -130,8 +132,9 @@ async function handle(msg) {
       }
     }
 
-    const images = files.filter((f) => /^image\//.test(f.mime)).map((f) => f.path);
-    const resumeId = (p.cliSession && typeof p.cliSession === 'object' && p.cliSession[backend]) || null;
+    const imagesOf = (list) => list.filter((f) => /^image\//.test(f.mime)).map((f) => f.path);
+    const resumeId = (p.cliSession && typeof p.cliSession === 'object' && typeof p.cliSession[backend] === 'string'
+      && /^[a-zA-Z0-9-]{1,120}$/.test(p.cliSession[backend])) ? p.cliSession[backend] : null;
     const lastMsg = messages[messages.length - 1];
 
     const ac = new AbortController();
@@ -141,68 +144,64 @@ async function handle(msg) {
       resume: !!resumeId, attachments: files.map((f) => f.name),
     });
 
-    const mkEvents = (holdErrors) => {
-      const held = [];
-      let sawText = false;
-      let failed = false;
-      let streamSession = null; // codex 的 thread_id（等确认本轮成功再上报，防面板记住失败的空会话）
-      const onEvent = (ev) => {
-        if (ev.kind === 'text') { sawText = true; send({ type: 'delta', reqId: msg.reqId, text: ev.data }); }
-        else if (ev.kind === 'thinking') send({ type: 'thinking', reqId: msg.reqId, text: ev.data });
-        else if (ev.kind === 'model') send({ type: 'model', reqId: msg.reqId, model: ev.data });
-        else if (ev.kind === 'session') streamSession = ev.data;
-        else if (ev.kind === 'error') {
-          failed = true;
-          // 续轮失败要静默回退重建，错误先扣着；真失败（拿到过正文/回退也失败）才转发
-          if (holdErrors) held.push(ev.data);
-          else send({ type: 'error', reqId: msg.reqId, error: ev.data });
-        }
+    // 错误先收集：续轮若只是会话失效，要静默回退重建，不把这类错误闪给用户。
+    const mkEvents = () => {
+      let sawText = false, session = null;
+      const errors = [];
+      return {
+        errors, gotText: () => sawText, session: () => session,
+        onEvent(ev) {
+          if (ev.kind === 'text') { sawText = true; send({ type: 'delta', reqId: msg.reqId, text: ev.data }); }
+          else if (ev.kind === 'thinking') send({ type: 'thinking', reqId: msg.reqId, text: ev.data });
+          else if (ev.kind === 'model') send({ type: 'model', reqId: msg.reqId, model: ev.data });
+          else if (ev.kind === 'status') send({ type: 'status', reqId: msg.reqId, text: ev.data });
+          else if (ev.kind === 'session') session = ev.data;
+          else if (ev.kind === 'error') errors.push({ type: 'error', reqId: msg.reqId, error: ev.data, code: ev.code, hint: ev.hint });
+        },
       };
-      return { onEvent, held, gotText: () => sawText, failed: () => failed, session: () => streamSession };
     };
 
+    let successful = false;
     try {
-      let handled = false;
-      if (resumeId) {
+      let rebuild = !resumeId;
+      if (resumeId && !ac.signal.aborted) {
         // 续轮：短 prompt（选中片段 + 新增附件 + 指令），全文和历史在 CLI 会话里（走服务端缓存）。
         // 附件只带"新增"的：旧附件内容已在会话记忆里，重发既浪费又可能路径失效。
         const newIdx = Array.isArray(p.newAttIdx) ? p.newAttIdx : null;
         const filesTurn = newIdx ? files.filter((f) => newIdx.includes(f.idx)) : files;
-        const imagesTurn = filesTurn.filter((f) => /^image\//.test(f.mime)).map((f) => f.path);
         const docTurn = { ...(p.doc || {}) };
         if (Array.isArray(docTurn.newExtraNames) && Array.isArray(docTurn.extraFiles)) {
           docTurn.extraFiles = docTurn.extraFiles.filter((f) => docTurn.newExtraNames.includes(f.name));
         }
-        const turnPrompt = buildTurnPrompt({ mode, backend, doc: docTurn, instruction: lastMsg?.content || '', files: filesTurn });
-        const ev = mkEvents(true);
-        await runModel(backend, { prompt: turnPrompt, model, effort, images: imagesTurn, resume: resumeId, signal: ac.signal }, ev.onEvent);
-        if (ev.gotText()) {
-          for (const e of ev.held) send({ type: 'error', reqId: msg.reqId, error: e });
-          handled = true;
-        } else if (!ac.signal.aborted && (!ev.held.length || ev.held.some((e) => /session|thread|会话/i.test(e) && /not found|missing|invalid|expired|不存在|失效/i.test(e)))) {
-          send({ type: 'note', reqId: msg.reqId, text: '会话已失效，正在重新读取全文并重建…' });
-        } else {
-          for (const e of ev.held) send({ type: 'error', reqId: msg.reqId, error: e });
-          handled = true;
-        }
+        const turnPrompt = buildTurnPrompt({ mode, backend, uiLanguage, doc: docTurn, instruction: lastMsg?.content || '', files: filesTurn });
+        const ev = mkEvents();
+        const result = await runModel(backend, { prompt: turnPrompt, model, effort, files: filesTurn, images: imagesOf(filesTurn), resume: resumeId, signal: ac.signal }, ev.onEvent);
+        successful = result.ok;
+        // 只有明确的会话失效且没有正文时才自动重建；网络、鉴权、额度失败不重复请求。
+        rebuild = !ac.signal.aborted && !ev.gotText() && !!result.errors?.some((e) => e.code === 'session_expired');
+        if (rebuild) send({ type: 'note', reqId: msg.reqId, text: '会话已失效，正在重新读取全文并重建…' });
+        else for (const error of ev.errors) send(error);
       }
-      if (!handled && !ac.signal.aborted) {
-        // 首轮（或续轮失败回退）：完整 prompt + 建新 CLI 会话
+      if (rebuild && !ac.signal.aborted) {
+        // 首轮（或续轮失效回退）：完整 prompt + 建新 CLI 会话
         const newId = backend === 'claude' ? randomUUID() : null; // codex 的 id 从事件流里抓
-        const prompt = buildPrompt({ mode, backend, doc: p.doc || {}, messages, files });
-        const ev = mkEvents(false);
-        await runModel(backend, { prompt, model, effort, images, sessionId: newId, signal: ac.signal }, ev.onEvent);
+        const prompt = buildPrompt({ mode, backend, uiLanguage, doc: p.doc || {}, messages, files });
+        const ev = mkEvents();
+        const result = await runModel(backend, { prompt, model, effort, files, images: imagesOf(files), sessionId: newId, signal: ac.signal }, ev.onEvent);
+        successful = result.ok;
+        for (const error of ev.errors) send(error);
         const sid = backend === 'claude' ? newId : ev.session();
-        if (sid && ev.gotText() && !ev.failed()) {
-          send({ type: 'cli_session', reqId: msg.reqId, backend, id: sid });
-        }
+        if (sid && successful) send({ type: 'cli_session', reqId: msg.reqId, backend, id: sid });
       }
     } catch (e) {
-      send({ type: 'error', reqId: msg.reqId, error: String(e?.message || e) });
+      send({ type: 'error', reqId: msg.reqId, ...classifyError(e?.message || e) });
+    } finally {
+      aborters.delete(msg.reqId);
+      // 失败的一轮不再续写：下一轮重新读全文建会话，避免在残缺会话上继续。
+      if (!successful) send({ type: 'cli_session', reqId: msg.reqId, backend, id: null });
+      send({ type: 'done', reqId: msg.reqId, ok: successful, cancelled: ac.signal.aborted });
+      if (attachDir) { try { await rm(attachDir, { recursive: true, force: true }); } catch {} }
     }
-    aborters.delete(msg.reqId);
-    send({ type: 'done', reqId: msg.reqId });
-    if (attachDir) { try { await rm(attachDir, { recursive: true, force: true }); } catch {} }
     return;
   }
 

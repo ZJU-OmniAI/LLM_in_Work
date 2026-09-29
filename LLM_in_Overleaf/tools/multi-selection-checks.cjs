@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-module.exports = async (page, outputDir) => {
+module.exports = async (page, outputDir, expect) => {
   const source = 'First paragraph.\n\nLeave this middle exactly.\n\nLast paragraph.';
   const first = { from: 0, to: 'First paragraph.'.length };
   const last = { from: source.indexOf('Last'), to: source.length };
@@ -45,14 +45,14 @@ module.exports = async (page, outputDir) => {
   await page.evaluate((text) => resetEditor(text), source);
   await capture([first], 1);
   await capture([last], 2);
-  assert.match(await page.locator('#ole-context-summary').innerText(), /2 段/);
+  assert.match(await page.locator('#ole-context-summary').innerText(), expect.twoSelections);
   await capture([first], 2); // Duplicate selection must not add a third target.
   await capture([{ from: 2, to: 8 }], 2); // Partial overlap is rejected, old group survives.
-  assert.match(await page.locator('#ole-selection-hint').innerText(), /重叠/);
+  assert.match(await page.locator('#ole-selection-hint').innerText(), expect.overlap);
 
   await page.evaluate(() => { document.querySelector('.editor-file-tab-path').textContent = 'other.tex'; });
   await capture([last], 2);
-  assert.match(await page.locator('#ole-selection-hint').innerText(), /同一文件/);
+  assert.match(await page.locator('#ole-selection-hint').innerText(), expect.sameFile);
   await page.evaluate(() => { document.querySelector('.editor-file-tab-path').textContent = 'main.tex'; });
   await page.locator('#ole-context-summary').click();
   await page.locator('.ole-range-remove').first().click();
@@ -103,7 +103,7 @@ module.exports = async (page, outputDir) => {
   await page.locator('.ole-range-remove').first().click();
   await page.locator('#ole-settings-toggle').click();
   await page.locator('.ole-apply').last().click();
-  assert.match(await page.locator('.ole-card-status').last().innerText(), /选区已切换/);
+  assert.match(await page.locator('.ole-card-status').last().innerText(), expect.switched);
   await capture([first], 2);
   payload = await send('重新生成两段');
   await reply(validReply(payload));
@@ -112,7 +112,7 @@ module.exports = async (page, outputDir) => {
   await page.evaluate((r) => editor.dispatch({ changes: { from: r.from, to: r.to, insert: 'Changed by collaborator.' } }), last);
   const modified = await page.evaluate(() => editor.state.doc.toString());
   await page.locator('.ole-apply').last().click();
-  await page.waitForFunction(() => [...document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelectorAll('.ole-card-status')].at(-1).textContent.includes('无法唯一定位'));
+  await page.waitForFunction((text) => [...document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelectorAll('.ole-card-status')].at(-1).textContent.includes(text), expect.notUnique);
   assert.equal(await page.evaluate(() => editor.state.doc.toString()), modified);
 
   // Restore source with fresh undo history; the group applies as one transaction.

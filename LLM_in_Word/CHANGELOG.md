@@ -1,5 +1,13 @@
 # 更新记录
 
+## 0.7.1 — 2026-09-30
+
+- Explanations now follow the language of your instruction, falling back to the pane's interface language. Previously the model always explained its edits in Chinese, even in the English interface.
+- Replacements keep the document's language unless you ask for a translation; the assistant no longer introduces itself to the model as a Chinese-only writer.
+- The pane sends its interface language with each request. The Windows installation check reads the expected version from `package.json`.
+
+中文摘要：说明文字跟随指令语言（此前英文界面下也总是中文说明）；改写结果保持原文语言；安装检查不再写死版本号。更新：在仓库目录运行 `npm run update`。
+
 ## 0.7.0 — 2026-09-13
 
 - Add English and Simplified Chinese interfaces with a persistent header language selector and automatic initial locale selection.

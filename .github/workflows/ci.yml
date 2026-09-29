@@ -49,14 +49,14 @@ jobs:
   overleaf:
     name: Overleaf (${{ matrix.os }}, Node 22)
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 12
     defaults:
       run:
         working-directory: LLM_in_Overleaf
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -66,15 +66,20 @@ jobs:
           cache-dependency-path: LLM_in_Overleaf/package-lock.json
       - run: npm ci
       - name: Validate scripts
+        shell: bash
         run: |
           bash -n install.sh
-          for file in server/*.js extension/content/*.js extension/background/*.js extension/popup/*.js tools/*.js tools/*.cjs; do node --check "$file"; done
+          for file in server/*.js extension/content/*.js extension/background/*.js extension/popup/*.js extension/shared/*.js tools/*.js tools/*.cjs tools/*.mjs; do node --check "$file"; done
+          node -e "for (const f of ['extension/manifest.json','extension/_locales/en/messages.json','extension/_locales/zh_CN/messages.json']) JSON.parse(require('fs').readFileSync(f,'utf8'))"
       - name: Run offline regression tests
         run: npm test
+      - name: Installer, native host launcher and uninstall smoke test
+        timeout-minutes: 3
+        run: npm run test:install
       - name: Install browser for regression tests
         if: runner.os == 'Linux'
         run: npx playwright-core install --with-deps chromium
-      - name: Test editor, panel and Chinese-site integration
+      - name: Test editor, panel, English interface and Chinese-site integration
         if: runner.os == 'Linux'
         run: |
           npm run test:ui

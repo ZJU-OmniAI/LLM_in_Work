@@ -186,3 +186,9 @@ test('locale preference overrides Office language; catalog placeholders stay int
     } finally { dom.window.close(); }
   }
 });
+test('each request carries the interface language so explanations match it', async () => {
+  for (const language of ['en', 'zh-CN']) {
+    const t = setup(good, { language });
+    try { await t.w.ui.sendInstruction(language === 'en' ? 'Polish' : '润色'); assert.equal(t.calls[0].uiLanguage, language); } finally { await t.close(); }
+  }
+});

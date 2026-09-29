@@ -1,5 +1,19 @@
 # 更新记录
 
+## 0.9.0 — 2026-09-30
+
+- Add an English interface. Switch **English / 中文** in the panel's Settings or in the toolbar popup; the choice is remembered and shared. Existing conversations are not translated. Chrome's extension page shows the English or Chinese description automatically.
+- Explanations follow the language of your instruction (falling back to the interface language). Replacements keep the document's language unless you ask for a translation.
+- Safer Claude calls, matching LLM_in_Word: permission checks are no longer skipped and your own MCP servers are not loaded. Text-only turns run without tools; turns with attachments may only use Read on those files. Codex runs read-only with approvals disabled.
+- More robust native host: a request timeout (10 minutes; `LLM_IN_OVERLEAF_TIMEOUT_MS`), process-tree cleanup when you stop, error categories with a suggested fix, and failed turns no longer resume a broken CLI session.
+- Refreshing the model list reads the CLI's model catalog without sending a prompt. Claude shows resolved versions (for example Sonnet 5.5); Codex offers only the reasoning efforts each model supports.
+- New installers: `install.ps1` for Windows and Linux support in `install.sh`, both with an uninstall option. The installer now checks that the host starts and reports whether Claude Code and Codex are ready, and it no longer records temporary PATH entries.
+- CI runs on Linux, macOS and Windows, including an installer smoke test and English-interface browser regressions.
+
+To update, rerun the installer, click **Reload** on the extension card, then refresh Overleaf.
+
+中文摘要：新增英文界面与中英切换；模型说明文字跟随指令语言；Claude 调用不再跳过权限、不加载本机 MCP；增加超时、进程树清理和出错建议；模型列表刷新不再发生成请求；新增 Windows / Linux 安装与卸载；CI 覆盖三大系统。更新后重跑安装脚本、在扩展页点「重新加载」并刷新 Overleaf。
+
 ## 0.8.2 — 2026-09-26
 
 - Standardize LLM_in_Overleaf naming across the native host, runtime directory, configuration and page bridge.

@@ -1375,6 +1375,7 @@
         model: cfg.backend === 'codex' ? cfg.model_codex : cfg.model_claude,
         effort: cfg.effort,
         mode,
+        uiLanguage: window.WordI18n.language,
         doc,
         attachments: binAtts.map((a) => ({ name: a.name, mime: a.mime, b64: a.b64 })),
         cliSession: { ...state.cliSession },

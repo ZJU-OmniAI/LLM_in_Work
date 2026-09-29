@@ -6,6 +6,11 @@ const fs = require('node:fs');
 const os = require('node:os');
 const project = path.resolve(__dirname, '..');
 const origin = process.argv[2] || 'https://www.overleaf.com';
+const lang = process.argv[3] === 'en' ? 'en' : 'zh-CN';
+// Language-specific UI text checked by this regression (the rest is behavior, not wording).
+const expect = lang === 'en'
+  ? { noSelection: /No selection found/, twoSelections: /2 selections/, overlap: /overlap/, sameFile: /same file/, switched: /selection has changed/, notUnique: 'cannot be located uniquely', sourceEditor: /source mode/ }
+  : { noSelection: /没有读取到选区/, twoSelections: /2 段/, overlap: /重叠/, sameFile: /同一文件/, switched: /选区已切换/, notUnique: '无法唯一定位', sourceEditor: /源码编辑/ };
 const outputDir = process.env.LLM_IN_OVERLEAF_TEST_OUTPUT || fs.mkdtempSync(path.join(os.tmpdir(), 'llm-in-overleaf-selection-'));
 fs.mkdirSync(outputDir, { recursive: true });
 
@@ -33,12 +38,13 @@ fs.mkdirSync(outputDir, { recursive: true });
     <div class="editor-file-tab tab-selected"><span class="editor-file-tab-path">main.tex</span></div>
     <main><div id="editor"></div><div id="pdf" tabindex="0"><h2>Introduction</h2>Deep learning has revolutionized many fields.</div></main></body></html>` }));
     await page.goto(`${origin}/project/abcdef123456`);
-    await page.evaluate(() => {
+    await page.evaluate((language) => {
+      window.testLanguage = language;
       window.extensionMessage = null;
       window.mockMessages = [];
       window.fakeListeners = [];
       window.chrome = {
-        storage: { local: { get: async () => ({ backend: 'codex' }), set: async () => {}, remove: async () => {} }, onChanged: { addListener() {} } },
+        storage: { local: { get: async () => ({ backend: 'codex', uiLanguage: window.testLanguage }), set: async () => {}, remove: async () => {} }, onChanged: { addListener() {} } },
         runtime: { sendMessage: async () => ({ ok: true, version: 'test' }), onMessage: { addListener: (f) => { window.extensionMessage = f; } },
           connect: () => ({ onMessage: { addListener: (f) => fakeListeners.push(f) }, onDisconnect: { addListener() {} }, disconnect() {}, postMessage: (m) => mockMessages.push(m) }),
         },
@@ -53,9 +59,10 @@ fs.mkdirSync(outputDir, { recursive: true });
         window.addEventListener('message', cb);
         window.postMessage({ ns: 'LLM_IN_OVERLEAF_BRIDGE', dir: 'req', id, op, args }, '*');
       });
-    });
+    }, lang);
     await page.addScriptTag({ content: fixture.outputFiles[0].text });
     await page.addScriptTag({ path: path.join(project, 'extension/content/bridge.js') });
+    await page.addScriptTag({ path: path.join(project, 'extension/shared/i18n.js') });
     await page.addScriptTag({ path: path.join(project, 'extension/content/content.js') });
     assert.equal((await page.evaluate(() => rpc('status'))).ready, true, 'real CodeMirror must be found');
     await page.locator('#ole-launcher').waitFor({ state: 'visible' });
@@ -99,8 +106,8 @@ fs.mkdirSync(outputDir, { recursive: true });
     await page.locator('#ole-context-summary').click();
     await page.locator('#ole-target-clear').click();
     await page.locator('#ole-capture').click();
-    await page.waitForFunction(() => document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelector('#ole-selection-hint').textContent.includes('没有读取到选区'));
-    assert.match(await page.locator('#ole-selection-hint').innerText(), /没有读取到选区/);
+    await page.waitForFunction((re) => new RegExp(re).test(document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelector('#ole-selection-hint').textContent), expect.noSelection.source);
+    assert.match(await page.locator('#ole-selection-hint').innerText(), expect.noSelection);
     await page.locator('#ole-close').click();
 
     // Shift + Arrow selection and collapse work without relying on mouseup.
@@ -144,16 +151,16 @@ fs.mkdirSync(outputDir, { recursive: true });
     await page.waitForTimeout(800);
     assert.equal(await float.isVisible(), false);
 
-    await require('./multi-selection-checks.cjs')(page, outputDir);
+    await require('./multi-selection-checks.cjs')(page, outputDir, expect);
     await page.evaluate(() => editor.destroy());
     await page.locator('#ole-launcher').click();
     await page.locator('#ole-panel.open').waitFor();
-    assert.match(await page.locator('#ole-selection-hint').innerText(), /源码编辑/);
+    assert.match(await page.locator('#ole-selection-hint').innerText(), expect.sourceEditor);
     await page.setViewportSize({ width: 390, height: 720 });
     await page.screenshot({ path: path.join(outputDir, 'selection-narrow.png') });
     assert.ok((await page.locator('#ole-panel').boundingBox()).width <= 390);
     assert.deepEqual(errors, []);
-    console.log(`Selection PASS (${origin}): real CodeMirror, mouse, keyboard, absent DOM selection, single character, launcher, manual capture, runtime message, hidden/multiple editors, PDF exclusion and diagnostics.`);
+    console.log(`Selection PASS (${origin}, ${lang}): real CodeMirror, mouse, keyboard, absent DOM selection, single character, launcher, manual capture, runtime message, hidden/multiple editors, PDF exclusion and diagnostics.`);
     console.log('Screenshots:', outputDir);
   } finally { await browser.close(); }
 })().catch((e) => { console.error(e); process.exitCode = 1; });
