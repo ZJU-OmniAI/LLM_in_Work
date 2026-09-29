@@ -10,6 +10,14 @@
 
   const NS = 'LLM_IN_OVERLEAF_BRIDGE';
 
+  // 界面文案：中文原文作键，英文从 shared/i18n.js 查表；文档内容和模型回复不翻译。
+  const I18N = globalThis.LLMOverleafI18n || {
+    t: (key, ...v) => String(key).replace(/\{(\d+)\}/g, (m, i) => (i < v.length ? String(v[i]) : m)),
+    known: (x) => x, setLanguage: () => 'zh-CN', normalize: () => 'zh-CN', applyStatic() {}, language: 'zh-CN', STORAGE_KEY: 'uiLanguage',
+  };
+  const t = (key, ...values) => I18N.t(key, ...values);
+  const known = (value) => I18N.known(value);
+
   // 项目 id（会话按项目分开存）
   const PID = (location.pathname.match(/^\/project\/([0-9a-z]+)/i) || [])[1] || 'unknown';
   const HIST_KEY = 'hist:' + PID; // 当前会话
@@ -22,7 +30,8 @@
     codex: [['(default)', '使用 Codex 配置']],
   };
   const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
-  const EFFORT_LABELS = { low: '快速', medium: '均衡', high: '深入', xhigh: '更深入', max: '最高' };
+  const EFFORT_LABELS = { none: '不额外思考', minimal: '最少', low: '快速', medium: '均衡', high: '深入', xhigh: '更深入', max: '最高', ultra: '最深入' };
+  let modelEfforts = { codex: {} }; // codex 各模型支持的思考档位（来自 model/list）
 
   // 快捷指令（点一下填进输入框，可再编辑）
   const PRESETS = [
@@ -71,12 +80,14 @@
   // ---------- 配置读写（popup 里改了会经 storage.onChanged 同步过来）----------
   async function loadCfg() {
     try {
-      const saved = await chrome.storage.local.get(['backend', 'model_claude', 'model_codex', 'effort', 'width', 'mode', 'layout', 'modelList']);
-      const { modelList: m, ...rest } = saved;
+      const saved = await chrome.storage.local.get(['backend', 'model_claude', 'model_codex', 'effort', 'width', 'mode', 'layout', 'modelList', I18N.STORAGE_KEY]);
+      const { modelList: m, [I18N.STORAGE_KEY]: lang, ...rest } = saved;
+      if (lang) I18N.setLanguage(lang);
       Object.assign(state.cfg, Object.fromEntries(Object.entries(rest).filter(([, v]) => v != null)));
       // 上次 🔄 探测到的最新模型列表（没探测过就用代码里的兜底列表）
       if (m && Array.isArray(m.claude) && m.claude.length) MODELS.claude = m.claude;
       if (m && Array.isArray(m.codex) && m.codex.length) MODELS.codex = m.codex;
+      if (m && m.efforts && typeof m.efforts === 'object') modelEfforts = { codex: {}, ...m.efforts };
     } catch {}
   }
   function saveCfg() {
@@ -92,7 +103,9 @@
           dirty = true;
         }
       }
-      if (dirty && els.backend) { els.backend.value = state.cfg.backend; fillModelOptions(); els.effort.value = state.cfg.effort; }
+      if (dirty && els.backend) { els.backend.value = state.cfg.backend; fillModelOptions(); }
+      const lang = changes[I18N.STORAGE_KEY]?.newValue;
+      if (lang && lang !== I18N.language && els.panel) { I18N.setLanguage(lang); applyLanguage(); }
     });
   } catch {}
 
@@ -104,17 +117,17 @@
     const d = e.data;
     if (!d || d.ns !== NS || d.dir !== 'resp') return;
     const w = pendingRpc.get(d.id);
-    if (w) { pendingRpc.delete(d.id); clearTimeout(w.timer); w.resolve(d.resp || { ok: false, error: '空响应' }); }
+    if (w) { pendingRpc.delete(d.id); clearTimeout(w.timer); w.resolve(d.resp || { ok: false, error: t('空响应') }); }
   });
   function bridge(op, args = {}, timeoutMs = 5000) {
     return new Promise((resolve) => {
       const id = ++rpcSeq;
       const timer = setTimeout(() => {
         pendingRpc.delete(id);
-        resolve({ ok: false, error: '编辑器桥未响应（页面可能还没加载完，稍等或刷新）' });
+        resolve({ ok: false, error: t('编辑器桥未响应（页面可能还没加载完，稍等或刷新）') });
       }, timeoutMs);
       pendingRpc.set(id, { resolve, timer });
-      window.postMessage({ ns: NS, dir: 'req', id, op, args }, '*');
+      window.postMessage({ ns: NS, dir: 'req', id, op, args: { ...args, lang: I18N.language } }, '*');
     });
   }
 
@@ -122,7 +135,7 @@
   function trimMsgs(msgs) {
     return msgs.slice(-40).map((m) => ({
       role: m.role,
-      content: m.content.length > 20000 ? m.content.slice(0, 20000) + '…（存档截断）' : m.content,
+      content: m.content.length > 20000 ? m.content.slice(0, 20000) + t('…（存档截断）') : m.content,
       via: m.via,
     }));
   }
@@ -167,11 +180,11 @@
   }
   function sessionMarkdown(messages) {
     const fname = state.target?.fileName || '';
-    const title = (document.title || '').split(' - Overleaf')[0] || 'Overleaf 项目';
-    const lines = [`# ${title}${fname ? ` · ${fname}` : ''}`, '', `> 导出自 LLM_in_Overleaf · ${new Date().toLocaleString()}`, ''];
+    const title = (document.title || '').split(' - Overleaf')[0] || t('Overleaf 项目');
+    const lines = [`# ${title}${fname ? ` · ${fname}` : ''}`, '', t('> 导出自 LLM_in_Overleaf · {0}', new Date().toLocaleString()), ''];
     for (const m of messages) {
-      if (m.role === 'user') lines.push(`## 🙋 用户`, '', m.content, '');
-      else lines.push(`## 🤖 助手${m.via ? `（${[m.via.backend, m.via.model, 'effort ' + m.via.effort].filter(Boolean).join(' · ')}）` : ''}`, '', m.content, '');
+      if (m.role === 'user') lines.push(t('## 🙋 用户'), '', m.content, '');
+      else lines.push(t('## 🤖 助手{0}', m.via ? t('（{0}）', [m.via.backend, m.via.model, 'effort ' + m.via.effort].filter(Boolean).join(' · ')) : ''), '', m.content, '');
     }
     return lines.join('\n');
   }
@@ -185,7 +198,7 @@
   async function ensureZip(force) {
     if (state.zipEntries && !force) return;
     const res = await fetch(`/project/${PID}/download/zip`, { credentials: 'include' });
-    if (!res.ok) throw new Error(`下载项目源码失败 HTTP ${res.status}`);
+    if (!res.ok) throw new Error(t('下载项目源码失败 HTTP {0}', res.status));
     const buf = await res.arrayBuffer();
     state.zipBuf = buf;
     state.zipEntries = parseZipEntries(buf);
@@ -195,7 +208,7 @@
     let i = buf.byteLength - 22; // EOCD 最小 22 字节，从尾部往前找签名
     const lo = Math.max(0, buf.byteLength - 22 - 65536);
     while (i >= lo && dv.getUint32(i, true) !== 0x06054b50) i--;
-    if (i < lo) throw new Error('不是有效的 zip');
+    if (i < lo) throw new Error(t('不是有效的 zip'));
     const count = dv.getUint16(i + 10, true);
     let off = dv.getUint32(i + 16, true);
     const entries = [];
@@ -217,7 +230,7 @@
   }
   async function extractZipEntry(buf, e) {
     const dv = new DataView(buf);
-    if (dv.getUint32(e.lho, true) !== 0x04034b50) throw new Error('zip 条目损坏');
+    if (dv.getUint32(e.lho, true) !== 0x04034b50) throw new Error(t('zip 条目损坏'));
     const nlen = dv.getUint16(e.lho + 26, true);
     const elen = dv.getUint16(e.lho + 28, true);
     const start = e.lho + 30 + nlen + elen;
@@ -227,7 +240,7 @@
       const stream = new Blob([comp]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
       return new Uint8Array(await new Response(stream).arrayBuffer());
     }
-    throw new Error('不支持的 zip 压缩方式 ' + e.method);
+    throw new Error(t('不支持的 zip 压缩方式 {0}', e.method));
   }
 
   // ---------- 附件管理 ----------
@@ -254,9 +267,9 @@
     return state.attachments.filter((a) => a.kind === 'binary').reduce((s, a) => s + a.size, 0);
   }
   function canAddFile(size, isBin) {
-    if (state.attachments.length >= MAX_FILES) return `附件最多 ${MAX_FILES} 个`;
-    if (isBin && size > BIN_CAP) return `单个图片/PDF 最大 ${fmtSize(BIN_CAP)}`;
-    if (isBin && totalBinBytes() + size > TOTAL_BIN_CAP) return `图片/PDF 合计超过 ${fmtSize(TOTAL_BIN_CAP)}`;
+    if (state.attachments.length >= MAX_FILES) return t('附件最多 {0} 个', MAX_FILES);
+    if (isBin && size > BIN_CAP) return t('单个图片/PDF 最大 {0}', fmtSize(BIN_CAP));
+    if (isBin && totalBinBytes() + size > TOTAL_BIN_CAP) return t('图片/PDF 合计超过 {0}', fmtSize(TOTAL_BIN_CAP));
     return null;
   }
   function pushAttachment(a) {
@@ -274,10 +287,11 @@
     for (const a of state.attachments) {
       const chip = document.createElement('span');
       chip.className = 'ole-att-chip';
-      chip.innerHTML = `${attIcon(a)} ${escapeHtml(a.name)} · ${fmtSize(a.size)}${a.truncated ? '（截断）' : ''} `;
+      chip.innerHTML = `${attIcon(a)} ${escapeHtml(a.name)} · ${fmtSize(a.size)}${a.truncated ? escapeHtml(t('（截断）')) : ''} `;
       const x = document.createElement('button');
       x.textContent = '✕';
-      x.title = '移除';
+      x.title = t('移除');
+      x.setAttribute('aria-label', `${t('移除')} ${a.name}`);
       x.addEventListener('click', () => removeAttachment(a.id));
       chip.appendChild(x);
       wrap.appendChild(chip);
@@ -291,7 +305,7 @@
     const ext = extOf(entry.name);
     const isText = TEXT_EXTS.includes(ext);
     const isBin = !!BIN_EXTS[ext];
-    if (!isText && !isBin) { noteAttErr(`暂不支持 .${ext} 文件`); return false; }
+    if (!isText && !isBin) { noteAttErr(t('暂不支持 .{0} 文件', ext)); return false; }
     if (state.attachments.some((a) => a.source === 'project' && a.name === entry.name)) return true; // 已添加
     const err = canAddFile(entry.usize, isBin);
     if (err) { noteAttErr(err); return false; }
@@ -300,14 +314,14 @@
       if (isText) {
         let text = new TextDecoder().decode(bytes);
         const truncated = text.length > TEXT_CAP;
-        if (truncated) text = text.slice(0, TEXT_CAP) + '\n…（过长已截断）';
+        if (truncated) text = text.slice(0, TEXT_CAP) + t('\n…（过长已截断）');
         pushAttachment({ source: 'project', name: entry.name, kind: 'text', mime: 'text/plain', text, size: entry.usize, truncated });
       } else {
         pushAttachment({ source: 'project', name: entry.name, kind: 'binary', mime: BIN_EXTS[ext], b64: u8ToB64(bytes), size: bytes.length });
       }
       return true;
     } catch (e) {
-      noteAttErr(`读取 ${entry.name} 失败：${e.message}`);
+      noteAttErr(t('读取 {0} 失败：{1}', entry.name, e.message));
       return false;
     }
   }
@@ -317,26 +331,26 @@
       const ext = extOf(f.name);
       const isText = TEXT_EXTS.includes(ext);
       const isBin = !!BIN_EXTS[ext];
-      if (!isText && !isBin) { noteAttErr(`暂不支持 ${f.name}（只收 ${TEXT_EXTS.join('/')}/pdf/图片）`); continue; }
+      if (!isText && !isBin) { noteAttErr(t('暂不支持 {0}（只收 {1}/pdf/图片）', f.name, TEXT_EXTS.join('/'))); continue; }
       const err = canAddFile(f.size, isBin);
       if (err) { noteAttErr(err); continue; }
       try {
         if (isText) {
           let text = await f.text();
           const truncated = text.length > TEXT_CAP;
-          if (truncated) text = text.slice(0, TEXT_CAP) + '\n…（过长已截断）';
+          if (truncated) text = text.slice(0, TEXT_CAP) + t('\n…（过长已截断）');
           pushAttachment({ source: 'local', name: f.name, kind: 'text', mime: 'text/plain', text, size: f.size, truncated });
         } else {
           const b64 = await new Promise((resolve, reject) => {
             const r = new FileReader();
             r.onload = () => resolve(String(r.result).split(',')[1] || '');
-            r.onerror = () => reject(new Error('读取失败'));
+            r.onerror = () => reject(new Error(t('读取失败')));
             r.readAsDataURL(f);
           });
           pushAttachment({ source: 'local', name: f.name, kind: 'binary', mime: BIN_EXTS[ext] || f.type, b64, size: f.size });
         }
       } catch (e) {
-        noteAttErr(`读取 ${f.name} 失败：${e.message}`);
+        noteAttErr(t('读取 {0} 失败：{1}', f.name, e.message));
       }
     }
   }
@@ -344,12 +358,12 @@
   // ---------- 📁 项目文件选择浮层 ----------
   async function openProjView() {
     els.projView.classList.remove('hidden');
-    els.projList.innerHTML = '<div class="ole-hist-empty">📦 正在打包下载项目源码…（首次稍慢，之后走缓存）</div>';
+    els.projList.innerHTML = `<div class="ole-hist-empty">${escapeHtml(t('📦 正在打包下载项目源码…（首次稍慢，之后走缓存）'))}</div>`;
     try {
       await ensureZip(false);
       await renderProjList();
     } catch (e) {
-      els.projList.innerHTML = `<div class="ole-hist-empty">⚠️ ${escapeHtml(e.message || '拉取失败')}</div>`;
+      els.projList.innerHTML = `<div class="ole-hist-empty">⚠️ ${escapeHtml(e.message || t('拉取失败'))}</div>`;
     }
   }
   async function renderProjList() {
@@ -367,7 +381,7 @@
     const wrap = els.projList;
     wrap.innerHTML = '';
     if (!entries.length) {
-      wrap.innerHTML = '<div class="ole-hist-empty">项目里没有文件？</div>';
+      wrap.innerHTML = `<div class="ole-hist-empty">${escapeHtml(t('项目里没有文件？'))}</div>`;
       return;
     }
     for (const e of entries) {
@@ -381,16 +395,16 @@
       const btn = document.createElement('button');
       btn.className = 'ole-hbtn';
       const added = state.attachments.some((a) => a.source === 'project' && a.name === e.name);
-      if (isCur) { btn.textContent = '当前文件'; btn.disabled = true; btn.title = '正在编辑的文件已自动作为全文上下文'; }
-      else if (!supported) { btn.textContent = '不支持'; btn.disabled = true; }
-      else if (added) { btn.textContent = '✓ 已添加'; btn.disabled = true; }
+      if (isCur) { btn.textContent = t('当前文件'); btn.disabled = true; btn.title = t('正在编辑的文件已自动作为全文上下文'); }
+      else if (!supported) { btn.textContent = t('不支持'); btn.disabled = true; }
+      else if (added) { btn.textContent = t('✓ 已添加'); btn.disabled = true; }
       else {
-        btn.textContent = '＋ 添加';
+        btn.textContent = t('＋ 添加');
         btn.addEventListener('click', async () => {
           btn.disabled = true;
-          btn.textContent = '读取中…';
+          btn.textContent = t('读取中…');
           const ok = await addProjectEntry(e);
-          btn.textContent = ok ? '✓ 已添加' : '＋ 添加';
+          btn.textContent = ok ? t('✓ 已添加') : t('＋ 添加');
           btn.disabled = ok;
         });
       }
@@ -418,7 +432,7 @@
     }
     if (btn) {
       const old = btn.textContent;
-      btn.textContent = ok ? '✓ 已复制' : '✗ 失败';
+      btn.textContent = ok ? t('✓ 已复制') : t('✗ 失败');
       setTimeout(() => { btn.textContent = old; }, 1500);
     }
     return ok;
@@ -573,6 +587,7 @@
     launcher: $('#ole-launcher'),
     panel: $('#ole-panel'),
     settingsBtn: $('#ole-settings-toggle'),
+    language: $('#ole-language'),
     settings: $('#ole-settings'),
     readingBtn: $('#ole-reading'),
     readingStop: $('#ole-reading-stop'),
@@ -633,10 +648,7 @@
     reading = value;
     showSettings(false);
     els.panel.classList.toggle('reading', value);
-    els.readingBtn.textContent = value ? '返回' : '阅读';
-    els.readingBtn.title = value ? '退出最大化阅读（Esc）' : '最大化阅读：展开输出区域';
-    els.readingBtn.setAttribute('aria-label', els.readingBtn.title);
-    els.readingBtn.setAttribute('aria-pressed', String(value));
+    updateReadingBtn();
     // 改布局只调整可见空间，不跳回正在阅读的回复底部。
     requestAnimationFrame(() => {
       els.messages.scrollTop = followOutput ? els.messages.scrollHeight : scrollTop;
@@ -644,6 +656,12 @@
     });
     if (value) els.messages.focus({ preventScroll: true });
     else els.input.focus({ preventScroll: true });
+  }
+  function updateReadingBtn() {
+    els.readingBtn.textContent = reading ? t('返回') : t('阅读');
+    els.readingBtn.title = reading ? t('退出最大化阅读（Esc）') : t('最大化阅读：展开输出区域');
+    els.readingBtn.setAttribute('aria-label', els.readingBtn.title);
+    els.readingBtn.setAttribute('aria-pressed', String(reading));
   }
   function openPanel() {
     panelOpen = true;
@@ -692,8 +710,9 @@
     const push = state.cfg.layout !== 'overlay';
     els.layoutBtn.textContent = push ? '📌' : '🪟';
     els.layoutBtn.title = push
-      ? '当前：推挤页面（Overleaf 整体变窄，不遮挡）。点击切换为悬浮覆盖'
-      : '当前：悬浮覆盖（会盖住 PDF 侧）。点击切换为推挤页面';
+      ? t('当前：推挤页面（Overleaf 整体变窄，不遮挡）。点击切换为悬浮覆盖')
+      : t('当前：悬浮覆盖（会盖住 PDF 侧）。点击切换为推挤页面');
+    els.layoutBtn.setAttribute('aria-label', els.layoutBtn.title);
   }
 
   // ---------- 状态检查（编辑器桥 + 本机桥）----------
@@ -701,31 +720,31 @@
   async function refreshStatus() {
     const seq = ++statusSeq;
     const backend = state.cfg.backend;
-    els.statusText.textContent = `正在检查 ${backend === 'codex' ? 'Codex' : 'Claude'}…`;
+    els.statusText.textContent = t('正在检查 {0}…', backend === 'codex' ? 'Codex' : 'Claude');
     const st = await bridge('status', {}, 2500);
     state.editorOk = !!(st.ok && st.ready);
     let nativeMsg = '';
     try {
-      const h = await chrome.runtime.sendMessage({ type: 'health', backend });
+      const h = await chrome.runtime.sendMessage({ type: 'health', backend, lang: I18N.language });
       if (seq !== statusSeq) return;
       state.nativeOk = !!(h && h.ok);
-      if (!state.nativeOk) nativeMsg = (h && h.error) || '本机桥未安装';
+      if (!state.nativeOk) nativeMsg = known(h && h.error) || t('本机桥未安装');
     } catch {
       state.nativeOk = false;
-      nativeMsg = '无法连接扩展后台，刷新页面试试';
+      nativeMsg = t('无法连接扩展后台，刷新页面试试');
     }
     if (seq !== statusSeq) return;
     const okAll = state.editorOk && state.nativeOk;
     els.statusDot.className = 'ole-dot ' + (okAll ? 'ok' : 'bad');
     els.statusText.textContent = okAll
-      ? `编辑器已连接 · ${backend === 'codex' ? 'Codex' : 'Claude'} 就绪`
+      ? t('编辑器已连接 · {0} 就绪', backend === 'codex' ? 'Codex' : 'Claude')
       : !state.editorOk
-        ? '未连接源码编辑器'
-        : `${backend === 'codex' ? 'Codex' : 'Claude'} 需要检查`;
+        ? t('未连接源码编辑器')
+        : t('{0} 需要检查', backend === 'codex' ? 'Codex' : 'Claude');
     els.statusDot.title = els.statusText.textContent;
     els.statusDot.setAttribute('aria-label', els.statusText.textContent);
     if (!state.editorOk || (!state.nativeOk && nativeMsg)) {
-      els.banner.textContent = !state.editorOk ? (st.error || '请打开 .tex 文件，切换到 Code Editor（源码编辑）后重试。') : nativeMsg;
+      els.banner.textContent = !state.editorOk ? (st.error || t('请打开 .tex 文件，切换到 Code Editor（源码编辑）后重试。')) : nativeMsg;
       els.banner.classList.remove('hidden');
     } else {
       els.banner.classList.add('hidden');
@@ -747,51 +766,56 @@
     if (!ctx.ok) return ctx;
     // 单段兼容旧桥响应；多段必须有逐段校准结果。
     if (!ctx.ranges && t.ranges.length === 1) ctx.ranges = [{ ...t.ranges[0], from: ctx.from, to: ctx.to, line1: ctx.line1, line2: ctx.line2 }];
-    if (!ctx.ranges || ctx.ranges.length !== t.ranges.length) return { ok: false, error: '选段校准失败，请重新加载扩展并刷新页面。' };
+    if (!ctx.ranges || ctx.ranges.length !== t.ranges.length) return { ok: false, error: I18N.t('选段校准失败，请重新加载扩展并刷新页面。') };
     Object.assign(t, makeTarget(ctx.ranges, t.fileName || ctx.fileName, ctx.docChars));
     return ctx;
   }
   async function revealRange(r) {
     if (targetBusy() || !state.target) return;
     const res = await bridge('reveal', { from: r.from, to: r.to, oldText: r.text, fileName: state.target.fileName }, 4000);
-    if (!res.ok) addNote('⚠️ ' + escapeHtml(res.error || '定位失败'));
+    if (!res.ok) addNote('⚠️ ' + escapeHtml(res.error || t('定位失败')));
     else showSettings(false);
+  }
+  // 行号标签：第 3 行 / 第 3–5 行（英文界面为 line 3 / lines 3–5）
+  function linesLabel(line1, line2) {
+    return line2 && line2 !== line1 ? I18N.t('第 {0}–{1} 行', line1, line2) : I18N.t('第 {0} 行', line1);
   }
   function renderTargetBar() {
     const t = state.target;
+    const tr = I18N.t;
     const count = t?.ranges.length || 0;
     els.contextSummary.textContent = t
-      ? `${t.fileName || '当前文件'} · ${count > 1 ? count + ' 段' : `${t.line1}${t.line2 !== t.line1 ? '–' + t.line2 : ''} 行`}`
-      : state.cfg.mode === 'ask' ? '全文上下文' : '未选择段落';
-    els.contextSummary.title = t ? `查看 ${count} 段 · ${t.text.length} 字符；可逐段移除` : '查看上下文与选段设置';
+      ? `${t.fileName || tr('当前文件')} · ${count > 1 ? tr('{0} 段', count) : linesLabel(t.line1, t.line2)}`
+      : state.cfg.mode === 'ask' ? tr('全文上下文') : tr('未选择段落');
+    els.contextSummary.title = t ? tr('查看 {0} 段 · {1} 字符；可逐段移除', count, t.text.length) : tr('查看上下文与选段设置');
     els.contextSummary.setAttribute('aria-label', els.contextSummary.title);
     els.selectionHint.classList.remove('error');
     els.targetList.replaceChildren();
     els.targetPrev.classList.toggle('hidden', count > 1);
     els.targetReveal.classList.toggle('hidden', count > 1);
-    els.floatBtn.textContent = t ? '＋ 加入选段' : '✦ 改这段';
+    els.floatBtn.textContent = t ? tr('＋ 加入选段') : tr('✦ 改这段');
     if (!t) {
-      els.targetInfo.innerHTML = '<span class="ole-muted">选中一段源码后点「添加选段」；可继续选择其他位置并累积添加。</span>';
+      els.targetInfo.innerHTML = `<span class="ole-muted">${escapeHtml(tr('选中一段源码后点「添加选段」；可继续选择其他位置并累积添加。'))}</span>`;
       els.targetPrev.textContent = '';
-      els.selectionHint.textContent = '支持逐段添加，也支持编辑器已有的多个不连续选区。';
+      els.selectionHint.textContent = tr('支持逐段添加，也支持编辑器已有的多个不连续选区。');
       els.targetBar.classList.add('empty');
       return;
     }
     els.targetBar.classList.remove('empty');
-    const warn = t.text.length > SOFT_SEL_LIMIT ? ' · <b class="ole-warn">选段较多，建议分批</b>' : '';
+    const warn = t.text.length > SOFT_SEL_LIMIT ? tr(' · <b class="ole-warn">选段较多，建议分批</b>') : '';
     const cacheOn = state.cliSession[state.cfg.backend];
-    const ctxInfo = cacheOn ? ' · ♻️已缓存全文' : ' · 附全文上下文';
-    els.targetInfo.innerHTML = `🎯 ${escapeHtml(t.fileName || '当前文件')} · ${count} 段 · ${t.ranges.reduce((n, r) => n + r.text.length, 0)} 字符${ctxInfo}${warn}`;
+    const ctxInfo = cacheOn ? tr(' · ♻️已缓存全文') : tr(' · 附全文上下文');
+    els.targetInfo.innerHTML = tr('🎯 {0} · {1} 段 · {2} 字符{3}{4}', escapeHtml(t.fileName || tr('当前文件')), count, t.ranges.reduce((n, r) => n + r.text.length, 0), ctxInfo, warn);
     const preview = t.ranges[0].text.replace(/\s+/g, ' ').trim();
     els.targetPrev.textContent = preview.length > 150 ? preview.slice(0, 150) + '…' : preview;
     for (const [i, r] of t.ranges.entries()) {
       const row = document.createElement('div');
       row.className = 'ole-selected-range';
       const caption = document.createElement('span');
-      caption.textContent = `${i + 1}. 第 ${r.line1}${r.line2 !== r.line1 ? '–' + r.line2 : ''} 行 · ${r.text.length} 字符`;
+      caption.textContent = tr('{0}. {1} · {2} 字符', i + 1, linesLabel(r.line1, r.line2), r.text.length);
       caption.title = r.text.slice(0, 500);
-      const reveal = mkBtn('定位', () => revealRange(r));
-      const remove = mkBtn('移除', () => {
+      const reveal = mkBtn(tr('定位'), () => revealRange(r));
+      const remove = mkBtn(tr('移除'), () => {
         if (targetBusy() || state.target !== t) return;
         const rest = t.ranges.filter((x) => x.id !== r.id);
         state.target = rest.length ? makeTarget(rest, t.fileName, t.docChars) : null;
@@ -799,7 +823,7 @@
       });
       reveal.classList.add('ole-range-reveal');
       remove.classList.add('ole-range-remove');
-      remove.setAttribute('aria-label', `移除选段 ${i + 1}`);
+      remove.setAttribute('aria-label', tr('移除选段 {0}', i + 1));
       reveal.disabled = remove.disabled = targetBusy();
       row.append(caption, reveal, remove);
       els.targetList.appendChild(row);
@@ -829,20 +853,24 @@
     els.messages.appendChild(d);
     if (state.followOutput) els.messages.scrollTop = els.messages.scrollHeight;
   }
+  function typingHtml() {
+    return `<span class="ole-typing">${escapeHtml(t('思考中'))}<span>.</span><span>.</span><span>.</span></span>`;
+  }
   function footHtml(via) {
     if (!via) return '';
-    return `<div class="ole-foot">${escapeHtml([via.backend, via.model, 'effort ' + via.effort, via.resumed ? '♻️缓存续写' : ''].filter(Boolean).join(' · '))}</div>`;
+    return `<div class="ole-foot">${escapeHtml([via.backend, via.model, 'effort ' + via.effort, via.resumed ? t('♻️缓存续写') : ''].filter(Boolean).join(' · '))}</div>`;
   }
 
   function renderWelcome() {
     const welcome = document.createElement('div');
     welcome.className = 'ole-welcome';
+    const e = (key) => escapeHtml(t(key));
     welcome.innerHTML = `<div class="ole-welcome-mark">✦</div><div class="ole-eyebrow">YOUR WRITING COMPANION</div>
-      <h2>让想法，表达得更好。</h2><p>专注论文，让助手处理措辞、语法与 LaTeX。</p>
-      <div class="ole-steps"><div><b>01</b><span>选中段落<small>在 Code Editor 中选择源码，点击「✦ 改这段」或上方「添加选段」</small></span></div>
-      <div><b>02</b><span>告诉我怎么改<small>输入要求，或选择下方快捷指令</small></span></div>
-      <div><b>03</b><span>比较，再应用<small>查看修改差异，确认后写回 · ⌘Z 可撤销</small></span></div></div>
-      <div class="ole-welcome-tip">也可以切换「问答」，一起梳理论文思路。</div>`;
+      <h2>${e('让想法，表达得更好。')}</h2><p>${e('专注论文，让助手处理措辞、语法与 LaTeX。')}</p>
+      <div class="ole-steps"><div><b>01</b><span>${e('选中段落')}<small>${e('在 Code Editor 中选择源码，点击「✦ 改这段」或上方「添加选段」')}</small></span></div>
+      <div><b>02</b><span>${e('告诉我怎么改')}<small>${e('输入要求，或选择下方快捷指令')}</small></span></div>
+      <div><b>03</b><span>${e('比较，再应用')}<small>${e('查看修改差异，确认后写回 · ⌘Z 可撤销')}</small></span></div></div>
+      <div class="ole-welcome-tip">${e('也可以切换「问答」，一起梳理论文思路。')}</div>`;
     els.messages.appendChild(welcome);
   }
 
@@ -854,20 +882,20 @@
     const parts = t.ranges.map((r, i) => {
       const replacement = replacements.find((e) => e.id === r.id).text;
       const diff = diffHtml(r.text, replacement);
-      const heading = t.ranges.length > 1 ? `<span class="ole-edit-heading">选段 ${i + 1} · 第 ${r.line1}${r.line2 !== r.line1 ? '–' + r.line2 : ''} 行</span>` : '';
-      return { text: replacement, diff: `<div class="ole-edit-part">${heading}${diff ?? '<i class="ole-muted">内容较大，请切到新文本查看</i>'}</div>`, next: `<div class="ole-edit-part">${heading}${escapeHtml(replacement)}</div>` };
+      const heading = t.ranges.length > 1 ? `<span class="ole-edit-heading">${escapeHtml(I18N.t('选段 {0} · {1}', i + 1, linesLabel(r.line1, r.line2)))}</span>` : '';
+      return { text: replacement, diff: `<div class="ole-edit-part">${heading}${diff ?? `<i class="ole-muted">${escapeHtml(I18N.t('内容较大，请切到新文本查看'))}</i>`}</div>`, next: `<div class="ole-edit-part">${heading}${escapeHtml(replacement)}</div>` };
     });
     card.innerHTML =
       `<div class="ole-card-head">` +
-      `<span class="ole-card-title">替换预览${parts.length > 1 ? ` · ${parts.length} 段` : ''}</span>` +
-      `<span class="ole-tabs"><button class="ole-tab active" data-tab="diff">对比</button><button class="ole-tab" data-tab="new">新文本</button></span>` +
+      `<span class="ole-card-title">${escapeHtml(parts.length > 1 ? I18N.t('替换预览 · {0} 段', parts.length) : I18N.t('替换预览'))}</span>` +
+      `<span class="ole-tabs"><button class="ole-tab active" data-tab="diff">${escapeHtml(I18N.t('对比'))}</button><button class="ole-tab" data-tab="new">${escapeHtml(I18N.t('新文本'))}</button></span>` +
       `</div>` +
       `<div class="ole-card-body ole-diffview">${parts.map((p) => p.diff).join('')}</div>` +
       `<div class="ole-card-body ole-newview hidden">${parts.map((p) => p.next).join('')}</div>` +
       `<div class="ole-card-actions">` +
-      `<button class="ole-btn ole-apply">✅ ${parts.length > 1 ? '应用全部选段' : '应用替换'}</button>` +
-      `<button class="ole-btn ole-copy">📋 复制</button>` +
-      `<button class="ole-btn ole-retry" title="用同样的指令重新生成">🔁 重试</button>` +
+      `<button class="ole-btn ole-apply">✅ ${escapeHtml(parts.length > 1 ? I18N.t('应用全部选段') : I18N.t('应用替换'))}</button>` +
+      `<button class="ole-btn ole-copy">${escapeHtml(I18N.t('📋 复制'))}</button>` +
+      `<button class="ole-btn ole-retry" title="${escapeHtml(I18N.t('用同样的指令重新生成'))}">${escapeHtml(I18N.t('🔁 重试'))}</button>` +
       `<span class="ole-card-status"></span>` +
       `</div>`;
     bubble.appendChild(card);
@@ -889,16 +917,16 @@
     applyBtn.addEventListener('click', async () => {
       if (state.streaming || state.preparing || state.applying || state.capturing) return;
       const tgt = state.target;
-      if (!tgt) { statusEl.textContent = '目标已清除，请重新选中'; return; }
-      if (tgt !== t) { statusEl.textContent = '选区已切换。这张预览属于之前的段落，请为当前选区重新生成。'; return; }
+      if (!tgt) { statusEl.textContent = I18N.t('目标已清除，请重新选中'); return; }
+      if (tgt !== t) { statusEl.textContent = I18N.t('选区已切换。这张预览属于之前的段落，请为当前选区重新生成。'); return; }
       state.applying = true;
       try {
       applyBtn.disabled = true;
-      statusEl.textContent = '应用中…';
+      statusEl.textContent = I18N.t('应用中…');
       // 防呆：当前打开的文件和选中时不一样就先别写
       const st = await bridge('status', {}, 2500);
       if (st.ok && st.fileName && tgt.fileName && st.fileName !== tgt.fileName) {
-        statusEl.textContent = `⚠️ 当前打开的是 ${st.fileName}，请切回 ${tgt.fileName} 再应用`;
+        statusEl.textContent = I18N.t('⚠️ 当前打开的是 {0}，请切回 {1} 再应用', st.fileName, tgt.fileName);
         applyBtn.disabled = false;
         return;
       }
@@ -906,9 +934,9 @@
       if (r.ok) {
         // 应用成功即完成该目标：自动移除，下一处改动让用户重新选中（与 word_edit 行为一致）
         if (state.target === tgt) { state.target = null; renderTargetBar(); }
-        statusEl.textContent = '✅ 已应用（Cmd+Z 可撤销）· 该目标已完成移除，要改下一处请重新选中';
+        statusEl.textContent = I18N.t('✅ 已应用（Cmd+Z 可撤销）· 该目标已完成移除，要改下一处请重新选中');
       } else {
-        statusEl.textContent = '⚠️ ' + (r.error || '应用失败');
+        statusEl.textContent = '⚠️ ' + (r.error || I18N.t('应用失败'));
         applyBtn.disabled = false;
       }
       } finally { state.applying = false; }
@@ -942,7 +970,7 @@
     catch (e) {
       if (state.stopCurrent) state.stopCurrent();
       setStreaming(false);
-      addNote('发送失败：' + escapeHtml(String(e?.message || e)));
+      addNote(escapeHtml(t('发送失败：')) + escapeHtml(String(e?.message || e)));
       if (!els.input.value) els.input.value = text;
       autoGrow();
     } finally {
@@ -954,7 +982,7 @@
   async function performSend(text, { isRetry = false } = {}) {
     const mode = state.cfg.mode;
     if (mode === 'edit' && !state.target) {
-      addNote('⚠️ 改写模式需要先有目标：在 Code Editor 里选中一段 LaTeX，点「添加选段」或浮标「✦ 改这段」。<br>（只是想提问的话，切上面的「💬 问答」模式）');
+      addNote(t('⚠️ 改写模式需要先有目标：在 Code Editor 里选中一段 LaTeX，点「添加选段」或浮标「✦ 改这段」。<br>（只是想提问的话，切上面的「💬 问答」模式）'));
       return;
     }
 
@@ -963,7 +991,7 @@
     if (state.target) {
       const t = state.target;
       const ctx = await targetContext(t);
-      if (!ctx.ok) { addNote('⚠️ ' + escapeHtml(ctx.error || '拿不到上下文')); return; }
+      if (!ctx.ok) { addNote('⚠️ ' + escapeHtml(ctx.error || I18N.t('拿不到上下文'))); return; }
       renderTargetBar();
       doc = {
         projectName: ctx.projectName, fileName: ctx.fileName, docChars: ctx.docChars,
@@ -1003,7 +1031,7 @@
     state.messages.push({ role: 'user', content: text });
 
     const aBubble = addMessageEl('assistant');
-    aBubble.innerHTML = '<span class="ole-typing">思考中<span>.</span><span>.</span><span>.</span></span>';
+    aBubble.innerHTML = typingHtml();
 
     let raw = '';
     let thinking = '';
@@ -1015,7 +1043,7 @@
       model: state.cfg.backend === 'codex' ? state.cfg.model_codex : state.cfg.model_claude,
       effort: state.cfg.effort,
     };
-    if (via.backend === 'codex' && via.model === '(default)') via.model = 'CLI 配置默认';
+    if (via.backend === 'codex' && via.model === '(default)') via.model = t('CLI 配置默认');
 
     const scheduleRender = (final) => {
       if (rafPending && !final) return;
@@ -1025,12 +1053,12 @@
         rafPending = false;
         let html = '';
         if (thinking.trim()) {
-          html += `<details class="ole-think"><summary>💭 思考过程</summary><div>${escapeHtml(thinking)}</div></details>`;
+          html += `<details class="ole-think"><summary>${escapeHtml(t('💭 思考过程'))}</summary><div>${escapeHtml(thinking)}</div></details>`;
         }
         // 流式途中：未闭合的围栏先补上，防止渲染成一坨
         let show = raw;
         if ((raw.match(/```/g) || []).length % 2 === 1) show = raw + '\n```';
-        html += renderMarkdown(show) || '<span class="ole-typing">思考中<span>.</span><span>.</span><span>.</span></span>';
+        html += renderMarkdown(show) || typingHtml();
         aBubble.innerHTML = html;
         if (state.followOutput) els.messages.scrollTop = els.messages.scrollHeight;
       });
@@ -1041,12 +1069,13 @@
     setStreaming(true);
     // 长时间没输出时显示已等待秒数，免得"思考中…"看起来像卡死
     const startedAt = Date.now();
+    let phase = '';
     const ticker = setInterval(() => {
       if (!state.streaming || raw || thinking.trim()) return;
       const s = Math.round((Date.now() - startedAt) / 1000);
       if (s >= 5) {
-        aBubble.innerHTML = '<span class="ole-typing">思考中<span>.</span><span>.</span><span>.</span></span>' +
-          ` <span style="color:#748078;font-size:11px">${s}s${s >= 30 ? ' · effort 高时要几分钟，可点停止' : ''}</span>`;
+        aBubble.innerHTML = typingHtml() +
+          ` <span style="color:#748078;font-size:11px">${escapeHtml(phase ? phase + ' · ' : '')}${s}s${s >= 30 ? escapeHtml(t(' · effort 高时要几分钟，可点停止')) : ''}</span>`;
       }
     }, 1000);
     const payload = {
@@ -1054,6 +1083,7 @@
       model: state.cfg.backend === 'codex' ? state.cfg.model_codex : state.cfg.model_claude,
       effort: state.cfg.effort,
       mode,
+      uiLanguage: I18N.language,
       doc,
       attachments: binAtts.map((a) => ({ name: a.name, mime: a.mime, b64: a.b64 })),
       cliSession: { ...state.cliSession },
@@ -1070,7 +1100,7 @@
       clearInterval(ticker);
       state.stopCurrent = null;
       setStreaming(false);
-      state.messages.push({ role: 'assistant', content: raw || '（无输出）', via: { ...via } });
+      state.messages.push({ role: 'assistant', content: raw || t('（无输出）'), via: { ...via } });
       // 本轮成功且 CLI 会话在册 → 当前所有附件都已进入该会话的记忆，下轮不必重发
       if (sawDelta && !streamFailed && state.cliSession[sendBackend]) {
         state.sentAtts[sendBackend] = state.attachments.map((a) => a.id);
@@ -1080,13 +1110,13 @@
       // 聊太长提醒（每会话一次）：历史会整段进 prompt，太长又贵又容易带偏
       if (!state.longNoteShown && state.messages.length >= LONG_SESSION_MSGS) {
         state.longNoteShown = true;
-        setTimeout(() => addNote('💡 这个会话有点长了。建议点右上角 <b>🆕</b> 开新会话：旧会话自动归档到 🕘，并<b>重新读取全文上下文</b>，回复会更快更准。'), 400);
+        setTimeout(() => addNote(t('💡 这个会话有点长了。建议点右上角 <b>🆕</b> 开新会话：旧会话自动归档到 🕘，并<b>重新读取全文上下文</b>，回复会更快更准。')), 400);
       }
       // 最终渲染：edit 模式抠围栏 → 说明 + 替换卡片；ask 模式纯 Markdown
       const replacement = mode === 'edit' && !streamFailed ? parseReplacementSet(raw, state.target) : null;
       let html = '';
       if (thinking.trim()) {
-        html += `<details class="ole-think"><summary>💭 思考过程</summary><div>${escapeHtml(thinking)}</div></details>`;
+        html += `<details class="ole-think"><summary>${escapeHtml(t('💭 思考过程'))}</summary><div>${escapeHtml(thinking)}</div></details>`;
       }
       if (replacement != null) {
         const note = replacement.note;
@@ -1094,16 +1124,16 @@
         aBubble.innerHTML = html;
         attachReplacementCard(aBubble, replacement.edits, via);
       } else {
-        html += renderMarkdown(raw) || '<i class="ole-muted">（无输出）</i>';
+        html += renderMarkdown(raw) || `<i class="ole-muted">${escapeHtml(t('（无输出）'))}</i>`;
         if (mode === 'edit' && raw.trim()) {
-          html += `<div class="ole-warnbox">替换稿与当前选段不完整对应，暂时无法应用。请重试，让助手重新生成各段的替换稿。</div>`;
+          html += `<div class="ole-warnbox">${escapeHtml(t('替换稿与当前选段不完整对应，暂时无法应用。请重试，让助手重新生成各段的替换稿。'))}</div>`;
         }
         html += footHtml(via);
         aBubble.innerHTML = html;
         if (mode === 'edit' && raw.trim()) {
           const retryBtn = document.createElement('button');
           retryBtn.className = 'ole-btn';
-          retryBtn.textContent = '🔁 重试';
+          retryBtn.textContent = t('🔁 重试');
           retryBtn.addEventListener('click', () => {
             if (state.streaming) return;
             const lastUser = [...state.messages].reverse().find((m) => m.role === 'user');
@@ -1123,20 +1153,21 @@
       else if (evt.type === 'model') { if (evt.model) via.model = evt.model; }
       else if (evt.type === 'meta') { via.resumed = !!evt.resume; }
       else if (evt.type === 'cli_session') { if (evt.backend) { state.cliSession[evt.backend] = evt.id || null; } }
-      else if (evt.type === 'note') { via.resumed = false; if (evt.text) addNote(escapeHtml(evt.text)); }
-      else if (evt.type === 'error') { streamFailed = true; raw += (raw ? '\n\n' : '') + `⚠️ **出错了**：\n\n${evt.error}`; scheduleRender(); }
-      else if (evt.type === 'aborted') { streamFailed = true; raw += raw ? '\n\n_（已停止）_' : '_（已停止）_'; scheduleRender(); }
-      else if (evt.type === 'done') finishStream();
+      else if (evt.type === 'note') { via.resumed = false; if (evt.text) addNote(escapeHtml(known(evt.text))); }
+      else if (evt.type === 'status') { phase = known(evt.text) || ''; }
+      else if (evt.type === 'error') { streamFailed = true; raw += (raw ? '\n\n' : '') + t('⚠️ **出错了**：\n\n{0}', known(evt.error) + (evt.hint ? '\n\n' + known(evt.hint) : '')); scheduleRender(); }
+      else if (evt.type === 'aborted') { streamFailed = true; raw += raw ? t('\n\n_（已停止）_') : t('_（已停止）_'); scheduleRender(); }
+      else if (evt.type === 'done') { if (evt.ok === false) streamFailed = true; finishStream(); }
     });
     port.onDisconnect.addListener(() => {
-      if (!finished) { streamFailed = true; raw += '\n\n连接中断，请检查本机桥后重试。'; finishStream(); }
+      if (!finished) { streamFailed = true; raw += t('\n\n连接中断，请检查本机桥后重试。'); finishStream(); }
     });
     // Chrome 的坑：自己调 port.disconnect() 只通知对端，自己这端的 onDisconnect 不会触发。
     // 所以把"停止收尾"挂到 state 上，stopStream 手动调——否则点停止后界面永远卡在流式态。
     state.stopCurrent = () => {
       if (finished) return;
       streamFailed = true;
-      raw += raw ? '\n\n_（已停止）_' : '_（已停止）_';
+      raw += raw ? t('\n\n_（已停止）_') : t('_（已停止）_');
       finishStream();
     };
     port.postMessage({ type: 'start', payload });
@@ -1185,17 +1216,17 @@
       if (ctx.ok) {
         state.target = t;
         renderTargetBar();
-        addNote(`🆕 新会话已开启（旧会话在 🕘 里）。已重新读取 <b>${escapeHtml(ctx.fileName || '当前文件')}</b> 全文 ~${Math.round(ctx.docChars / 1000)}k 字符，已校准 ${t.ranges.length} 个选段。`);
+        addNote(I18N.t('🆕 新会话已开启（旧会话在 🕘 里）。已重新读取 <b>{0}</b> 全文 ~{1}k 字符，已校准 {2} 个选段。', escapeHtml(ctx.fileName || I18N.t('当前文件')), Math.round(ctx.docChars / 1000), t.ranges.length));
       } else {
         clearTarget();
-        addNote('🆕 新会话已开启（旧会话在 🕘 里）。原目标片段在文档里找不到了（内容已变化），请重新选中一段。');
+        addNote(I18N.t('🆕 新会话已开启（旧会话在 🕘 里）。原目标片段在文档里找不到了（内容已变化），请重新选中一段。'));
       }
     } else {
       const st = await bridge('status', {}, 2500);
       if (st.ok && st.ready) {
-        addNote(`🆕 新会话已开启（旧会话在 🕘 里）。当前文件 <b>${escapeHtml(st.fileName || '')}</b> ~${Math.round((st.docLen || 0) / 1000)}k 字符，下次提问会重新读取全文。`);
+        addNote(t('🆕 新会话已开启（旧会话在 🕘 里）。当前文件 <b>{0}</b> ~{1}k 字符，下次提问会重新读取全文。', escapeHtml(st.fileName || ''), Math.round((st.docLen || 0) / 1000)));
       } else {
-        addNote('🆕 新会话已开启（旧会话在 🕘 里）。');
+        addNote(t('🆕 新会话已开启（旧会话在 🕘 里）。'));
       }
     }
   }
@@ -1217,11 +1248,11 @@
     cur.className = 'ole-hist-item ole-hist-cur';
     const curMeta = document.createElement('div');
     curMeta.className = 'ole-hist-meta';
-    curMeta.textContent = `当前会话 · ${state.messages.length} 条消息`;
+    curMeta.textContent = t('当前会话 · {0} 条消息', state.messages.length);
     cur.appendChild(curMeta);
     const curBtns = document.createElement('div');
     curBtns.className = 'ole-hist-btns';
-    const curCopy = mkBtn('📋 复制整段', () => copyText(sessionMarkdown(state.messages), curCopy));
+    const curCopy = mkBtn(t('📋 复制整段'), () => copyText(sessionMarkdown(state.messages), curCopy));
     curBtns.appendChild(curCopy);
     cur.appendChild(curBtns);
     wrap.appendChild(cur);
@@ -1229,7 +1260,7 @@
     if (!list.length) {
       const empty = document.createElement('div');
       empty.className = 'ole-hist-empty';
-      empty.textContent = '还没有归档的会话。点 🆕 开新会话时，旧会话会自动归档到这里（每个项目最多留 10 段）。';
+      empty.textContent = t('还没有归档的会话。点 🆕 开新会话时，旧会话会自动归档到这里（每个项目最多留 10 段）。');
       wrap.appendChild(empty);
     }
 
@@ -1238,20 +1269,22 @@
       item.className = 'ole-hist-item';
       const meta = document.createElement('div');
       meta.className = 'ole-hist-meta';
-      meta.textContent = `${fmtTime(s.ts)} · ${s.messages.length} 条消息`;
+      meta.textContent = t('{0} · {1} 条消息', fmtTime(s.ts), s.messages.length);
       const prev = document.createElement('div');
       prev.className = 'ole-hist-prev';
-      prev.textContent = s.preview || '（无预览）';
+      prev.textContent = s.preview || t('（无预览）');
       const btns = document.createElement('div');
       btns.className = 'ole-hist-btns';
-      const openB = mkBtn('打开', () => openSession(i));
-      const copyB = mkBtn('📋 复制整段', () => copyText(sessionMarkdown(s.messages), copyB));
+      const openB = mkBtn(t('打开'), () => openSession(i));
+      const copyB = mkBtn(t('📋 复制整段'), () => copyText(sessionMarkdown(s.messages), copyB));
       const delB = mkBtn('🗑', async () => {
         const l = await getArchive();
         l.splice(i, 1);
         setArchive(l);
         openHistView(); // 重新渲染列表
       });
+      delB.title = t('删除');
+      delB.setAttribute('aria-label', t('删除'));
       btns.append(openB, copyB, delB);
       item.append(meta, prev, btns);
       wrap.appendChild(item);
@@ -1277,7 +1310,7 @@
     renderTargetBar();
     saveHistory();
     els.histView.classList.add('hidden');
-    addNote('🕘 已切回历史会话（它的缓存会话一并恢复：能续写就续写，失效则自动重读全文）。改写前请确认目标条里的目标还是你想改的那段。');
+    addNote(t('🕘 已切回历史会话（它的缓存会话一并恢复：能续写就续写，失效则自动重读全文）。改写前请确认目标条里的目标还是你想改的那段。'));
   }
   // 把已存的会话消息渲染出来（历史里的围栏就按代码块显示，不再挂应用卡片——位置早失效了）
   function renderHistoryMsgs() {
@@ -1328,16 +1361,16 @@
     if (state.streaming || state.preparing || state.applying || state.capturing) return;
     state.capturing = true;
     els.capture.disabled = true;
-    els.capture.textContent = '读取选区…';
+    els.capture.textContent = t('读取选区…');
     els.send.disabled = true;
     hideFloatBtn();
     try {
       const s = await bridge('get_target', {}, 4000);
       if (!s.ok || !s.len) {
         setReading(false);
-        els.selectionHint.textContent = !s.ok ? (s.error || '读取选区失败，请重试。')
-          : allowEmpty ? '在源码编辑器中选中段落后，点击「添加选段」。'
-          : '没有读取到选区。请在左侧 Code Editor 中选择一段或多段源码，再点此按钮；PDF 预览中的选区不能改写。';
+        els.selectionHint.textContent = !s.ok ? (s.error || t('读取选区失败，请重试。'))
+          : allowEmpty ? t('在源码编辑器中选中段落后，点击「添加选段」。')
+          : t('没有读取到选区。请在左侧 Code Editor 中选择一段或多段源码，再点此按钮；PDF 预览中的选区不能改写。');
         els.selectionHint.classList.toggle('error', !s.ok || !allowEmpty);
         openPanel();
         return;
@@ -1348,18 +1381,18 @@
       let merged = { ok: true, ranges: incoming, fileName: s.fileName, docChars: s.docLen || 0 };
       if (state.target) {
         if (state.target.fileName !== (s.fileName || '')) {
-          els.selectionHint.textContent = '请在同一文件中添加选段；要切换文件，请先在设置里清空已有选段。';
+          els.selectionHint.textContent = t('请在同一文件中添加选段；要切换文件，请先在设置里清空已有选段。');
           els.selectionHint.classList.add('error'); openPanel(); return;
         }
         merged = await bridge('merge_targets', { existing: state.target.ranges, incoming, fileName: state.target.fileName }, 4000);
         if (!merged.ok) {
-          els.selectionHint.textContent = merged.error || '添加选段失败';
+          els.selectionHint.textContent = merged.error || t('添加选段失败');
           els.selectionHint.classList.add('error'); openPanel(); return;
         }
       }
       state.target = makeTarget(merged.ranges, merged.fileName || '', merged.docChars);
       renderTargetBar();
-      els.selectionHint.textContent = `已添加 ${state.target.ranges.length} 段。可继续选择其他位置并点击「添加选段」。`;
+      els.selectionHint.textContent = t('已添加 {0} 段。可继续选择其他位置并点击「添加选段」。', state.target.ranges.length);
       await bridge('collapse', { pos: incoming.at(-1).to }, 1500);
       setReading(false);
       if (!panelOpen) openPanel();
@@ -1367,7 +1400,7 @@
     } finally {
       state.capturing = false;
       els.capture.disabled = false;
-      els.capture.textContent = '＋ 添加选段';
+      els.capture.textContent = t('＋ 添加选段');
       els.send.disabled = false;
       els.targetList.querySelectorAll('button').forEach((b) => { b.disabled = targetBusy(); });
     }
@@ -1383,12 +1416,22 @@
   function fillModelOptions() {
     const list = [...(MODELS[state.cfg.backend] || MODELS.claude)];
     const want = state.cfg.backend === 'codex' ? state.cfg.model_codex : state.cfg.model_claude;
-    if (want && !list.some(([v]) => v === want)) list.push([want, want + '（已保存）']);
-    els.model.replaceChildren(...list.map(([v, label]) => new Option(label, v)));
+    if (want && !list.some(([v]) => v === want)) list.push([want, t('{0}（已保存）', want)]);
+    els.model.replaceChildren(...list.map(([v, label]) => new Option(known(label), v)));
     els.model.value = list.some(([v]) => v === want) ? want : list[0][0];
     // 列表刷新后原选择可能已不存在，把实际生效的值写回配置，防止发请求时用到失效模型名
     if (state.cfg.backend === 'codex') state.cfg.model_codex = els.model.value;
     else state.cfg.model_claude = els.model.value;
+    fillEffortOptions();
+  }
+  // Claude 固定五档；Codex 按 model/list 报告的该模型档位（未知时用常见四档）。
+  function fillEffortOptions() {
+    const levels = state.cfg.backend === 'codex'
+      ? (modelEfforts.codex?.[els.model.value] || ['low', 'medium', 'high', 'xhigh'])
+      : EFFORTS;
+    els.effort.replaceChildren(...levels.map((e) => new Option(EFFORT_LABELS[e] ? t(EFFORT_LABELS[e]) : e, e)));
+    if (!levels.includes(state.cfg.effort)) state.cfg.effort = levels.includes('medium') ? 'medium' : levels[0];
+    els.effort.value = state.cfg.effort;
   }
   // 🔄 实测获取最新模型列表（后台转发给本机桥探测，见 server/models.js）
   async function refreshModelList() {
@@ -1398,19 +1441,21 @@
     btn.disabled = true;
     btn.textContent = '⏳';
     try {
-      const r = await chrome.runtime.sendMessage({ type: 'models', backend });
-      if (!r) throw new Error('后台无响应');
+      const r = await chrome.runtime.sendMessage({ type: 'models', backend, force: true, lang: I18N.language });
+      if (!r) throw new Error(t('后台无响应'));
       const got = [];
-      if (Array.isArray(r.claude) && r.claude.length) { MODELS.claude = r.claude; got.push('claude ' + r.claude.length + ' 个'); }
-      if (Array.isArray(r.codex) && r.codex.length) { MODELS.codex = r.codex; got.push('codex ' + r.codex.length + ' 个'); }
-      if (!got.length) throw new Error(r.error || '两个后端都没探测到模型（CLI 没装好或网络不通？）');
-      try { chrome.storage.local.set({ modelList: { claude: MODELS.claude, codex: MODELS.codex, fetchedAt: r.fetchedAt } }); } catch {}
+      if (Array.isArray(r.claude) && r.claude.length) { MODELS.claude = r.claude; got.push('claude ' + t('{0} 个', r.claude.length)); }
+      if (Array.isArray(r.codex) && r.codex.length) { MODELS.codex = r.codex; got.push('codex ' + t('{0} 个', r.codex.length)); }
+      if (r.efforts?.codex && Array.isArray(r.codex) && r.codex.length) modelEfforts = { ...modelEfforts, codex: r.efforts.codex };
+      if (!got.length) throw new Error(known(r.error) || t('两个后端都没探测到模型（CLI 没装好或网络不通？）'));
+      try { chrome.storage.local.set({ modelList: { claude: MODELS.claude, codex: MODELS.codex, efforts: modelEfforts, fetchedAt: r.fetchedAt } }); } catch {}
       fillModelOptions();
       saveCfg();
       const cur = MODELS[state.cfg.backend].find(([v]) => v === els.model.value);
-      addNote(`🔄 模型列表已更新（${got.join('、')}，实测当前可用）。当前选用：${escapeHtml(cur ? cur[1] : els.model.value)}`);
+      addNote(escapeHtml(t('🔄 模型列表已更新（{0}）。当前选用：{1}', got.join(t('、')), known(cur ? cur[1] : els.model.value))));
+      for (const w of (r.warnings || [])) addNote('⚠️ ' + escapeHtml(known(w)));
     } catch (e) {
-      addNote('⚠️ 获取模型列表失败：' + escapeHtml(String(e?.message || e)));
+      addNote(escapeHtml(t('⚠️ 获取模型列表失败：')) + escapeHtml(String(e?.message || e)));
     }
     btn.disabled = false;
     btn.textContent = '↻';
@@ -1420,10 +1465,10 @@
     els.modeEdit.classList.toggle('active', mode === 'edit');
     els.modeAsk.classList.toggle('active', mode === 'ask');
     els.presets.classList.toggle('hidden', mode !== 'edit');
-    els.modeSummary.textContent = mode === 'edit' ? '改写 ▾' : '问答 ▾';
+    els.modeSummary.textContent = mode === 'edit' ? t('改写 ▾') : t('问答 ▾');
     els.input.placeholder = mode === 'edit'
-      ? '输入改写要求…'
-      : '针对选区或全文提问…';
+      ? t('输入改写要求…')
+      : t('针对选区或全文提问…');
     renderTargetBar();
     saveCfg();
   }
@@ -1453,9 +1498,9 @@
     els.attProj.addEventListener('click', openProjView);
     els.projClose.addEventListener('click', () => els.projView.classList.add('hidden'));
     els.projRefresh.addEventListener('click', async () => {
-      els.projList.innerHTML = '<div class="ole-hist-empty">📦 重新打包下载中…</div>';
+      els.projList.innerHTML = `<div class="ole-hist-empty">${escapeHtml(t('📦 重新打包下载中…'))}</div>`;
       try { await ensureZip(true); await renderProjList(); }
-      catch (e) { els.projList.innerHTML = `<div class="ole-hist-empty">⚠️ ${escapeHtml(e.message || '拉取失败')}</div>`; }
+      catch (e) { els.projList.innerHTML = `<div class="ole-hist-empty">⚠️ ${escapeHtml(e.message || t('拉取失败'))}</div>`; }
     });
     els.attLocal.addEventListener('click', () => els.fileInput.click());
     els.fileInput.addEventListener('change', async () => {
@@ -1468,6 +1513,14 @@
     els.targetClear.addEventListener('click', () => { clearTarget(); showSettings(false); });
     els.targetReveal.addEventListener('click', () => { if (state.target) revealRange(state.target.ranges[0]); });
 
+    els.language.value = I18N.language;
+    els.language.addEventListener('change', () => {
+      // 生成中不切换，避免同一条回复里混用两种界面语言。
+      if (state.streaming || state.preparing) { els.language.value = I18N.language; return; }
+      I18N.setLanguage(els.language.value);
+      try { chrome.storage.local.set({ [I18N.STORAGE_KEY]: I18N.language }); } catch {}
+      applyLanguage();
+    });
     els.backend.value = state.cfg.backend;
     els.backend.addEventListener('change', () => {
       state.cfg.backend = els.backend.value;
@@ -1476,23 +1529,23 @@
       refreshStatus();
       saveCfg();
     });
-    els.effort.innerHTML = EFFORTS.map((e) => `<option value="${e}">${EFFORT_LABELS[e]}</option>`).join('');
-    els.effort.value = state.cfg.effort;
+    fillEffortOptions();
     els.effort.addEventListener('change', () => { state.cfg.effort = els.effort.value; saveCfg(); });
     els.modelsRefresh.addEventListener('click', refreshModelList);
     els.model.addEventListener('change', () => {
       if (state.cfg.backend === 'codex') state.cfg.model_codex = els.model.value;
       else state.cfg.model_claude = els.model.value;
+      fillEffortOptions();
       saveCfg();
     });
     els.modeEdit.addEventListener('click', () => { setMode('edit'); showSettings(false); });
     els.modeAsk.addEventListener('click', () => { setMode('ask'); showSettings(false); });
 
     // 快捷指令
-    els.presets.innerHTML = PRESETS.map(([label], i) => `<button class="ole-chip" data-i="${i}">${label}</button>`).join('');
+    renderPresets();
     els.presets.querySelectorAll('.ole-chip').forEach((chip) => {
       chip.addEventListener('click', () => {
-        els.input.value = PRESETS[Number(chip.dataset.i)][1];
+        els.input.value = t(PRESETS[Number(chip.dataset.i)][1]);
         autoGrow();
         els.input.focus();
       });
@@ -1513,7 +1566,6 @@
       else if (reading) setReading(false);
       else closePanel();
     });
-    ui.querySelectorAll('button[title], select[title]').forEach((el) => el.setAttribute('aria-label', el.title));
 
     els.floatBtn.addEventListener('mousedown', (e) => e.preventDefault()); // 别让点击清掉选区
     els.floatBtn.addEventListener('click', () => captureTarget());
@@ -1568,10 +1620,51 @@
     els.input.style.height = Math.min(110, els.input.scrollHeight) + 'px';
   }
 
+  // ---------- 界面语言 ----------
+  function renderPresets() {
+    const chips = els.presets.querySelectorAll('.ole-chip');
+    if (!chips.length) {
+      els.presets.innerHTML = PRESETS.map(([label], i) => `<button class="ole-chip" data-i="${i}">${escapeHtml(t(label))}</button>`).join('');
+      return;
+    }
+    chips.forEach((chip) => { chip.textContent = t(PRESETS[Number(chip.dataset.i)][0]); });
+  }
+  // 模板里的固定文案（data-i18n*），按钮 title 同步到 aria-label 方便读屏。
+  function applyStaticText() {
+    I18N.applyStatic(shadow);
+    shadow.querySelectorAll('button[title], select[title]').forEach((el) => el.setAttribute('aria-label', el.title));
+    host.setAttribute('lang', I18N.language);
+  }
+  // 切换语言：只翻译面板自己的控件；已有对话内容保持原来的语言。
+  function applyLanguage() {
+    applyStaticText();
+    els.language.value = I18N.language;
+    fillModelOptions();
+    renderPresets();
+    setMode(state.cfg.mode === 'ask' ? 'ask' : 'edit');
+    updateLayoutBtn();
+    updateReadingBtn();
+    els.capture.textContent = t('＋ 添加选段');
+    const welcome = els.messages.querySelector('.ole-welcome');
+    if (welcome) { welcome.remove(); renderWelcome(); }
+    shadow.querySelectorAll('.ole-card .ole-tab, .ole-card .ole-btn, .ole-card-title, .ole-card-status, .ole-warnbox, .ole-think summary, .ole-edit-heading, #ole-messages > .ole-msg .ole-bubble > .ole-btn').forEach((el) => {
+      if (el.children.length === 0) {
+        const text = el.textContent, direct = known(text);
+        el.textContent = direct !== text || !text.startsWith('✅ ') ? direct : '✅ ' + known(text.slice(2));
+      }
+      if (el.title) el.title = known(el.title);
+    });
+    if (!els.histView.classList.contains('hidden')) openHistView();
+    if (!els.projView.classList.contains('hidden') && state.zipEntries) renderProjList();
+    renderAttachChips();
+    if (panelOpen) refreshStatus();
+  }
+
   // ---------- 启动 ----------
   const uiReady = (async function init() {
     await loadCfg();
     await loadHistory();
+    applyStaticText();
     fillModelOptions();
     bindEvents();
     setMode(state.cfg.mode === 'ask' ? 'ask' : 'edit');
@@ -1580,7 +1673,7 @@
     renderTargetBar();
     if (state.messages.length) {
       renderHistoryMsgs();
-      addNote('↩️ 已恢复上次会话（刷新过页面，目标需重新选中）。想从头来就点 🆕。');
+      addNote(t('↩️ 已恢复上次会话（刷新过页面，目标需重新选中）。想从头来就点 🆕。'));
     } else {
       renderWelcome();
     }
@@ -1597,37 +1690,37 @@
   // ---------- 模板 ----------
   function PANEL_HTML() {
     return `
-      <button id="ole-launcher" title="打开写作助手（⌘⇧E / Ctrl⇧E）"><span aria-hidden="true">✦</span> 写作助手</button>
-      <div id="ole-panel" role="complementary" aria-label="论文写作助手">
+      <button id="ole-launcher" data-i18n-title="打开写作助手（⌘⇧E / Ctrl⇧E）"><span aria-hidden="true">✦</span> <span data-i18n="写作助手">写作助手</span></button>
+      <div id="ole-panel" role="complementary" data-i18n-aria-label="论文写作助手">
         <div id="ole-resizer"></div>
         <header id="ole-header">
           <div class="ole-head-top">
-            <div class="ole-brand"><span id="ole-status-dot" class="ole-dot" role="img" aria-label="检查连接中"></span><span>LLM_in_Overleaf</span></div>
+            <div class="ole-brand"><span id="ole-status-dot" class="ole-dot" role="img" data-i18n-aria-label="检查连接中"></span><span>LLM_in_Overleaf</span></div>
             <div class="ole-head-btns">
-              <button id="ole-settings-toggle" aria-expanded="false" aria-controls="ole-settings" title="模型、模式与选区设置">设置</button>
-              <button id="ole-reading" aria-pressed="false" title="最大化阅读：展开输出区域">阅读</button>
-              <button id="ole-reading-stop" title="停止生成">停止</button>
-              <button id="ole-new" title="开新会话（旧会话自动归档，并重新读取全文上下文）">＋</button>
-              <button id="ole-hist" title="会话历史">◷</button>
-              <button id="ole-close" title="收起（⌘⇧E）">✕</button>
+              <button id="ole-settings-toggle" aria-expanded="false" aria-controls="ole-settings" data-i18n-title="模型、模式与选区设置" data-i18n="设置">设置</button>
+              <button id="ole-reading" aria-pressed="false" data-i18n-title="最大化阅读：展开输出区域" data-i18n="阅读">阅读</button>
+              <button id="ole-reading-stop" data-i18n-title="停止生成" data-i18n="停止">停止</button>
+              <button id="ole-new" data-i18n-title="开新会话（旧会话自动归档，并重新读取全文上下文）">＋</button>
+              <button id="ole-hist" data-i18n-title="会话历史">◷</button>
+              <button id="ole-close" data-i18n-title="收起（⌘⇧E）">✕</button>
             </div>
           </div>
         </header>
-        <div id="ole-settings" class="hidden" role="region" aria-label="写作设置">
-          <div class="ole-settings-heading"><b>写作设置</b><button id="ole-layout" title="切换面板布局：推挤页面 / 悬浮覆盖">📌</button></div>
-          <div class="ole-statusline" role="status"><span id="ole-status-text">检查中…</span></div>
+        <div id="ole-settings" class="hidden" role="region" data-i18n-aria-label="写作设置">
+          <div class="ole-settings-heading"><b data-i18n="写作设置">写作设置</b><span class="ole-settings-tools"><select id="ole-language" data-i18n-title="界面语言"><option value="en">English</option><option value="zh-CN">中文</option></select><button id="ole-layout" data-i18n-title="切换面板布局：推挤页面 / 悬浮覆盖">📌</button></span></div>
+          <div class="ole-statusline" role="status"><span id="ole-status-text" data-i18n="检查中…">检查中…</span></div>
           <div class="ole-controls">
-            <select id="ole-backend" title="后端">
+            <select id="ole-backend" data-i18n-title="后端">
               <option value="claude">Claude</option>
               <option value="codex">Codex</option>
             </select>
-            <select id="ole-model" title="模型"></select>
-            <select id="ole-effort" title="思考强度 effort"></select>
-            <button id="ole-models-refresh" class="ole-mrefresh" title="获取当前后端的最新模型列表">↻</button>
+            <select id="ole-model" data-i18n-title="模型"></select>
+            <select id="ole-effort" data-i18n-title="思考强度 effort"></select>
+            <button id="ole-models-refresh" class="ole-mrefresh" data-i18n-title="获取当前后端的最新模型列表">↻</button>
           </div>
           <div class="ole-modes">
-            <button id="ole-mode-edit" class="ole-mode active">改写段落</button>
-            <button id="ole-mode-ask" class="ole-mode">论文问答</button>
+            <button id="ole-mode-edit" class="ole-mode active" data-i18n="改写段落">改写段落</button>
+            <button id="ole-mode-ask" class="ole-mode" data-i18n="论文问答">论文问答</button>
           </div>
           <div id="ole-target" class="empty">
             <div class="ole-target-main">
@@ -1636,46 +1729,46 @@
               <div id="ole-target-list"></div>
             </div>
             <div class="ole-target-btns">
-              <button id="ole-target-reveal" title="在编辑器里定位">🎯</button>
-              <button id="ole-target-clear" title="清空所有选段">✕</button>
+              <button id="ole-target-reveal" data-i18n-title="在编辑器里定位">🎯</button>
+              <button id="ole-target-clear" data-i18n-title="清空所有选段">✕</button>
             </div>
           </div>
         </div>
         <div id="ole-banner" class="hidden"></div>
         <div id="ole-selection-actions">
-          <button id="ole-mode-summary" title="切换改写或问答模式">改写 ▾</button>
-          <button id="ole-context-summary" title="查看上下文与选区设置">未选择段落</button>
-          <button id="ole-capture" type="button">＋ 添加选段</button>
+          <button id="ole-mode-summary" data-i18n-title="切换改写或问答模式">改写 ▾</button>
+          <button id="ole-context-summary" data-i18n-title="查看上下文与选区设置">未选择段落</button>
+          <button id="ole-capture" type="button" data-i18n="＋ 添加选段">＋ 添加选段</button>
         </div>
-        <div id="ole-selection-hint" role="status">支持拖选、双击或 Shift + 方向键选择源码。</div>
-        <div id="ole-messages" tabindex="0" role="region" aria-label="对话与输出"></div>
+        <div id="ole-selection-hint" role="status" data-i18n="支持拖选、双击或 Shift + 方向键选择源码。">支持拖选、双击或 Shift + 方向键选择源码。</div>
+        <div id="ole-messages" tabindex="0" role="region" data-i18n-aria-label="对话与输出"></div>
         <div id="ole-attachbar">
-          <button id="ole-att-proj" title="把项目里的其他文件（章节/main.tex/.bib/图表）加进上下文">📁 项目文件</button>
-          <button id="ole-att-local" title="附加本地 PDF / 图片 / 文本文件">📎 本地文件</button>
+          <button id="ole-att-proj" data-i18n-title="把项目里的其他文件（章节/main.tex/.bib/图表）加进上下文" data-i18n="📁 项目文件">📁 项目文件</button>
+          <button id="ole-att-local" data-i18n-title="附加本地 PDF / 图片 / 文本文件" data-i18n="📎 本地文件">📎 本地文件</button>
           <div id="ole-att-chips"></div>
         </div>
         <input type="file" id="ole-file-input" multiple class="hidden"
           accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.tex,.bib,.txt,.md,.cls,.sty,.bst,.csv">
         <div id="ole-presets"></div>
         <div id="ole-inputbar">
-          <textarea aria-label="输入改写要求或问题" id="ole-input" rows="1" placeholder="下达改写指令…（Enter 发送，Shift+Enter 换行）"></textarea>
-          <button id="ole-send" title="发送">发送</button>
-          <button id="ole-stop" class="hidden" title="停止">停止</button>
+          <textarea id="ole-input" rows="1" data-i18n-aria-label="输入改写要求或问题"></textarea>
+          <button id="ole-send" data-i18n-title="发送" data-i18n="发送">发送</button>
+          <button id="ole-stop" class="hidden" data-i18n-title="停止" data-i18n="停止">停止</button>
         </div>
-        <div class="ole-input-hint">Enter 发送 <span>Shift + Enter 换行 · Esc 收起</span></div>
+        <div class="ole-input-hint"><span data-i18n="Enter 发送">Enter 发送</span> <span data-i18n="Shift + Enter 换行 · Esc 收起">Shift + Enter 换行 · Esc 收起</span></div>
         <div id="ole-hist-view" class="hidden">
           <div class="ole-hist-head">
-            <b>🕘 本项目的会话历史</b>
-            <button id="ole-hist-close" title="返回">✕</button>
+            <b data-i18n="🕘 本项目的会话历史">🕘 本项目的会话历史</b>
+            <button id="ole-hist-close" data-i18n-title="返回">✕</button>
           </div>
           <div id="ole-hist-list"></div>
         </div>
         <div id="ole-proj-view" class="hidden">
           <div class="ole-hist-head">
-            <b>📁 项目文件（加进上下文）</b>
+            <b data-i18n="📁 项目文件（加进上下文）">📁 项目文件（加进上下文）</b>
             <span>
-              <button id="ole-proj-refresh" title="重新下载项目源码">↻</button>
-              <button id="ole-proj-close" title="返回">✕</button>
+              <button id="ole-proj-refresh" data-i18n-title="重新下载项目源码">↻</button>
+              <button id="ole-proj-close" data-i18n-title="返回">✕</button>
             </span>
           </div>
           <div id="ole-proj-list"></div>
@@ -1706,7 +1799,7 @@
       .ole-steps small { display: block; font-size: 11px; color: #76817b; line-height: 1.8; margin-top: 3px; }
       .ole-welcome-tip { border-top: 1px solid #e4e9e3; margin-top: 25px; padding-top: 16px; font-size: 11px; color: #76817b; }
       .ole-input-hint { padding: 0 20px 14px; display: flex; justify-content: space-between; gap: 8px; color: #76817b; font-size: 10px; }
-      .ole-input-hint span { text-align: right; }
+      .ole-input-hint span:last-child { text-align: right; }
       * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
       .hidden { display: none !important; }
       .ole-muted { color: #76817b; }
@@ -1957,6 +2050,8 @@
       }
       .ole-settings-heading { display: flex; justify-content: space-between; align-items: center; color: #365e51; font-size: 13px; }
       #ole-layout { padding: 4px 8px; border: 1px solid #d7e5dc; border-radius: 6px; background: #f1f6f2; cursor: pointer; }
+      .ole-settings-tools { display: flex; align-items: center; gap: 6px; }
+      #ole-language { font-size: 11px; padding: 4px 6px; border: 1px solid #d7e5dc; border-radius: 6px; background: #fff; color: #25352f; cursor: pointer; }
       .ole-statusline { margin: 8px 0 12px; font-size: 11px; }
       .ole-controls { display: grid; grid-template-columns: 70px minmax(70px,1fr) 70px 28px; gap: 5px; margin: 0 0 12px; }
       .ole-controls select { width: 100%; padding: 7px 5px; font-size: 11px; }

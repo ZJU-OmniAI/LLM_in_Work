@@ -1,84 +1,97 @@
-// 模型列表探测：把面板下拉框里的模型列表换成"现在真实可用的最新版"，不再靠代码里写死。
-// 两个后端的探测办法不一样：
-// - claude：CLI 没有"列模型"命令，但别名（fable/opus/sonnet/haiku）会被解析成当下最新版。
-//   起一个 -p 流式进程，第一行 init 事件里就带解析后的完整模型名，读到立刻杀进程——
-//   不等模型回答，几乎不花钱、不留会话。
-// - codex：codex app-server 有正规 JSON-RPC 接口 model/list，返回 OpenAI 服务器端的实时列表；
+// 模型列表：从本机 CLI 读取模型目录，不发起任何生成请求，也不发送文档内容。
+// - claude：用 SDK 的 initialize 控制请求读能力目录，拿到 sonnet/opus/haiku 别名当前解析到的版本；
+// - codex：codex app-server 的 JSON-RPC model/list（服务器实时列表，含每个模型支持的思考档位），
 //   另读 ~/.codex/config.toml 里配置的默认模型（面板选"默认"、exec 不带 -m 时用的就是它）。
-// 结果带 5 分钟内存缓存，防止连点刷新按钮反复起进程。
+// 只探测当前后端；结果带 5 分钟缓存，防止连点刷新按钮反复起进程。
+// 与 LLM_in_Word 的 server/models.js 同源。
 
-import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { CLAUDE_BIN, CODEX_BIN, spawnEnv } from './config.js';
+import { spawnCli, killTree } from './launch.js';
+import { CLAUDE_BIN, CODEX_BIN } from './config.js';
 
-const CLAUDE_ALIASES = ['opus', 'sonnet', 'haiku'];
-const PROBE_TIMEOUT = 25000;
+// Claude 使用稳定别名；CLI 会把别名解析成当下最新版本。
+const CLAUDE_MODELS = [['sonnet', 'Sonnet · 自动版本'], ['opus', 'Opus · 自动版本'], ['haiku', 'Haiku · 自动版本']];
+const PROBE_TIMEOUT = 12000;
 
-// claude-fable-5 → Fable 5；claude-haiku-4-5-20251001 → Haiku 4.5
-function prettyClaude(id) {
-  const core = String(id).replace(/^claude-/, '').replace(/-\d{8}$/, '');
-  const parts = core.split('-');
-  const name = parts.shift() || core;
-  const ver = parts.join('.');
-  return name.charAt(0).toUpperCase() + name.slice(1) + (ver ? ' ' + ver : '');
-}
-
-// 问 CLI：这个别名现在指向哪个模型？（读 init 事件即杀，别名无效→进程报错退出→null）
-function resolveClaudeAlias(alias) {
+// SDK initialize 只查询能力目录，不发送 user 消息或文档。
+function listClaudeModels() {
   return new Promise((resolve) => {
     let child;
     try {
-      child = spawn(CLAUDE_BIN, ['-p', '--model', alias, '--verbose', '--output-format', 'stream-json', 'ok'], {
-        env: spawnEnv(),
-        stdio: ['ignore', 'pipe', 'ignore'],
-      });
+      child = spawnCli(CLAUDE_BIN, ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json',
+        '--verbose', '--permission-mode', 'dontAsk', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}',
+        '--disable-slash-commands', '--tools', '', '--no-session-persistence'],
+      { cwd: os.tmpdir(), stdio: ['pipe', 'pipe', 'ignore'] });
     } catch { resolve(null); return; }
-    let buf = '';
-    let done = false;
-    const finish = (val) => {
+    let buf = '', done = false;
+    const finish = (value) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
-      try { child.kill('SIGKILL'); } catch {}
-      resolve(val);
+      killTree(child, 'SIGKILL');
+      resolve(value);
     };
     const timer = setTimeout(() => finish(null), PROBE_TIMEOUT);
-    child.stdout.on('data', (d) => {
-      buf += d.toString();
-      const i = buf.indexOf('\n');
-      if (i < 0) return;
-      let evt = null;
-      try { evt = JSON.parse(buf.slice(0, i)); } catch {}
-      finish(evt && evt.model ? { alias, id: String(evt.model) } : null);
+    child.stdin.on('error', () => {});
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      buf += chunk;
+      if (buf.length > 1024 * 1024) { finish(null); return; }
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i); buf = buf.slice(i + 1);
+        let m; try { m = JSON.parse(line); } catch { continue; }
+        if (m.type !== 'control_response' || m.response?.request_id !== 'models') continue;
+        const models = m.response?.response?.models;
+        finish(Array.isArray(models) ? models : null);
+        return;
+      }
     });
     child.on('error', () => finish(null));
-    child.on('close', () => finish(null)); // close 在 stdout 排干后才触发，不会抢在 data 前面
+    child.on('close', () => finish(null));
+    child.stdin.write(JSON.stringify({ type: 'control_request', request_id: 'models', request: { subtype: 'initialize' } }) + '\n');
   });
 }
 
-// 走 codex app-server 的 JSON-RPC：initialize → model/list，拿到列表即杀进程
+// claude-sonnet-5-5 → Sonnet 5.5；claude-haiku-4-5-20251001 → Haiku 4.5
+export function claudeCatalog(data) {
+  const details = {};
+  const claude = CLAUDE_MODELS.map(([alias, fallback]) => {
+    const item = Array.isArray(data) ? data.find((m) => m?.value === alias) : null;
+    const id = typeof item?.resolvedModel === 'string' ? item.resolvedModel : '';
+    // 旧版 CLI 可能只返回显示名：不编造版本号。
+    if (!id || id === alias) return [alias, fallback];
+    details[alias] = { resolvedModel: id, description: item.description || '', source: 'cli' };
+    const match = id.match(/^claude-([a-z]+)-(\d+(?:-\d{1,2})*)(?:-\d{8})?$/i);
+    const label = match ? `${match[1][0].toUpperCase()}${match[1].slice(1)} ${match[2].replaceAll('-', '.')}` : id;
+    return [alias, label];
+  });
+  return { claude, details };
+}
+
+// 走 codex app-server 的 JSON-RPC：initialize → model/list（支持翻页），拿到列表即杀进程
 function listCodexModels() {
   return new Promise((resolve) => {
     let child;
     try {
-      child = spawn(CODEX_BIN, ['app-server'], { env: spawnEnv(), stdio: ['pipe', 'pipe', 'ignore'] });
+      child = spawnCli(CODEX_BIN, ['app-server'], { stdio: ['pipe', 'pipe', 'ignore'] });
     } catch { resolve(null); return; }
     const send = (o) => { try { child.stdin.write(JSON.stringify(o) + '\n'); } catch {} };
     let buf = '';
     let done = false;
+    const all = [];
+    const cursors = new Set();
     const finish = (val) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
-      try { child.kill('SIGKILL'); } catch {}
+      killTree(child, 'SIGKILL');
       resolve(val);
     };
     const timer = setTimeout(() => finish(null), PROBE_TIMEOUT);
     child.stdin.on('error', () => {});
-    const models = [];
-    const cursors = new Set();
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (d) => {
       buf += d;
@@ -89,25 +102,26 @@ function listCodexModels() {
         if (!line.trim()) continue;
         let m = null;
         try { m = JSON.parse(line); } catch { continue; }
-        if (m?.error) { finish(null); return; }
         if (m && m.id === 1) {
+          if (m.error) { finish(null); return; }
           send({ jsonrpc: '2.0', method: 'initialized' });
           send({ jsonrpc: '2.0', id: 2, method: 'model/list', params: { includeHidden: false } });
         } else if (m && m.id === 2) {
+          if (m.error) { finish(null); return; }
           const data = m.result && Array.isArray(m.result.data) ? m.result.data : null;
           if (!data) { finish(null); return; }
-          models.push(...data.filter((x) => !x.hidden));
+          all.push(...data.filter((x) => !x.hidden));
           const cursor = m.result.nextCursor;
-          if (cursor && !cursors.has(cursor)) {
+          if (cursor && !cursors.has(cursor) && cursors.size < 20) {
             cursors.add(cursor);
             send({ jsonrpc: '2.0', id: 2, method: 'model/list', params: { includeHidden: false, cursor } });
-          } else finish(models);
+          } else finish(all);
         }
       }
     });
     child.on('error', () => finish(null));
     child.on('close', () => finish(null));
-    send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { clientInfo: { name: 'model-probe', version: '1.0' } } });
+    send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { clientInfo: { name: 'llm-in-overleaf-model-probe', version: '1.0' } } });
   });
 }
 
@@ -120,49 +134,63 @@ function codexConfigModel() {
   } catch { return null; }
 }
 
-async function fetchModels(backend) {
-  const [claudeRes, codexData] = await Promise.all([
-    backend === 'codex' ? [] : Promise.all(CLAUDE_ALIASES.map(resolveClaudeAlias)),
-    backend === 'claude' ? null : listCodexModels(),
-  ]);
-
-  const resolved = claudeRes.filter(Boolean);
-  const claude = resolved.map(({ alias, id }) => [alias, `${alias} · ${prettyClaude(id)}`]);
-
-  let codex = null;
-  if (codexData) {
-    const cfgModel = codexConfigModel();
-    const serverDefault = (codexData.find((x) => x.isDefault) || {}).model || null;
-    codex = [['(default)', `默认 · ${cfgModel || serverDefault || '按 codex 配置'}`]];
-    if (cfgModel && !codexData.some((x) => (x.model || x.id) === cfgModel)) {
-      codex.push([cfgModel, `${cfgModel}（配置默认）`]);
-    }
-    for (const x of codexData) {
-      const id = x.model || x.id;
-      if (!id) continue;
-      codex.push([id, (x.displayName || id) + (x.isDefault ? '（默认）' : '')]);
-    }
+function codexCatalog(data) {
+  const efforts = {};
+  const cfgModel = codexConfigModel();
+  const serverDefault = (data.find((x) => x.isDefault) || {}).model || (data.find((x) => x.isDefault) || {}).id || null;
+  const codex = [['(default)', `默认 · ${cfgModel || serverDefault || '按 codex 配置'}`]];
+  if (cfgModel && !data.some((x) => (x.model || x.id) === cfgModel)) codex.push([cfgModel, `${cfgModel}（配置默认）`]);
+  for (const x of data) {
+    const id = x.model || x.id;
+    if (!id) continue;
+    codex.push([id, x.displayName || id]);
+    const levels = (x.supportedReasoningEfforts || []).map((e) => (typeof e === 'string' ? e : e.reasoningEffort)).filter(Boolean);
+    if (levels.length) efforts[id] = levels;
+    if (x.isDefault && levels.length) efforts['(default)'] = levels;
   }
-
-  return {
-    claude: claude.length ? claude : null,
-    codex,
-    error: backend === 'codex' && !codexData ? 'Codex 模型列表读取失败。请检查 codex login status、网络或代理配置；仍可使用 CLI 配置默认模型。' : undefined,
-    fetchedAt: new Date().toISOString(),
-  };
+  if (cfgModel) {
+    if (efforts[cfgModel]) efforts['(default)'] = efforts[cfgModel];
+    else delete efforts['(default)'];
+  }
+  return { codex, efforts };
 }
 
-// 5 分钟缓存 + 进行中的探测只跑一份
+async function fetchModels(backend) {
+  const wantClaude = backend !== 'codex';
+  const wantCodex = backend !== 'claude';
+  const [claudeData, codexData] = await Promise.all([
+    wantClaude ? listClaudeModels() : null,
+    wantCodex ? listCodexModels() : null,
+  ]);
+  const result = { claude: null, codex: null, efforts: { codex: {} }, details: { claude: {} }, warnings: [], fetchedAt: new Date().toISOString() };
+  if (wantClaude) {
+    const { claude, details } = claudeCatalog(claudeData);
+    result.claude = claude;
+    result.details.claude = details;
+    if (!Object.keys(details).length) result.warnings.push('Claude CLI 暂未提供具体版本；别名由 CLI 解析，回复会显示实际模型。');
+  }
+  if (wantCodex) {
+    if (codexData) Object.assign(result, (({ codex, efforts }) => ({ codex, efforts: { codex: efforts } }))(codexCatalog(codexData)));
+    else result.warnings.push('Codex 模型列表暂时不可用，保留上次列表；请检查 Codex CLI 是否安装并已登录。');
+  }
+  if (!result.claude && !result.codex) result.error = '两个后端都没探测到模型（CLI 没装好或网络不通？）';
+  return result;
+}
+
+// 5 分钟缓存 + 进行中的探测只跑一份（按后端分开）
 const cache = new Map();
 const inflight = new Map();
-export function getModels(backend = 'all') {
-  const prev = cache.get(backend);
-  if (prev && Date.now() - prev.at < 5 * 60 * 1000) return Promise.resolve(prev.data);
-  if (inflight.has(backend)) return inflight.get(backend);
-  const request = fetchModels(backend).then((data) => {
-    if (data.claude || data.codex) cache.set(backend, { at: Date.now(), data });
-    return data;
-  }).finally(() => inflight.delete(backend));
-  inflight.set(backend, request);
-  return request;
+export function getModels(backend, force = false) {
+  const key = backend === 'codex' || backend === 'claude' ? backend : 'all';
+  const hit = cache.get(key);
+  if (!force && hit && Date.now() - hit.at < 5 * 60 * 1000) return Promise.resolve(hit.data);
+  if (inflight.has(key)) return inflight.get(key);
+  const pending = fetchModels(key === 'all' ? undefined : key)
+    .then((data) => {
+      if (data.claude || data.codex) cache.set(key, { at: Date.now(), data });
+      return data;
+    })
+    .finally(() => { inflight.delete(key); });
+  inflight.set(key, pending);
+  return pending;
 }

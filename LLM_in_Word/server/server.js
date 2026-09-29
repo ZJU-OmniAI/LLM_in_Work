@@ -23,7 +23,7 @@ import { getModels } from './models.js';
 import { getHealth } from './health.js';
 import { classifyError } from './process.js';
 
-const VERSION = '0.7.0';
+const VERSION = '0.7.1';
 const activeRequests = new Set();
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url))); // 项目根目录
 
@@ -134,6 +134,7 @@ async function handleChat(req, res) {
   const model = payload.model || (backend === 'codex' ? '(default)' : 'sonnet');
   const effort = payload.effort || 'medium';
   const mode = payload.mode === 'ask' ? 'ask' : 'edit';
+  const uiLanguage = payload.uiLanguage === 'en' ? 'en' : 'zh-CN';
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
 
   // 二进制附件落盘
@@ -186,7 +187,7 @@ async function handleChat(req, res) {
       if (Array.isArray(docTurn.newExtraNames) && Array.isArray(docTurn.extraFiles)) {
         docTurn.extraFiles = docTurn.extraFiles.filter((f) => docTurn.newExtraNames.includes(f.name));
       }
-      const prompt = buildTurnPrompt({ mode, backend, doc: docTurn, instruction: lastMsg?.content || '', files: filesTurn });
+      const prompt = buildTurnPrompt({ mode, backend, uiLanguage, doc: docTurn, instruction: lastMsg?.content || '', files: filesTurn });
       const ev = mkEvents();
       const result = await runModel(backend, { prompt, model, effort, files: filesTurn,
         images: filesTurn.filter((f) => /^image\//.test(f.mime)).map((f) => f.path), resume: resumeId, signal: ac.signal }, ev.onEvent);
@@ -198,7 +199,7 @@ async function handleChat(req, res) {
     }
     if (rebuild && !ac.signal.aborted) {
       const newId = backend === 'claude' ? randomUUID() : null;
-      const prompt = buildPrompt({ mode, backend, doc: payload.doc || {}, messages, files });
+      const prompt = buildPrompt({ mode, backend, uiLanguage, doc: payload.doc || {}, messages, files });
       const ev = mkEvents();
       const result = await runModel(backend, { prompt, model, effort, images, files, sessionId: newId, signal: ac.signal }, ev.onEvent);
       successful = result.ok;

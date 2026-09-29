@@ -1,0 +1,11 @@
+{
+  "extDescription": {
+    "message": "在 Overleaf 里选中 LaTeX，交给本机 Claude Code / Codex CLI 改写；先看差异，再一键写回。整份文件作上下文，可附加项目文件、PDF 和图片。"
+  },
+  "actionTitle": {
+    "message": "LLM_in_Overleaf 写作助手"
+  },
+  "cmdToggle": {
+    "message": "打开/收起 LLM_in_Overleaf 面板"
+  }
+}

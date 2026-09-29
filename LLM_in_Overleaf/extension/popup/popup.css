@@ -23,3 +23,5 @@ button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid
 .install { margin-top: 12px; padding: 10px; font-size: 11px; background: #fff5e6; border-radius: 8px; color: #7a5b12; }
 .install code { overflow-wrap: anywhere; }
 .hidden { display: none; }
+.tip b { color: #365e51; font-size: 11px; letter-spacing: .5px; }
+.tip p { margin: 4px 0 6px; }

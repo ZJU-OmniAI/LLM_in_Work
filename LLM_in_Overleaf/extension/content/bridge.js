@@ -10,6 +10,10 @@
 
   const NS = 'LLM_IN_OVERLEAF_BRIDGE';
 
+  // 报错文案跟随面板界面语言：内容脚本在每个请求里带上 lang。
+  let lang = 'zh-CN';
+  const L = (zh, en) => (lang === 'en' ? en : zh);
+
   let lastView = null;
   function findView() {
     const views = [];
@@ -26,7 +30,8 @@
     return lastView;
   }
 
-  const NO_EDITOR = '未连接到源码编辑器。请打开 .tex 文件并切换到 Code Editor（源码编辑），等待加载完成后重试；PDF 预览中的选区不能用于替换源码。';
+  const NO_EDITOR = () => L('未连接到源码编辑器。请打开 .tex 文件并切换到 Code Editor（源码编辑），等待加载完成后重试；PDF 预览中的选区不能用于替换源码。',
+    'Source editor not connected. Open a .tex file in Code Editor (source mode) and wait for it to load. Text selected in the PDF preview cannot replace source.');
 
   function readSelection(v, withText = false) {
     const selected = v.state.selection.ranges.filter((r) => r.to > r.from);
@@ -103,20 +108,20 @@
 
   function resolveRanges(v, ranges, fileName) {
     const current = currentFileName();
-    if (fileName && current !== fileName) throw new Error(`请切回 ${fileName} 后再操作选段。`);
-    if (!Array.isArray(ranges) || !ranges.length) throw new Error('没有选段，请重新选择。');
+    if (fileName && current !== fileName) throw new Error(L(`请切回 ${fileName} 后再操作选段。`, `Switch back to ${fileName} to work with these selections.`));
+    if (!Array.isArray(ranges) || !ranges.length) throw new Error(L('没有选段，请重新选择。', 'No selection. Select text again.'));
     const found = ranges.map((r) => {
       const text = r.oldText ?? r.text;
-      if (typeof text !== 'string' || !text) throw new Error('选段内容为空，请重新选择。');
+      if (typeof text !== 'string' || !text) throw new Error(L('选段内容为空，请重新选择。', 'A selection is empty. Select text again.'));
       const loc = locate(v.state, r.from, r.to, text);
-      if (!loc) throw new Error('某个选段已被修改或无法唯一定位，请移除该段后重新选择；文档尚未修改。');
+      if (!loc) throw new Error(L('某个选段已被修改或无法唯一定位，请移除该段后重新选择；文档尚未修改。', 'A selection has changed or cannot be located uniquely. Remove it and select it again; the document was not modified.'));
       return { ...r, ...loc, text,
         line1: v.state.doc.lineAt(loc.from).number,
         line2: v.state.doc.lineAt(loc.to - 1).number,
       };
     }).sort((a, b) => a.from - b.from);
     for (let i = 1; i < found.length; i++) {
-      if (found[i].from < found[i - 1].to) throw new Error('选段有重叠，请先移除重叠的选段再添加。');
+      if (found[i].from < found[i - 1].to) throw new Error(L('选段有重叠，请先移除重叠的选段再添加。', 'Selections overlap. Remove the overlapping selection first.'));
     }
     return found;
   }
@@ -150,36 +155,36 @@
     // 桥和编辑器是否就绪
     status() {
       const v = findView();
-      return { ok: true, ready: !!v, error: v ? '' : NO_EDITOR, docLen: v ? v.state.doc.length : 0, fileName: currentFileName(), projectName: projectName() };
+      return { ok: true, ready: !!v, error: v ? '' : NO_EDITOR(), docLen: v ? v.state.doc.length : 0, fileName: currentFileName(), projectName: projectName() };
     },
 
     // 轻量读当前选区（拖选过程中会频繁调，只带 200 字预览）
     get_selection() {
       const v = findView();
-      if (!v) return { ok: false, error: NO_EDITOR };
+      if (!v) return { ok: false, error: NO_EDITOR() };
       return readSelection(v);
     },
 
     // 一次读出位置、原文和文件名，避免两次 RPC 之间选区或文件发生切换。
     get_target() {
       const v = findView();
-      if (!v) return { ok: false, error: NO_EDITOR };
+      if (!v) return { ok: false, error: NO_EDITOR() };
       return readSelection(v, true);
     },
 
     // 读一段完整文本（点浮标时把选中内容整段取回）
     get_range({ from, to }) {
       const v = findView();
-      if (!v) return { ok: false, error: '找不到编辑器' };
+      if (!v) return { ok: false, error: L('找不到编辑器', 'Editor not found') };
       const len = v.state.doc.length;
-      if (!(from >= 0 && to <= len && from < to)) return { ok: false, error: '选区已失效' };
+      if (!(from >= 0 && to <= len && from < to)) return { ok: false, error: L('选区已失效', 'The selection is no longer valid') };
       return { ok: true, from, to, text: v.state.sliceDoc(from, to) };
     },
 
     // 追加前重新校准旧选段；同一位置去重，不合并跨越空隙的片段。
     merge_targets({ existing = [], incoming = [], fileName }) {
       const v = findView();
-      if (!v) return { ok: false, error: NO_EDITOR };
+      if (!v) return { ok: false, error: NO_EDITOR() };
       const old = existing.length ? resolveRanges(v, existing, fileName) : [];
       const added = resolveRanges(v, incoming, fileName);
       const combined = [...old];
@@ -193,7 +198,7 @@
     // 全文或各选段周边上下文；每一段都独立校准，保持原始文档顺序。
     get_context({ from, to, oldText, ranges, fileName, cap = 110000, headKeep = 4000 }) {
       const v = findView();
-      if (!v) return { ok: false, error: NO_EDITOR };
+      if (!v) return { ok: false, error: NO_EDITOR() };
       const found = resolveRanges(v, ranges || [{ from, to, oldText }], fileName);
       return {
         ok: true, ...found[0], ranges: found,
@@ -206,9 +211,9 @@
     // 先校验所有段，再用一个编辑事务提交；任一段失效时整组都不写入。
     apply_edits({ edits, fileName }) {
       const v = findView();
-      if (!v) return { ok: false, error: NO_EDITOR };
+      if (!v) return { ok: false, error: NO_EDITOR() };
       const found = resolveRanges(v, edits, fileName);
-      if (found.some((r) => typeof r.newText !== 'string')) return { ok: false, error: '替换内容不完整。' };
+      if (found.some((r) => typeof r.newText !== 'string')) return { ok: false, error: L('替换内容不完整。', 'The replacement is incomplete.') };
       const changes = found.map((r) => ({ from: r.from, to: r.to, insert: r.newText }));
       const shift = found.slice(0, -1).reduce((n, r) => n + r.newText.length - (r.to - r.from), 0);
       const last = found.at(-1);
@@ -220,7 +225,7 @@
     // 读全文（问答模式没选中时用），超过 cap 截断
     get_doc({ cap = 120000 } = {}) {
       const v = findView();
-      if (!v) return { ok: false, error: '找不到编辑器' };
+      if (!v) return { ok: false, error: L('找不到编辑器', 'Editor not found') };
       const st = v.state;
       const docLen = st.doc.length;
       const truncated = docLen > cap;
@@ -237,10 +242,10 @@
     // 应用替换：先按 oldText 精确校验/重定位，再 dispatch。走正常事务 → 进撤销历史，Cmd+Z 可撤。
     apply_edit({ from, to, oldText, newText }) {
       const v = findView();
-      if (!v) return { ok: false, error: '找不到编辑器' };
-      if (typeof newText !== 'string') return { ok: false, error: '没有可应用的内容' };
+      if (!v) return { ok: false, error: L('找不到编辑器', 'Editor not found') };
+      if (typeof newText !== 'string') return { ok: false, error: L('没有可应用的内容', 'Nothing to apply') };
       const loc = locate(v.state, from, to, oldText);
-      if (!loc) return { ok: false, error: '原选中内容在文档里已被改动，找不到可替换的位置。请重新选中后再试。' };
+      if (!loc) return { ok: false, error: L('原选中内容在文档里已被改动，找不到可替换的位置。请重新选中后再试。', 'The selected text has changed in the document, so it cannot be replaced. Select it again and retry.') };
       v.dispatch({
         changes: { from: loc.from, to: loc.to, insert: newText },
         // 光标收拢到替换内容末尾，不整段选中（用户反馈：改完一直高亮着很碍事）
@@ -255,7 +260,7 @@
     // 取消编辑器里的选中（光标收拢到 pos）：目标捕获后调用，选区高亮没必要一直留着
     collapse({ pos }) {
       const v = findView();
-      if (!v) return { ok: false, error: '找不到编辑器' };
+      if (!v) return { ok: false, error: L('找不到编辑器', 'Editor not found') };
       const p = Math.max(0, Math.min(v.state.doc.length, pos | 0));
       v.dispatch({ selection: { anchor: p }, userEvent: 'select' });
       return { ok: true };
@@ -264,7 +269,7 @@
     // 在编辑器里选中并滚动到目标片段（面板上点「定位」）
     reveal({ from, to, oldText, fileName }) {
       const v = findView();
-      if (!v) return { ok: false, error: '找不到编辑器' };
+      if (!v) return { ok: false, error: L('找不到编辑器', 'Editor not found') };
       const loc = resolveRanges(v, [{ from, to, oldText }], fileName)[0];
       v.dispatch({ selection: { anchor: loc.from, head: loc.to }, scrollIntoView: true, userEvent: 'select' });
       try { v.focus(); } catch {}
@@ -274,8 +279,8 @@
     // 在光标处插入（没选中时让 AI 生成片段后插入用；预留）
     insert_at_cursor({ text }) {
       const v = findView();
-      if (!v) return { ok: false, error: '找不到编辑器' };
-      if (typeof text !== 'string' || !text) return { ok: false, error: '没有可插入的内容' };
+      if (!v) return { ok: false, error: L('找不到编辑器', 'Editor not found') };
+      if (typeof text !== 'string' || !text) return { ok: false, error: L('没有可插入的内容', 'Nothing to insert') };
       const pos = v.state.selection.main.head;
       v.dispatch({
         changes: { from: pos, to: pos, insert: text },
@@ -293,9 +298,10 @@
     const d = e.data;
     if (!d || d.ns !== NS || d.dir !== 'req' || !d.op) return;
     let resp;
+    lang = d.args?.lang === 'en' ? 'en' : 'zh-CN';
     try {
       const h = handlers[d.op];
-      resp = h ? h(d.args || {}) : { ok: false, error: `未知操作 ${d.op}` };
+      resp = h ? h(d.args || {}) : { ok: false, error: L(`未知操作 ${d.op}`, `Unknown operation ${d.op}`) };
     } catch (err) {
       resp = { ok: false, error: String((err && err.message) || err) };
     }

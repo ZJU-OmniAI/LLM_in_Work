@@ -8,7 +8,7 @@
 
 import { MAX_FULLTEXT_CHARS } from './config.js';
 
-const EDIT_SYSTEM = `你是嵌入 Microsoft Word 的中文写作助手。下面会给你当前文档的完整正文（纯文本，段落用换行分隔），其中用【选中段开始】【选中段结束】标出了用户在 Word 里选中的一段，你要按用户指令给出"替换这段选中内容"的新文本。
+const EDIT_SYSTEM = `你是嵌入 Microsoft Word 的写作助手。下面会给你当前文档的完整正文（纯文本，段落用换行分隔），其中用【选中段开始】【选中段结束】标出了用户在 Word 里选中的一段，你要按用户指令给出"替换这段选中内容"的新文本。
 
 【怎么用全文】给你整份文档是为了让你吃透上下文：全文的文体、语气、术语用法、选中段前后在讲什么……改写时都要与全文保持一致。但注意：全文只是背景，你要改的只有选中那一段。
 
@@ -20,10 +20,10 @@ const EDIT_SYSTEM = `你是嵌入 Microsoft Word 的中文写作助手。下面�
    - 分段用换行表示，一行就是 Word 里的一个段落；没必要就不要改变原文的分段结构；
    - 原文里的编号（如"一、""1."）、专有名词、数据、引文照原样保留，除非用户明确要求改；
    - 没必要改动的词句请逐字保留原样：系统会把新旧文本逐字对比，把原有的加粗/斜体等格式迁移到没变的文字上——改动越少，格式保留越完整。
-3. 代码块外可以加一两句简短中文说明改了什么（可选，别长篇大论）。
-4. 如果指令无法执行（比如和选中内容无关），就不要输出代码块，直接用中文说明原因。`;
+3. 代码块外可以加一两句简短说明改了什么（可选，别长篇大论；用什么语言见下方【回复语言】）。
+4. 如果指令无法执行（比如和选中内容无关），就不要输出代码块，直接说明原因。`;
 
-const EDIT_SYSTEM_MULTI = (n) => `你是嵌入 Microsoft Word 的中文写作助手。下面会给你当前文档的完整正文（纯文本，段落用换行分隔），其中用【目标1开始】【目标1结束】…【目标${n}开始】【目标${n}结束】标出了用户选中的 ${n} 段分散的文字，你要按用户指令分别给出每段的替换文本。
+const EDIT_SYSTEM_MULTI = (n) => `你是嵌入 Microsoft Word 的写作助手。下面会给你当前文档的完整正文（纯文本，段落用换行分隔），其中用【目标1开始】【目标1结束】…【目标${n}开始】【目标${n}结束】标出了用户选中的 ${n} 段分散的文字，你要按用户指令分别给出每段的替换文本。
 
 【怎么用全文】给你整份文档是为了让你吃透上下文：全文的文体、语气、术语用法、各目标段前后在讲什么……改写时都要与全文保持一致，并注意各目标段之间的呼应（用户常常就是要把分散的几处改得一致）。但你要改的只有标出的目标段。
 
@@ -36,7 +36,7 @@ const EDIT_SYSTEM_MULTI = (n) => `你是嵌入 Microsoft Word 的中文写作助
    - 分段用换行表示，一行就是 Word 里的一个段落；没必要就不要改变原有分段结构；
    - 原文里的编号、专有名词、数据、引文照原样保留，除非用户明确要求改；
    - 没必要改动的词句请逐字保留原样：系统会逐字对比迁移格式，改动越少格式保留越完整。
-4. 如果指令无法执行，就不要输出围栏，直接用中文说明原因。`;
+4. 如果指令无法执行，就不要输出围栏，直接说明原因（语言见【回复语言】）。`;
 
 // 表格协议（edit 模式统一附加）：表格目标用 ```table 围栏放 Markdown 表格
 const TABLE_RULES = `
@@ -48,8 +48,16 @@ const TABLE_RULES = `
 
 const ASK_SYSTEM = `你是嵌入 Microsoft Word 的写作助手，帮用户理解和改进他们的文档。请遵守：
 - 只依据提供的文档内容和你已有的知识回答；文档里没有的信息就说"文中未提及"，不要编造。
-- 回答默认用中文；用户用英文提问则用英文。
 - 用 Markdown 组织，简明清晰。`;
+
+// 回复语言：说明文字跟随用户本轮指令的语言；判断不了时跟随面板界面语言。
+// 替换内容本身保持原文语言（除非用户要求翻译），避免英文界面收到中文说明、或文档被顺手翻译。
+export function languageRule(mode, uiLanguage) {
+  const fallback = uiLanguage === 'en' ? '英文（English）' : '中文';
+  return mode === 'edit'
+    ? `【回复语言】代码块外的说明、以及无法执行时的解释，使用用户本轮指令所用的语言；难以判断时使用${fallback}。替换内容本身保持原文的语言，除非用户明确要求翻译。`
+    : `【回复语言】使用用户本轮提问所用的语言回答；难以判断时使用${fallback}。`;
+}
 
 // 二进制附件（图片/PDF，已写到本地磁盘）的说明段，首轮/续轮共用
 function pushBinFilesSection(parts, files, backend) {
@@ -73,7 +81,7 @@ function pushBinFilesSection(parts, files, backend) {
 
 // 续轮的短 prompt：CLI 会话里已有系统规则、全文和此前对话（走服务端缓存），
 // 本轮只发：最新的目标段（权威版本）+ 新增附件 + 指令 + 输出格式提醒。
-export function buildTurnPrompt({ mode, backend = 'claude', doc = {}, instruction = '', files = [] }) {
+export function buildTurnPrompt({ mode, backend = 'claude', uiLanguage = 'zh-CN', doc = {}, instruction = '', files = [] }) {
   const isEdit = mode === 'edit';
   const targets = Array.isArray(doc.targets) && doc.targets.length
     ? doc.targets
@@ -114,6 +122,7 @@ export function buildTurnPrompt({ mode, backend = 'claude', doc = {}, instructio
         ? '\n仍按最初约定输出：唯一一个 ```table 围栏放完整的改后 Markdown 表格（只改需要改的单元格，其余逐字保留；单元格内不换行），围栏外最多一两句说明；无法执行就不出围栏、直接说明原因。'
         : '\n仍按最初约定输出：唯一一个 ```text 围栏放纯文本替换内容（禁 Markdown 记号；只写替换段本身；没必要改的词句逐字保留以利格式迁移），围栏外最多一两句说明；无法执行就不出围栏、直接说明原因。'))
     : '\n请直接用 Markdown 回答。');
+  parts.push(languageRule(isEdit ? 'edit' : 'ask', uiLanguage));
   return parts.join('\n');
 }
 
@@ -129,7 +138,7 @@ function pushDocInfo(parts, doc) {
 //   fullText 由前端拼好：单目标用【选中段开始/结束】、多目标用【目标k开始/结束】标出，超长已截取
 //   （兼容旧字段 doc.selection = 单目标文本）
 // files: [{name, path, mime}]  ← 已落盘的二进制附件（图片/PDF），backend 决定提示读法
-export function buildPrompt({ mode, backend = 'claude', doc = {}, messages = [], files = [] }) {
+export function buildPrompt({ mode, backend = 'claude', uiLanguage = 'zh-CN', doc = {}, messages = [], files = [] }) {
   const isEdit = mode === 'edit';
   const targets = Array.isArray(doc.targets) && doc.targets.length
     ? doc.targets
@@ -137,6 +146,7 @@ export function buildPrompt({ mode, backend = 'claude', doc = {}, messages = [],
   const parts = [];
   parts.push(isEdit ? (targets.length > 1 ? EDIT_SYSTEM_MULTI(targets.length) : EDIT_SYSTEM) : ASK_SYSTEM);
   if (isEdit) parts.push(TABLE_RULES);
+  parts.push(languageRule(isEdit ? 'edit' : 'ask', uiLanguage));
   parts.push('');
   pushDocInfo(parts, doc);
 

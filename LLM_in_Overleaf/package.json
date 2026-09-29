@@ -1,17 +1,18 @@
 {
   "name": "llm-in-overleaf",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
-  "description": "Overleaf AI 改写 Chrome 插件：选中 LaTeX → claude/codex CLI 改写 → diff 预览 → 一键应用",
+  "description": "LLM_in_Overleaf — select LaTeX in Overleaf, let your local Claude Code or Codex CLI revise it, review the diff and apply it in place.",
   "scripts": {
     "icons": "node tools/make-icons.js",
     "test": "npm run test:unit",
     "test:codex": "node tools/test-native-host.js --codex",
     "test:wrapper": "node tools/test-native-host.js --wrapper",
     "test:unit": "node --test tools/*.test.js",
-    "test:ui": "node tools/test-selection.cjs && node tools/test-ui.cjs",
+    "test:ui": "node tools/test-selection.cjs && node tools/test-selection.cjs https://www.overleaf.com en && node tools/test-ui.cjs",
     "test:ui:cn": "node tools/test-selection.cjs https://cn.overleaf.com",
+    "test:install": "node tools/test-install.mjs",
     "test:live": "node tools/test-native-host.js",
     "test:live:codex": "node tools/test-native-host.js --codex"
   },

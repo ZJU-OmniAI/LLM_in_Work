@@ -26,7 +26,7 @@ function setup({ url = 'https://www.overleaf.com/project/abcdef123456', missing 
     action: { setBadgeText: async () => {}, setTitle: async () => {} },
   };
   vm.runInNewContext(worker, { chrome, setTimeout, clearTimeout });
-  return { calls, open: () => new Promise((resolve) => onMessage({ type: 'open_active_panel' }, {}, resolve)), command: () => onCommand('toggle-panel') };
+  return { calls, open: (lang = 'zh-CN') => new Promise((resolve) => onMessage({ type: 'open_active_panel', lang }, {}, resolve)), command: () => onCommand('toggle-panel') };
 }
 
 test('popup opens an existing content script without reinjecting', async () => {
@@ -45,6 +45,7 @@ test('all supported Overleaf domains allow both automatic injection and popup re
       assert.equal((await app.open()).ok, true, `${domain}: missing=${missing}`);
       assert.deepEqual(app.calls.map((c) => c.world || c.type), missing
         ? ['open_panel', 'MAIN', 'ISOLATED', 'open_panel'] : ['open_panel']);
+      if (missing) assert.deepEqual([...app.calls.find((c) => c.world === 'ISOLATED').files], ['shared/i18n.js', 'content/content.js'], 'UI strings load before the panel');
     }
   }
 });
@@ -62,6 +63,7 @@ test('non-project pages never receive an injection', async () => {
   for (const url of ['https://www.overleaf.com/project', 'https://cn.overleaf.com/project', 'https://example.com/project/abcdef', 'https://www.overleaf.com.evil.test/project/abcdef', 'https://cn.overleaf.com.evil.test/project/abcdef', 'https://cn.overleaf.com@evil.test/project/abcdef']) {
     const app = setup({ url });
     assert.match((await app.open()).error, /项目编辑页/);
+    assert.match((await app.open('en')).error, /Overleaf project editor/);
     assert.equal(app.calls.length, 0);
   }
 });
@@ -70,4 +72,10 @@ test('failed injection returns actionable feedback', async () => {
   const result = await app.open();
   assert.equal(result.ok, false);
   assert.match(result.error, /刷新/);
+  assert.match((await setup({ missing: true, injectError: true }).open('en')).error, /Refresh the Overleaf project/);
+});
+test('manifest loads the translation table before the isolated panel script', () => {
+  const isolated = manifest.content_scripts.find((script) => script.world !== 'MAIN');
+  assert.deepEqual(isolated.js, ['shared/i18n.js', 'content/content.js']);
+  assert.equal(manifest.default_locale, 'en');
 });

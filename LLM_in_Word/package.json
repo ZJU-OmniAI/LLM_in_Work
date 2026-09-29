@@ -1,12 +1,12 @@
 {
   "name": "llm-in-word",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "type": "module",
   "description": "LLM_in_Word — Review and apply AI edits in desktop Microsoft Word with your local Claude Code or Codex CLI.",
   "scripts": {
     "server": "node server/server.js",
-    "test": "node tools/test-format.js && node tools/test-table.js && node --test tools/test-backend.js tools/test-ui.js tools/test-platform.js",
+    "test": "node tools/test-format.js && node tools/test-table.js && node --test tools/test-backend.js tools/test-ui.js tools/test-platform.js tools/test-prompt.js",
     "test:live": "node tools/test-server.js",
     "test:live:codex": "node tools/test-server.js --codex",
     "preview": "node tools/platform.js preview",

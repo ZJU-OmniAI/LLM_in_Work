@@ -15,7 +15,7 @@ if (args[0] === 'app-server') {
       if (msg.method === 'initialize') emit({ id: msg.id, result: {} });
       if (msg.method === 'model/list') emit({ id: msg.id, result: msg.params.cursor
         ? { data: [{ id: 'ui-second', model: 'model-second', displayName: 'Second' }], nextCursor: null }
-        : { data: [{ id: 'ui-first', model: 'model-first', displayName: 'First', isDefault: true }], nextCursor: 'page-2' } });
+        : { data: [{ id: 'ui-first', model: 'model-first', displayName: 'First', isDefault: true, supportedReasoningEfforts: [{ reasoningEffort: 'low' }, { reasoningEffort: 'medium' }] }], nextCursor: 'page-2' } });
     }
   });
 } else {
@@ -25,6 +25,7 @@ if (args[0] === 'app-server') {
     const resume = args[0] === 'exec' && args[1] === 'resume' ? args[2] : null;
     if (resume === 'auth-fail') { emit({ type: 'turn.failed', error: { message: '401 login required' } }); process.exit(1); }
     if (resume === 'missing') { emit({ type: 'turn.failed', error: { message: 'session not found' } }); process.exit(1); }
+    if (prompt.includes('WAIT_HARD')) { process.on('SIGTERM', () => {}); setInterval(() => {}, 1000); return; }
     if (prompt.includes('WAIT')) { setInterval(() => {}, 1000); return; }
     emit({ type: 'thread.started', thread_id: 'fixture-session' });
     if (prompt.includes('EMPTY')) return;
