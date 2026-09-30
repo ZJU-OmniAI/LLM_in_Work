@@ -12,38 +12,46 @@
   <div id="app">
     <header class="hdr">
       <div class="brand-mark" aria-hidden="true">w<span>✦</span></div>
-      <div class="brand-copy"><span class="hdr-title">LLM_in_Word</span><span class="brand-sub" data-i18n="让每一句，更进一步">让每一句，更进一步</span></div>
+      <div class="brand-copy"><span class="hdr-title">LLM_in_Word <span id="status-dot" class="dot" role="img" aria-label="正在连接" data-i18n-aria-label="正在连接"></span></span><span class="brand-sub" data-i18n="让每一句，更进一步">让每一句，更进一步</span></div>
       <span class="hdr-sp"></span>
-      <select id="sel-language" class="language-select" aria-label="Interface language / 界面语言" title="Interface language / 界面语言"><option value="en">English</option><option value="zh-CN">中文</option></select>
+      <button id="btn-settings" class="hdr-btn" aria-expanded="false" aria-controls="settings-pop" title="模型、模式与目标设置" data-i18n-title="模型、模式与目标设置" data-i18n="设置">设置</button>
       <button id="btn-new" class="ibtn" title="新会话，当前会话自动归档" aria-label="新会话" data-i18n-title="新会话，当前会话自动归档" data-i18n-aria-label="新会话">＋</button>
       <button id="btn-hist" class="ibtn" title="会话历史" aria-label="会话历史" data-i18n-title="会话历史" data-i18n-aria-label="会话历史">◷</button>
       <button id="btn-reload" class="ibtn" title="刷新面板" aria-label="刷新面板" data-i18n-title="刷新面板" data-i18n-aria-label="刷新面板">⟳</button>
     </header>
     <div id="banner" class="banner hidden" role="status"></div>
-    <section class="engine-panel" aria-label="模型设置" data-i18n-aria-label="模型设置">
-      <div class="section-heading"><button id="btn-engine" class="engine-toggle" type="button" aria-expanded="true" aria-controls="engine-body" title="收起或展开写作引擎设置" data-i18n-title="收起或展开写作引擎设置"><span class="chevron" aria-hidden="true">▾</span><span class="eyebrow" data-i18n="写作引擎">写作引擎</span><span id="engine-summary" class="engine-summary"></span></button><button id="btn-connection" class="connection-button" title="查看连接状态与登录指引" data-i18n-title="查看连接状态与登录指引"><span id="status-dot" class="dot"></span><span id="status-text" data-i18n="正在连接">正在连接</span><span aria-hidden="true">›</span></button></div>
-      <div id="engine-body">
-      <div class="cfg-row engine-row">
-        <label class="field backend-field"><span data-i18n="后端">后端</span><select id="sel-backend" aria-label="后端" data-i18n-aria-label="后端"><option value="claude">Claude Code</option><option value="codex">Codex</option></select></label>
-        <label class="field model-field"><span data-i18n="模型">模型</span><select id="sel-model" aria-label="模型" data-i18n-aria-label="模型"></select></label>
-        <button id="btn-models" class="ibtn" title="刷新模型列表" aria-label="刷新模型列表" data-i18n-title="刷新模型列表" data-i18n-aria-label="刷新模型列表">⟳</button>
-      </div>
-      <div id="model-detail" class="model-detail" aria-live="polite"></div>
-      <div class="engine-footer"><label class="effort-label" for="sel-effort" data-i18n="思考强度">思考强度</label><select id="sel-effort" aria-label="思考强度" data-i18n-aria-label="思考强度"></select><span id="engine-hint" data-i18n="使用本机订阅">使用本机订阅</span></div>
-      </div>
-    </section>
-    <div class="workspace-toolbar">
-      <div class="mode-tabs" role="group" aria-label="工作模式" data-i18n-aria-label="工作模式"><button id="mode-edit" class="mode-tab active" aria-pressed="true" data-i18n="改写文稿">改写文稿</button><button id="mode-ask" class="mode-tab" aria-pressed="false" data-i18n="文档问答">文档问答</button></div>
-      <label class="track-label" id="track-wrap" title="以 Word 修订写入，可在审阅中逐条接受或拒绝" data-i18n-title="以 Word 修订写入，可在审阅中逐条接受或拒绝"><input type="checkbox" id="chk-track" checked=""><span data-i18n="保留修订">保留修订</span></label>
+    <div id="context-bar" class="context-bar">
+      <button id="mode-summary" class="summary-btn" aria-haspopup="true" aria-controls="settings-pop" title="切换改写或问答模式" data-i18n-title="切换改写或问答模式">改写 ▾</button>
+      <button id="context-summary" class="summary-btn" aria-haspopup="true" aria-controls="settings-pop" title="查看目标与设置" data-i18n-title="查看目标与设置">未选择内容</button>
+      <button id="btn-capture" class="btn capture-btn" title="把 Word 中选中的文字或表格添加为改写目标" data-i18n-title="把 Word 中选中的文字或表格添加为改写目标"><span aria-hidden="true">＋</span><span data-i18n="添加选中">添加选中</span></button>
     </div>
-    <section id="target-bar" class="target empty" aria-label="改写目标" data-i18n-aria-label="改写目标">
-      <div class="section-heading"><span class="eyebrow">01 <span data-i18n="选择内容">选择内容</span></span><span id="target-count" class="count-label">0 / 8</span></div>
-      <div class="target-row"><button id="btn-capture" class="btn capture-btn"><span aria-hidden="true">＋</span><span data-i18n="添加 Word 选中内容"> 添加 Word 选中内容</span></button><button id="btn-clear" class="ibtn" title="清除全部目标" aria-label="清除全部目标" data-i18n-title="清除全部目标" data-i18n-aria-label="清除全部目标">×</button></div>
-      <div id="sel-hint" class="sel-hint"></div><div id="target-info" class="target-info"></div><div id="target-list" class="target-list"></div>
-    </section>
+    <div id="sel-hint" class="sel-hint" role="status"></div>
+    <div class="pop-anchor">
+      <section id="settings-pop" class="settings-pop hidden" role="region" aria-label="写作设置" data-i18n-aria-label="写作设置">
+        <div class="pop-head"><b data-i18n="写作设置">写作设置</b><span class="pop-tools"><select id="sel-language" class="language-select" aria-label="Interface language / 界面语言" title="Interface language / 界面语言"><option value="en">English</option><option value="zh-CN">中文</option></select></span></div>
+        <button id="btn-connection" class="connection-button" title="查看连接状态与登录指引" data-i18n-title="查看连接状态与登录指引"><span id="status-text" data-i18n="正在连接">正在连接</span><span aria-hidden="true">›</span></button>
+        <div class="pop-section" aria-label="模型设置" data-i18n-aria-label="模型设置">
+          <div class="cfg-row engine-row">
+            <label class="field backend-field"><span data-i18n="后端">后端</span><select id="sel-backend" aria-label="后端" data-i18n-aria-label="后端"><option value="claude">Claude Code</option><option value="codex">Codex</option></select></label>
+            <label class="field model-field"><span data-i18n="模型">模型</span><select id="sel-model" aria-label="模型" data-i18n-aria-label="模型"></select></label>
+            <button id="btn-models" class="ibtn" title="刷新模型列表" aria-label="刷新模型列表" data-i18n-title="刷新模型列表" data-i18n-aria-label="刷新模型列表">⟳</button>
+          </div>
+          <div id="model-detail" class="model-detail" aria-live="polite"></div>
+          <div class="engine-footer"><label class="effort-label" for="sel-effort" data-i18n="思考强度">思考强度</label><select id="sel-effort" aria-label="思考强度" data-i18n-aria-label="思考强度"></select><span id="engine-hint" data-i18n="使用本机订阅">使用本机订阅</span></div>
+        </div>
+        <div class="pop-row">
+          <div class="mode-tabs" role="group" aria-label="工作模式" data-i18n-aria-label="工作模式"><button id="mode-edit" class="mode-tab active" aria-pressed="true" data-i18n="改写文稿">改写文稿</button><button id="mode-ask" class="mode-tab" aria-pressed="false" data-i18n="文档问答">文档问答</button></div>
+          <label class="track-label" id="track-wrap" title="以 Word 修订写入，可在审阅中逐条接受或拒绝" data-i18n-title="以 Word 修订写入，可在审阅中逐条接受或拒绝"><input type="checkbox" id="chk-track" checked=""><span data-i18n="保留修订">保留修订</span></label>
+        </div>
+        <section id="target-bar" class="target empty" aria-label="改写目标" data-i18n-aria-label="改写目标">
+          <div class="section-heading"><span class="eyebrow" data-i18n="改写目标">改写目标</span><span class="target-tools"><span id="target-count" class="count-label">0 / 8</span><button id="btn-clear" class="ibtn" title="清除全部目标" aria-label="清除全部目标" data-i18n-title="清除全部目标" data-i18n-aria-label="清除全部目标">×</button></span></div>
+          <div id="target-info" class="target-info"></div><div id="target-list" class="target-list"></div>
+        </section>
+      </section>
+    </div>
     <main id="messages" class="messages" aria-label="对话和改写结果" tabindex="0" data-i18n-aria-label="对话和改写结果"></main>
     <section class="composer" aria-label="输入指令" data-i18n-aria-label="输入指令">
-      <div class="section-heading"><label for="input" class="eyebrow">02 <span id="instruction-label" data-i18n="告诉我怎么改">告诉我怎么改</span></label><span id="request-status" class="request-status" role="status"></span></div>
+      <div class="section-heading"><label for="input" class="eyebrow"><span id="instruction-label" data-i18n="告诉我怎么改">告诉我怎么改</span></label><span id="request-status" class="request-status" role="status"></span></div>
       <div id="presets" class="presets" aria-label="快捷指令" data-i18n-aria-label="快捷指令"></div>
       <div class="input-shell">
         <textarea id="input" rows="3" placeholder="比如：更简洁一些，保留关键数据…" aria-label="改写指令" data-i18n-aria-label="改写指令" data-i18n-placeholder="比如：更简洁一些，保留关键数据…"></textarea>

@@ -13,7 +13,8 @@ Files without a suffix show the English interface; `.zh-CN` files show the Chine
 | `word-tracked-changes` | Applied edits as tracked changes, with the Review tab / 以修订写入后的文档和「审阅」功能区 |
 | `word-table` | Table preview in which only the inserted row is new / 表格预览：只新增一行 |
 | `word-ask` | Document Q&A with a three-point summary / 文档问答：三条要点总结 |
+| `word-layout` | 0.7.2 layout: the normal view and the Settings card, rendered in the browser preview (`npm run preview`) with sample text and a sample reply, not in Word / 0.7.2 的布局：平时的样子和「设置」卡片，在浏览器预览（`npm run preview`）里用示例文字和示例回复渲染，并非 Word 实拍 |
 
-In the English take, the pane reports the plain-text fallback for the edited paragraphs; in the Chinese take the formatting was preserved. Formatting preservation is best effort. These images show macOS Word; interactive testing in Windows Word is a separate acceptance step.
+All images except `word-layout` show version 0.7.1, before the Settings card moved model, mode and targets out of the top of the pane. In the English take, the pane reports the plain-text fallback for the edited paragraphs; in the Chinese take the formatting was preserved. Formatting preservation is best effort. These images show macOS Word; interactive testing in Windows Word is a separate acceptance step.
 
-英文演示中，侧栏提示该段改用纯文本写入；中文演示中格式原样保留。格式保留属于尽力而为。以上为 macOS Word 画面，Windows Word 的交互验收需另行进行。
+除 `word-layout` 外，其余截图都是 0.7.1 版（模型、模式和目标还没收进「设置」卡片）。英文演示中，侧栏提示该段改用纯文本写入；中文演示中格式原样保留。格式保留属于尽力而为。以上为 macOS Word 画面，Windows Word 的交互验收需另行进行。

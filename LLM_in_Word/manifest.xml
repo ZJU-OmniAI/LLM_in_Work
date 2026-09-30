@@ -11,7 +11,7 @@
   xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
   xsi:type="TaskPaneApp">
   <Id>357a0a80-3537-4833-b135-a8177994730f</Id>
-  <Version>0.7.1.0</Version>
+  <Version>0.7.2.0</Version>
   <ProviderName>ZJU-OmniAI</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="LLM_in_Word"/>
