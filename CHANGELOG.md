@@ -1,5 +1,12 @@
 # 更新记录 / Changelog
 
+## 2026-10-01 — LLM_in_PowerPoint 0.1.0
+
+- **New: LLM_in_PowerPoint.** The Word workflow for slides: add selected words, text boxes, tables, groups or whole slides (up to 16 targets across slides), review a diff per target, and apply. Only the changed words are written, so fonts, colours, bold figures and bullet levels stay; every applied edit has a one-click Undo. Tables change cell by cell and can gain or lose rows. **Slide image** lets the model see the slide; **Presentation Q&A** writes speaker notes, checks consistency and finds typos.
+- Runs as its own local service on `127.0.0.1:8387`, next to LLM_in_Word. On macOS it reuses LLM_in_Word's trusted certificate, so installing both needs one password prompt.
+
+中文：新增 **LLM_in_PowerPoint**：选中文字、文本框、表格、分组或整页（最多 16 处，可跨页），每处一份差异，应用时只改变化的字词，字体、颜色、加粗和要点层级都保留，还能一键撤销；表格按单元格改、可增删行；可附当前页截图；演示文稿问答可写讲稿、查一致性。独立服务 `127.0.0.1:8387`，macOS 上沿用 Word 版已信任的证书。
+
 ## 2026-09-30 — LLM_in_Word 0.7.2
 
 - **A roomier Word pane, laid out like LLM_in_Overleaf:** one summary row at the top; model, language, mode and targets move into a floating **Settings** card. The conversation gets about three times the height.

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  LLM_in_PowerPoint 的 Office 加载项清单。install.sh 会把它拷进
+  ~/Library/Containers/com.microsoft.Powerpoint/Data/Documents/wef/（PowerPoint 的侧载目录）。
+  所有地址都指向本机服务 https://localhost:8387（端口改了要连同 server/config.js 一起改）。
+-->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+  <Id>f74c63ba-3bb3-46e9-9436-6e6d74f7a140</Id>
+  <Version>0.1.0.0</Version>
+  <ProviderName>ZJU-OmniAI</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="LLM_in_PowerPoint"/>
+  <Description DefaultValue="Review and apply AI edits to slides with your local Claude Code or Codex CLI.">
+    <Override Locale="zh-CN" Value="选中幻灯片里的文字、文本框或整页，预览差异后写回，保留原有格式。调用本机 Claude Code 或 Codex CLI。"/>
+  </Description>
+  <IconUrl DefaultValue="https://localhost:8387/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://localhost:8387/assets/icon-80.png"/>
+  <SupportUrl DefaultValue="https://github.com/ZJU-OmniAI/LLM_in_Work/issues"/>
+  <Hosts>
+    <Host Name="Presentation"/>
+  </Hosts>
+  <Requirements>
+    <Sets DefaultMinVersion="1.1">
+      <Set Name="PowerPointApi" MinVersion="1.5"/>
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://localhost:8387/taskpane.html"/>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Presentation">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="LLMInPowerPoint.Group1">
+                <Label resid="LLMInPowerPoint.GroupLabel"/>
+                <Icon>
+                  <bt:Image size="16" resid="LLMInPowerPoint.Icon16"/>
+                  <bt:Image size="32" resid="LLMInPowerPoint.Icon32"/>
+                  <bt:Image size="80" resid="LLMInPowerPoint.Icon80"/>
+                </Icon>
+                <Control xsi:type="Button" id="LLMInPowerPoint.TaskpaneButton">
+                  <Label resid="LLMInPowerPoint.ButtonLabel"/>
+                  <Supertip>
+                    <Title resid="LLMInPowerPoint.ButtonLabel"/>
+                    <Description resid="LLMInPowerPoint.ButtonTooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="LLMInPowerPoint.Icon16"/>
+                    <bt:Image size="32" resid="LLMInPowerPoint.Icon32"/>
+                    <bt:Image size="80" resid="LLMInPowerPoint.Icon80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>LLMInPowerPoint.Taskpane</TaskpaneId>
+                    <SourceLocation resid="LLMInPowerPoint.TaskpaneUrl"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="LLMInPowerPoint.Icon16" DefaultValue="https://localhost:8387/assets/icon-16.png"/>
+        <bt:Image id="LLMInPowerPoint.Icon32" DefaultValue="https://localhost:8387/assets/icon-32.png"/>
+        <bt:Image id="LLMInPowerPoint.Icon80" DefaultValue="https://localhost:8387/assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="LLMInPowerPoint.TaskpaneUrl" DefaultValue="https://localhost:8387/taskpane.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="LLMInPowerPoint.GroupLabel" DefaultValue="LLM_in_PowerPoint"/>
+        <bt:String id="LLMInPowerPoint.ButtonLabel" DefaultValue="LLM_in_PowerPoint"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="LLMInPowerPoint.ButtonTooltip" DefaultValue="Open LLM_in_PowerPoint: select text, a text box or a slide, describe the change, review the diff and apply it with formatting preserved.">
+          <bt:Override Locale="zh-CN" Value="打开 LLM_in_PowerPoint 面板：选中文字、文本框或整页，下指令改写，预览差异后写回，保留原有格式。"/>
+        </bt:String>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>
