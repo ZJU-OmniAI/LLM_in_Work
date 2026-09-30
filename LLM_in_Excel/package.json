@@ -1,0 +1,41 @@
+{
+  "name": "llm-in-excel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "LLM_in_Excel — Review and apply AI edits to cells in desktop Microsoft Excel with your local Claude Code or Codex CLI.",
+  "scripts": {
+    "server": "node server/server.js",
+    "test": "node --test tools/test-grid.js tools/test-book.js tools/test-i18n.js tools/test-ui.js tools/test-backend.js tools/test-platform.js tools/test-prompt.js",
+    "test:live": "node tools/test-server.js",
+    "test:live:codex": "node tools/test-server.js --codex",
+    "preview": "node tools/platform.js preview",
+    "update": "node tools/platform.js update",
+    "setup": "node tools/platform.js install",
+    "uninstall": "node tools/platform.js uninstall"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  },
+  "keywords": [
+    "excel-addin",
+    "office-js",
+    "claude-code",
+    "codex",
+    "spreadsheet",
+    "spreadsheet-assistant"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZJU-OmniAI/LLM_in_Work.git",
+    "directory": "LLM_in_Excel"
+  },
+  "homepage": "https://github.com/ZJU-OmniAI/LLM_in_Work/tree/main/LLM_in_Excel#readme",
+  "bugs": {
+    "url": "https://github.com/ZJU-OmniAI/LLM_in_Work/issues"
+  }
+}

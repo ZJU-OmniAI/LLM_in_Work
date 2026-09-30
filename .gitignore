@@ -46,3 +46,6 @@ pfx-password.txt
 
 # PowerPoint local runtime
 .llm_in_powerpoint/
+
+# Excel local runtime
+.llm_in_excel/
