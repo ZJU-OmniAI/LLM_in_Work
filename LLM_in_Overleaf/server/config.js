@@ -41,7 +41,10 @@ export function spawnEnv() {
   ];
   if (process.platform === 'darwin') {
     for (const root of ['/Applications', path.join(os.homedir(), 'Applications')]) {
-      for (const app of ['Codex.app', 'ChatGPT.app']) extra.push(path.join(root, app, 'Contents/Resources'));
+      for (const app of ['Codex.app', 'ChatGPT.app']) {
+        extra.push(path.join(root, app, 'Contents/Resources'));
+        extra.push(path.join(root, app, 'Contents/Resources/codex-cli/bin')); // 新版应用包里的 CLI 位置
+      }
     }
   }
   // nvm 升级后，安装时记录的 Node 与新装 CLI 可能不再处于同一目录。

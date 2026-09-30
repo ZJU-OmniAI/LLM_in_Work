@@ -1,5 +1,11 @@
 # 更新记录
 
+## Unreleased
+
+- Find the Codex CLI that newer Codex and ChatGPT desktop apps ship in `Contents/Resources/codex-cli/bin`, so Codex works without a separate install.
+
+中文摘要：能找到新版 Codex / ChatGPT 桌面应用自带的 Codex CLI，不单独安装也能用 Codex。
+
 ## 0.7.1 — 2026-09-30
 
 - Explanations now follow the language of your instruction, falling back to the pane's interface language. Previously the model always explained its edits in Chinese, even in the English interface.

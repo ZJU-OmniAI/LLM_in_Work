@@ -59,6 +59,9 @@ export function spawnEnv() {
     '/bin',
     '/Applications/Codex.app/Contents/Resources',
     '/Applications/ChatGPT.app/Contents/Resources',
+    // 新版 Codex / ChatGPT 桌面应用把 CLI 放在 Resources/codex-cli/bin 里。
+    '/Applications/Codex.app/Contents/Resources/codex-cli/bin',
+    '/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin',
   ];
   // nvm 升级后，launchd 使用的 Node 与新装 CLI 可能不再处于同一目录。
   try {
