@@ -15,7 +15,7 @@ process.env.CODEX_HOME = mkdtempSync(path.join(os.tmpdir(), 'llm-in-overleaf-cod
 const { runCodex, runClaude } = await import('../server/cli.js');
 const { getModels } = await import('../server/models.js');
 const { getHealth } = await import('../server/health.js');
-const { resolveBinary } = await import('../server/config.js');
+const { resolveBinary, spawnEnv } = await import('../server/config.js');
 const { runProcess, classifyError } = await import('../server/process.js');
 async function run(prompt, options = {}) {
   const events = [];
@@ -24,6 +24,10 @@ async function run(prompt, options = {}) {
 }
 const text = (events) => events.filter((e) => e.kind === 'text').map((e) => e.data).join('');
 test('explicit CLI path wins', () => assert.equal(resolveBinary('codex', '/custom/codex'), '/custom/codex'));
+test('PATH includes the Codex CLI bundled with the Codex and ChatGPT desktop apps', { skip: process.platform !== 'darwin' }, () => {
+  const dirs = spawnEnv().PATH.split(path.delimiter);
+  for (const app of ['Codex.app', 'ChatGPT.app']) assert.ok(dirs.includes(`/Applications/${app}/Contents/Resources/codex-cli/bin`), app);
+});
 test('health checks executable and login', async () => assert.equal((await getHealth('codex')).ok, true));
 test('model/list follows pagination and uses model rather than display id', async () => {
   const result = await getModels('codex', true);

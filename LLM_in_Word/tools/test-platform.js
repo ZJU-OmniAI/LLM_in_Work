@@ -5,6 +5,12 @@ import { once } from 'node:events';
 import path from 'node:path';
 import os from 'node:os';
 import { launchSpec, spawnCli, killTree } from '../server/launch.js';
+import { spawnEnv } from '../server/config.js';
+
+test('PATH includes the Codex CLI bundled with the Codex and ChatGPT desktop apps', () => {
+  const dirs = spawnEnv().PATH.split(path.delimiter);
+  for (const app of ['Codex.app', 'ChatGPT.app']) assert.ok(dirs.includes(`/Applications/${app}/Contents/Resources/codex-cli/bin`), app);
+});
 
 test('official Windows npm shims launch Node directly, with arguments intact', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'llm cli 空格 & '));
