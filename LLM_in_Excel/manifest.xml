@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  LLM_in_Excel 的 Office 加载项清单。install.sh 会把它拷进
+  ~/Library/Containers/com.microsoft.Excel/Data/Documents/wef/（Excel 的侧载目录）。
+  所有地址都指向本机服务 https://localhost:8397（端口改了要连同 server/config.js 一起改）。
+-->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+  <Id>e0073563-2fe7-49df-805f-f77267022baa</Id>
+  <Version>0.1.0.0</Version>
+  <ProviderName>ZJU-OmniAI</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="LLM_in_Excel"/>
+  <Description DefaultValue="Review and apply AI edits to cells with your local Claude Code or Codex CLI.">
+    <Override Locale="zh-CN" Value="选中单元格区域，预览改动后只写入有变化的单元格，格式不变。调用本机 Claude Code 或 Codex CLI。"/>
+  </Description>
+  <IconUrl DefaultValue="https://localhost:8397/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://localhost:8397/assets/icon-80.png"/>
+  <SupportUrl DefaultValue="https://github.com/ZJU-OmniAI/LLM_in_Work/issues"/>
+  <Hosts>
+    <Host Name="Workbook"/>
+  </Hosts>
+  <Requirements>
+    <Sets DefaultMinVersion="1.1">
+      <Set Name="ExcelApi" MinVersion="1.9"/>
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://localhost:8397/taskpane.html"/>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Workbook">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="LLMInExcel.Group1">
+                <Label resid="LLMInExcel.GroupLabel"/>
+                <Icon>
+                  <bt:Image size="16" resid="LLMInExcel.Icon16"/>
+                  <bt:Image size="32" resid="LLMInExcel.Icon32"/>
+                  <bt:Image size="80" resid="LLMInExcel.Icon80"/>
+                </Icon>
+                <Control xsi:type="Button" id="LLMInExcel.TaskpaneButton">
+                  <Label resid="LLMInExcel.ButtonLabel"/>
+                  <Supertip>
+                    <Title resid="LLMInExcel.ButtonLabel"/>
+                    <Description resid="LLMInExcel.ButtonTooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="LLMInExcel.Icon16"/>
+                    <bt:Image size="32" resid="LLMInExcel.Icon32"/>
+                    <bt:Image size="80" resid="LLMInExcel.Icon80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>LLMInExcel.Taskpane</TaskpaneId>
+                    <SourceLocation resid="LLMInExcel.TaskpaneUrl"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="LLMInExcel.Icon16" DefaultValue="https://localhost:8397/assets/icon-16.png"/>
+        <bt:Image id="LLMInExcel.Icon32" DefaultValue="https://localhost:8397/assets/icon-32.png"/>
+        <bt:Image id="LLMInExcel.Icon80" DefaultValue="https://localhost:8397/assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="LLMInExcel.TaskpaneUrl" DefaultValue="https://localhost:8397/taskpane.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="LLMInExcel.GroupLabel" DefaultValue="LLM_in_Excel"/>
+        <bt:String id="LLMInExcel.ButtonLabel" DefaultValue="LLM_in_Excel"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="LLMInExcel.ButtonTooltip" DefaultValue="Open LLM_in_Excel: select cells, describe the change, review the preview and apply only the changed cells.">
+          <bt:Override Locale="zh-CN" Value="打开 LLM_in_Excel 面板：选中单元格，下指令，预览改动后只写入有变化的单元格，格式不变。"/>
+        </bt:String>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

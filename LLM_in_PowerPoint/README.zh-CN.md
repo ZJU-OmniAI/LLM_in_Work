@@ -1,6 +1,6 @@
 # LLM_in_PowerPoint
 
-[← LLM_in_Work](../README.zh-CN.md) · [LLM_in_Word](../LLM_in_Word/README.zh-CN.md) · [LLM_in_Overleaf](../LLM_in_Overleaf/README.zh-CN.md)
+[← LLM_in_Work](../README.zh-CN.md) · [LLM_in_Word](../LLM_in_Word/README.zh-CN.md) · [LLM_in_Excel](../LLM_in_Excel/README.zh-CN.md) · [LLM_in_Overleaf](../LLM_in_Overleaf/README.zh-CN.md)
 
 **把本机的 Claude Code 或 Codex CLI 装进 Microsoft PowerPoint。**
 

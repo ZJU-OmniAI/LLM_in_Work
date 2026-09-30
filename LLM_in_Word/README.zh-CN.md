@@ -1,6 +1,6 @@
 # LLM_in_Word
 
-[← LLM_in_Work 首页](../README.zh-CN.md) · [LLM_in_Overleaf](../LLM_in_Overleaf/README.zh-CN.md)
+[← LLM_in_Work 首页](../README.zh-CN.md) · [LLM_in_PowerPoint](../LLM_in_PowerPoint/README.zh-CN.md) · [LLM_in_Excel](../LLM_in_Excel/README.zh-CN.md) · [LLM_in_Overleaf](../LLM_in_Overleaf/README.zh-CN.md)
 
 **把本机 Claude Code 与 Codex CLI，带进 Microsoft Word。**
 
