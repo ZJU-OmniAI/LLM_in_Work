@@ -455,7 +455,22 @@
     const out = [];
     let listType = null;
     const closeList = () => { if (listType) { out.push(`</${listType}>`); listType = null; } };
-    for (const line of lines) {
+    // GFM 表格：表头行 + 分隔线 + 若干数据行（单元格内容此前已转义并处理过行内格式）
+    const cells = (row) => row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+    const isSep = (row) => /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(row || '');
+    for (let li = 0; li < lines.length; li++) {
+      const line = lines[li];
+      if (/^\s*\|.*\|\s*$/.test(line) && isSep(lines[li + 1])) {
+        closeList();
+        const head = cells(line);
+        const body = [];
+        li += 2;
+        while (li < lines.length && /^\s*\|.*\|\s*$/.test(lines[li])) body.push(cells(lines[li++]));
+        li--;
+        out.push('<table class="ole-md-table"><thead><tr>' + head.map((c) => `<th>${c}</th>`).join('') + '</tr></thead><tbody>'
+          + body.map((r) => '<tr>' + head.map((_, i) => `<td>${r[i] ?? ''}</td>`).join('') + '</tr>').join('') + '</tbody></table>');
+        continue;
+      }
       let m;
       if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
         closeList();
@@ -1899,6 +1914,9 @@
       .ole-bubble p:last-child { margin-bottom: 0; }
       .ole-bubble ul, .ole-bubble ol { margin: 6px 0; padding-left: 20px; }
       .ole-bubble blockquote { margin: 6px 0; padding: 2px 10px; border-left: 3px solid #c9cde0; color: #555b6e; }
+      .ole-md-table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: 8px 0; font-size: 12px; line-height: 1.5; }
+      .ole-md-table th, .ole-md-table td { border: 1px solid #dde5de; padding: 4px 8px; text-align: left; vertical-align: top; }
+      .ole-md-table th { background: #f1f6f2; color: #365e51; font-weight: 600; }
       .ole-code { background: #e9ebf3; padding: 1px 5px; border-radius: 4px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
       .ole-pre { background: #25352f; color: #e6e8ef; padding: 10px 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
       .ole-pre code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: pre; }

@@ -30,7 +30,7 @@ function setup(responseEvents, { trailingNewline = true, hold = false, language 
   w.eval(js.replace('  init();', `  init();
     getEditContext = () => window.__context;
     getWholeDoc = () => window.__context;
-    window.ui = { state, sendInstruction, renderTargetBar, fillModelOptions, stopStream, contextKey, refreshModelList };
+    window.ui = { state, sendInstruction, renderTargetBar, fillModelOptions, stopStream, contextKey, refreshModelList, refreshStatusUI };
   `));
   w.ui.state.wordReady = true; w.ui.state.serverOk = true;
   w.ui.state.targets = [{ ccId: 1, text: '原文', kind: 'text' }];
@@ -191,4 +191,40 @@ test('each request carries the interface language so explanations match it', asy
     const t = setup(good, { language });
     try { await t.w.ui.sendInstruction(language === 'en' ? 'Polish' : '润色'); assert.equal(t.calls[0].uiLanguage, language); } finally { await t.close(); }
   }
+});
+test('backend hints from the local service are shown in the interface language', async () => {
+  const t = setup(good, { language: 'en' });
+  try {
+    t.w.ui.state.cfg.backend = 'codex';
+    t.w.ui.state.health = { backends: { codex: { status: 'missing', label: '未找到 CLI', hint: '请安装 Codex，或运行 npm run update 同步 CLI 路径。' } } };
+    t.w.ui.refreshStatusUI();
+    assert.equal(t.w.document.querySelector('#banner').textContent, 'Install Codex, or run npm run update to sync CLI paths.');
+    assert.equal(t.w.document.querySelector('#status-text').textContent, 'CLI not found');
+  } finally { await t.close(); }
+});
+test('engine settings collapse to a one-line summary and the choice is remembered', async () => {
+  const t = setup(good, { language: 'en' });
+  try {
+    const panel = t.w.document.querySelector('.engine-panel');
+    const toggle = t.w.document.querySelector('#btn-engine');
+    if (panel.classList.contains('collapsed')) toggle.click();
+    assert.equal(panel.classList.contains('collapsed'), false);
+    toggle.click();
+    assert.equal(panel.classList.contains('collapsed'), true);
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+    assert.match(t.w.document.querySelector('#engine-summary').textContent, /^Claude Code · .+ · (Light|Balanced|Deep)/);
+    assert.equal(JSON.parse(t.w.localStorage.getItem('we:cfg')).engineCollapsed, true);
+    assert.equal(toggle.title, 'Show or hide writing engine settings');
+  } finally { await t.close(); }
+});
+test('Markdown tables in answers render as tables', async () => {
+  const t = setup([{ type: 'delta', text: 'Summary\n\n| Metric | Week 3 | Week 6 |\n| --- | --- | --- |\n| Documents | 19 | 48 |\n| Accepted | 71% | **83%** |' }, { type: 'done', ok: true }], { language: 'en' });
+  try {
+    t.w.ui.state.cfg.mode = 'ask';
+    await t.w.ui.sendInstruction('Summarize');
+    const rows = t.w.document.querySelectorAll('.md-table tbody tr');
+    assert.equal(rows.length, 2);
+    assert.equal(t.w.document.querySelector('.md-table th').textContent, 'Metric');
+    assert.equal(t.w.document.querySelector('.md-table strong').textContent, '83%');
+  } finally { await t.close(); }
 });

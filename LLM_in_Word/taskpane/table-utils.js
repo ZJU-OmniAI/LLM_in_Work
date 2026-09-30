@@ -53,20 +53,63 @@
     return `<table style="border-collapse:collapse">${rows}</table>`;
   }
 
-  // 新旧值矩阵的单元格级差异统计（供预览高亮与应用提示）
+  // 按内容对齐新旧表格的行：完全相同的行作锚点（LCS），锚点之间数量对应的行算"修改"，
+  // 多出来的算新增 / 删除。这样在表格中间插入一行只记一次新增，后面的行不会被误判为改动。
+  // 返回按新表顺序排列的操作：keep / change（old→new）/ insert（new）/ delete（old）。
+  function planRows(oldVals, newVals) {
+    const o = oldVals || [], n = newVals || [];
+    const key = (row) => JSON.stringify((row || []).map((c) => String(c ?? '')));
+    const ok = o.map(key), nk = n.map(key);
+    const m = o.length, k = n.length;
+    const dp = Array.from({ length: m + 1 }, () => new Uint32Array(k + 1));
+    for (let i = m - 1; i >= 0; i--) {
+      for (let j = k - 1; j >= 0; j--) dp[i][j] = ok[i] === nk[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+    const anchors = [];
+    for (let i = 0, j = 0; i < m && j < k;) {
+      if (ok[i] === nk[j]) { anchors.push([i, j]); i++; j++; }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) i++;
+      else j++;
+    }
+    const ops = [];
+    let pi = 0, pj = 0;
+    for (const [ai, aj] of [...anchors, [m, k]]) {
+      const oldGap = ai - pi, newGap = aj - pj, pairs = Math.min(oldGap, newGap);
+      for (let t = 0; t < pairs; t++) ops.push({ type: 'change', old: pi + t, new: pj + t });
+      for (let t = pairs; t < oldGap; t++) ops.push({ type: 'delete', old: pi + t });
+      for (let t = pairs; t < newGap; t++) ops.push({ type: 'insert', new: pj + t });
+      if (ai < m) ops.push({ type: 'keep', old: ai, new: aj });
+      pi = ai + 1; pj = aj + 1;
+    }
+    return ops;
+  }
+
+  // 新旧值矩阵的单元格级差异统计（供预览高亮与应用提示）；行按内容对齐，见 planRows。
+  // changed 里是 [新表行号, 列号]；列数不同时整表重建，不做行对齐。
   function diffCells(oldVals, newVals) {
     const o = oldVals || [], n = newVals || [];
     const oRows = o.length, nRows = n.length;
     const oCols = o[0] ? o[0].length : 0, nCols = n[0] ? n[0].length : 0;
+    const colsChanged = oCols !== nCols;
     const changed = [];
-    const lim = Math.min(oRows, nRows);
-    for (let r = 0; r < lim; r++) {
-      for (let c = 0; c < Math.min(oCols, nCols); c++) {
-        if (String(o[r][c] ?? '') !== String(n[r][c] ?? '')) changed.push([r, c]);
+    let rowsAdded = 0, rowsRemoved = 0;
+    if (colsChanged) {
+      const lim = Math.min(oRows, nRows);
+      for (let r = 0; r < lim; r++) {
+        for (let c = 0; c < Math.min(oCols, nCols); c++) if (String(o[r][c] ?? '') !== String(n[r][c] ?? '')) changed.push([r, c]);
+      }
+      rowsAdded = Math.max(0, nRows - oRows); rowsRemoved = Math.max(0, oRows - nRows);
+    } else {
+      for (const op of planRows(o, n)) {
+        if (op.type === 'insert') rowsAdded++;
+        else if (op.type === 'delete') rowsRemoved++;
+        else if (op.type === 'change') {
+          for (let c = 0; c < nCols; c++) if (String(o[op.old][c] ?? '') !== String(n[op.new][c] ?? '')) changed.push([op.new, c]);
+        }
       }
     }
-    return { changed, rowsAdded: Math.max(0, nRows - oRows), rowsRemoved: Math.max(0, oRows - nRows), colsChanged: oCols !== nCols, oRows, oCols, nRows, nCols };
+    return { changed, rowsAdded, rowsRemoved, colsChanged, oRows, oCols, nRows, nCols };
   }
 
-  return { toMarkdown, parseMarkdown, toHTML, diffCells };
+  return { toMarkdown, parseMarkdown, toHTML, planRows, diffCells };
 });

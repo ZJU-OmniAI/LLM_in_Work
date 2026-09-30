@@ -215,6 +215,13 @@ button:focus-visible, select:focus-visible, summary:focus-visible, [tabindex]:fo
 .section-heading { display:flex; align-items:center; justify-content:space-between; gap:6px; }
 .eyebrow { font-size:10px; font-weight:600; color:#89968b; letter-spacing:1px; }
 .eyebrow span { color:#5e7169; letter-spacing:.4px; margin-left:4px; }
+.engine-toggle { display:flex; align-items:center; gap:6px; min-width:0; border:0; background:transparent; padding:0; cursor:pointer; color:inherit; }
+.engine-toggle .chevron { font-size:11px; line-height:1; color:#6f8279; transition:transform .15s; }
+.engine-panel.collapsed .engine-toggle .chevron { transform:rotate(-90deg); }
+.engine-summary { display:none; font-size:11px; color:#314f45; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.engine-panel.collapsed .engine-summary { display:inline; }
+.engine-panel.collapsed #engine-body { display:none; }
+.engine-panel.collapsed { padding-bottom:10px; }
 .connection-button { display:inline-flex; align-items:center; gap:5px; border:0; background:transparent; color:#697c72; cursor:pointer; font-size:10px; padding:0; }
 .dot { width:6px; height:6px; background:#aeb7af; }
 .dot.ok { background:#599275; box-shadow:0 0 0 3px #edf4eb; }
@@ -348,3 +355,6 @@ html[lang="en"] .card-head { flex-wrap:wrap; }
   html[lang="en"] .brand-sub { display:none; }
   html[lang="en"] .workspace-toolbar { flex-wrap:wrap; gap:6px; }
 }
+.md-table { display:block; max-width:100%; overflow-x:auto; border-collapse:collapse; margin:8px 0; font-size:11.5px; line-height:1.5; }
+.md-table th, .md-table td { border:1px solid #dfe6dc; padding:4px 7px; text-align:left; vertical-align:top; }
+.md-table th { background:#f1f5ee; color:#405a39; font-weight:600; }
