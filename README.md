@@ -1,64 +1,133 @@
+<div align="center">
+
 # LLM_in_Work
 
-**Bring your local Claude Code and Codex CLI into Word and Overleaf.**
+**Your local Claude Code and Codex, inside Microsoft Word and Overleaf.**
 
-English · [简体中文](README.zh-CN.md)
+Select text, describe the change, review the diff, apply. No copying between a chat window and your document, and no extra API key.
 
-Select the text you want to improve, describe the change, review the diff, and apply it in the editor you already use. LLM_in_Work brings together two independent writing assistants that use your existing local CLI login.
+[![CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ZJU-OmniAI/LLM_in_Work/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
+[![Word](https://img.shields.io/badge/Word-Windows%20%C2%B7%20macOS-2b579a)](LLM_in_Word/README.md)
+[![Overleaf](https://img.shields.io/badge/Overleaf-Chrome%20%C2%B7%20Edge%20%C2%B7%20Brave-47a141)](LLM_in_Overleaf/README.md)
+[![Backends](https://img.shields.io/badge/backend-Claude%20Code%20%C2%B7%20Codex%20CLI-555)](#quick-start)
+
+**English** · [简体中文](README.zh-CN.md)
+
+</div>
+
+https://github.com/user-attachments/assets/f6d255d1-0f46-4867-aaf6-50513a279c16
+
+<p align="center"><sub>Real recordings, English narration, bilingual subtitles · <a href="README.zh-CN.md">中文配音版</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-09-30">Download 1080p + subtitles</a></sub></p>
+
+## Why LLM_in_Work
+
+- **No API key, no new account.** It drives the Claude Code or Codex CLI already signed in on your computer, so it uses the subscription you already have.
+- **Review before anything changes.** Every edit arrives as a diff (red for deletions, green for additions). Your document stays untouched until you click Apply.
+- **Native write-back.** Word receives real tracked changes that you accept or reject in the Review tab. Overleaf applies a whole group of edits as one step that a single undo reverts.
+- **Several passages, one instruction.** Up to eight paragraphs or whole tables in Word; several separate selections in one `.tex` file in Overleaf.
+- **Whole-document context.** The full document or `.tex` file goes along with your request, so terminology, citations and math stay consistent. Add `.bib` files, other chapters or PDFs when you need more.
+- **Careful by design.** The original text is checked again before writing, so an edit never lands in the wrong place. Table edits touch only the rows and cells that changed. CLI calls run without your MCP servers and without extra tools.
+- **Ask, not only edit.** Document Q&A in Word and Ask mode in Overleaf answer questions without changing your text.
+- **English and 中文.** Switch the interface at any time. Explanations follow the language of your instruction.
+
+## Two assistants, one workflow
 
 | | [LLM_in_Word](LLM_in_Word/README.md) | [LLM_in_Overleaf](LLM_in_Overleaf/README.md) |
 | --- | --- | --- |
-| Write in | Microsoft Word desktop | Overleaf's LaTeX source editor |
-| Review changes | Text and table diffs; optional Word tracked changes | Per-selection LaTeX diffs; apply as one undoable editor transaction |
-| Edit together | Up to 8 paragraphs or tables | Multiple non-contiguous selections in one `.tex` file |
-| Ask questions | Use document text as context | Use the current `.tex` file and attached project files |
-| Local connection | Office.js add-in → localhost HTTPS → CLI | Browser extension → Native Messaging → CLI |
-| Installation | Windows and macOS | macOS installer for Chrome / Chromium browsers |
-| Interface | English and Simplified Chinese | Simplified Chinese |
-| Get started | **[Word guide →](LLM_in_Word/README.md)** | **[Overleaf guide →](LLM_in_Overleaf/README.md)** |
+| Works in | Microsoft Word desktop | Overleaf's Code Editor (`overleaf.com`, `cn.overleaf.com`) |
+| Review | Text and table diffs, applied as Word tracked changes | A LaTeX diff for every selection, applied as one undoable step |
+| Edit together | Up to 8 paragraphs or tables | Several non-adjacent selections in one `.tex` file |
+| Ask questions | Document Q&A about the whole document | Ask mode with the `.tex` file and attached project files |
+| Runs on | Windows and macOS | Chrome, Edge, Brave and other Chromium browsers on Windows, macOS and Linux |
+| Connection | Office add-in → local HTTPS service (`127.0.0.1:8377`) → CLI | Extension → Native Messaging (no port) → CLI |
+| Interface | English · 中文 | English · 中文 |
 
-## What you can do
+## See it in action
 
-- **Polish, shorten, translate and revise** without copying text between an editor and a chat window.
-- **Review before applying.** Generation produces a preview; you decide when to write it back.
-- **Work with multiple targets.** Give several selected passages one instruction while keeping the surrounding text intact.
-- **Continue the conversation.** Refine a draft, ask questions, attach references and revisit local conversation history.
-- **Choose your backend.** Use Claude Code or Codex CLI, with model selection and supported reasoning levels.
+<table>
+  <tr>
+    <td width="50%"><img src="LLM_in_Word/docs/images/word-diff.jpg" alt="Word side pane showing a diff for one of two targets"></td>
+    <td width="50%"><img src="LLM_in_Overleaf/docs/images/overleaf-diff.jpg" alt="Overleaf panel showing a separate diff for two LaTeX selections"></td>
+  </tr>
+  <tr>
+    <td><b>Word:</b> every target gets its own diff. Apply one, or all at once.</td>
+    <td><b>Overleaf:</b> citations and math stay intact; each selection has its own diff.</td>
+  </tr>
+  <tr>
+    <td><img src="LLM_in_Word/docs/images/word-table.jpg" alt="Word table preview with one inserted row highlighted"></td>
+    <td><img src="LLM_in_Overleaf/docs/images/overleaf-ask.jpg" alt="Overleaf Ask mode answering whether every citation is defined in refs.bib"></td>
+  </tr>
+  <tr>
+    <td><b>Tables:</b> a new row is inserted on its own; every other cell stays as it was.</td>
+    <td><b>Ask mode:</b> attach <code>refs.bib</code> and check that every citation is defined.</td>
+  </tr>
+</table>
 
-### LLM_in_Word
+Screenshots come from the demo recordings: real desktop Word on macOS, and the real extension and CodeMirror editor on a local demo page (not the hosted Overleaf site). All answers were generated by Claude Code (Sonnet 5.5, low effort).
 
-A Word side pane for prose and tables. Preview additions and deletions, apply edits with optional tracked changes, and accept or reject them in Word's Review tab. Formatting is preserved where supported, with an explicit plain-text fallback for unsupported content.
+## How it works
 
-[Features, installation and usage](LLM_in_Word/README.md) · [中文指南](LLM_in_Word/README.zh-CN.md)
+```mermaid
+flowchart LR
+  subgraph PC["Your computer"]
+    W["Microsoft Word<br/>LLM_in_Word pane"] -- "HTTPS · 127.0.0.1:8377" --> S["Local service<br/>(Node.js)"]
+    O["Overleaf tab<br/>LLM_in_Overleaf extension"] -- "Native Messaging · no port" --> H["Native host<br/>(Node.js)"]
+    S --> C["Claude Code / Codex CLI<br/>your sign-in and subscription"]
+    H --> C
+  end
+  C -- "inference" --> P[("Model provider")]
+```
 
-### LLM_in_Overleaf
+Both bridges run locally and add no cloud service of their own. The model itself runs wherever your CLI sends it, usually the provider's service.
 
-A browser extension for LaTeX writing on `overleaf.com` and `cn.overleaf.com`. Collect several selections in one source file, review a replacement for each, then apply them together. Source and filename checks guard against applying stale edits; the whole operation can be undone once in the editor.
+## Quick start
 
-[Features, installation and usage](LLM_in_Overleaf/README.md) · [中文指南](LLM_in_Overleaf/README.zh-CN.md)
-
-## Get started
-
-Install Node.js **22.12+ (22.x) or 24+**, and install and sign in to at least one local backend: Claude Code or Codex CLI. Then clone this repository:
+**You need:** Node.js 22.12+ (22.x) or 24+, and at least one CLI installed and signed in: [Claude Code](https://code.claude.com/docs/en/setup) (`claude auth login`) or [Codex CLI](https://github.com/openai/codex) (`codex login`).
 
 ```bash
 git clone https://github.com/ZJU-OmniAI/LLM_in_Work.git
 cd LLM_in_Work
 ```
 
-Choose the [Word installation guide](LLM_in_Word/README.md#windows-installation) or the [Overleaf installation guide](LLM_in_Overleaf/README.md#installation-macos). Each subproject has its own installer and dependencies; install either or both.
+| | LLM_in_Word | LLM_in_Overleaf |
+| --- | --- | --- |
+| macOS | `cd LLM_in_Word && ./install.sh` | `cd LLM_in_Overleaf && ./install.sh` |
+| Linux | Not available (no desktop Word) | `cd LLM_in_Overleaf && ./install.sh` |
+| Windows | In `LLM_in_Word`: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1` | The same command in `LLM_in_Overleaf` |
+| Then | Restart Word, then **Home → Add-ins → Developer Add-ins → LLM_in_Word** | Open `chrome://extensions`, turn on **Developer mode**, **Load unpacked** → `LLM_in_Overleaf/extension` |
+
+Install either one or both. Step-by-step guides with screenshots: **[LLM_in_Word](LLM_in_Word/README.md)** · **[LLM_in_Overleaf](LLM_in_Overleaf/README.md)**.
+
+## FAQ
+
+**Do I need an API key?**
+No. Requests go through your signed-in Claude Code or Codex CLI and count against that account's plan or usage.
+
+**What does the model receive?**
+Your instruction, the selected passages, the document (Word) or the current `.tex` file (Overleaf) as context, and any files you attach. Selecting a passage limits where edits are written, not what is sent. Read [data and security](SECURITY.md) before using confidential documents.
+
+**Can it change my document without asking?**
+No. Results are previews until you click Apply. In Word you can still reject each tracked change; in Overleaf one undo reverts the whole group.
+
+**Which editors are supported?**
+Microsoft 365 desktop Word on Windows and macOS, and the Code Editor on `overleaf.com` and `cn.overleaf.com`. Word for the web, the Overleaf visual editor and self-hosted Overleaf are not supported out of the box.
+
+**Is this an official Microsoft, Overleaf, Anthropic or OpenAI product?**
+No. It is an independent open-source project by ZJU-OmniAI.
+
+## Repository
 
 ```text
 LLM_in_Work/
-├── README.md              # Overview and project navigation
-├── LLM_in_Word/           # Word add-in, local HTTPS service and installers
-└── LLM_in_Overleaf/       # Browser extension and native messaging host
+├── LLM_in_Word/       Word add-in, local HTTPS service, installers
+├── LLM_in_Overleaf/   Browser extension, native messaging host, installers
+├── SECURITY.md        What is sent where, and how the CLIs are called
+└── CONTRIBUTING.md    Tests and CI for both projects
 ```
 
-## Development and data
+Both projects run without npm runtime dependencies. Offline tests use mock CLIs and synthetic documents, and [CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions) runs them on Linux, macOS and Windows. See [Contributing](CONTRIBUTING.md) and the [changelog](CHANGELOG.md).
 
-Both projects run without additional npm runtime dependencies. Development tests use mock CLIs and synthetic documents. See [Contributing](CONTRIBUTING.md) for per-project test commands and CI coverage.
+## License
 
-The bridge runs locally, but model inference usually connects to the selected provider. Selecting a passage limits the write-back target; it does **not** mean only that passage is sent as context. Read the [data and security notes](SECURITY.md).
-
-[MIT license](LICENSE). An independent ZJU-OmniAI project; not an official Microsoft, Overleaf, Anthropic or OpenAI product.
+[MIT](LICENSE). Office.js, Overleaf, the model CLIs and their services remain subject to their own terms.

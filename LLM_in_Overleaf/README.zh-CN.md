@@ -2,122 +2,134 @@
 
 [← LLM_in_Work 首页](../README.zh-CN.md) · [LLM_in_Word](../LLM_in_Word/README.zh-CN.md)
 
-**在 Overleaf 中选中 LaTeX，审阅 AI 修改，再写回源码。**
+**在 Overleaf 的 LaTeX 编辑器里审阅 AI 修改，再直接写回源码。**
 
 [English](README.md) · 简体中文
 
-选中同一 `.tex` 文件中的一段或多段内容，输入修改要求，逐段查看差异，再一次应用。扩展通过 Chrome Native Messaging 调用本机的 **Claude Code / Codex CLI**，沿用已有登录，无需另配 API key 或手动启动服务。
+在 `.tex` 文件里选中一段或几段内容，输入修改要求，逐段查看差异，再一起应用。扩展通过浏览器的「原生消息」（Native Messaging）调用你电脑上已登录的 **Claude Code 或 Codex CLI**：不需要 API Key，也不用自己启动服务。
+
+[安装](#安装) · [第一次修改](#第一次修改) · [上下文与附件](#上下文与附件) · [常见问题](#常见问题) · [卸载](#卸载)
+
+![从 main.tex 收集了两段内容，右侧打开 LLM_in_Overleaf 面板](docs/images/overleaf-selection.zh-CN.jpg)
 
 ## 可以做什么
 
 | 功能 | 实际用途 |
 | --- | --- |
-| LaTeX 改写 | 学术润色、语法修正、精简、扩写、翻译和公式表达调整。 |
-| 多个不连续选段 | 收集同一源码文件中的多处内容，用一条指令统一修改。 |
-| 先看差异，再应用 | 通过「对比」查看新增和删除，也可直接阅读「新文本」。 |
-| 写回前校验 | 核对文件名和原文；选段失效或替换稿不完整时拒绝应用。整组修改可一次撤销。 |
-| 文档问答 | 围绕选段或当前源码提问，无需替换内容。 |
-| 参考附件 | 添加项目其他文件、本地文本、图片或 PDF，实际读取能力取决于后端。 |
-| 多轮与历史 | 继续细化、按项目恢复历史、导出 Markdown、开启新会话。 |
-| 后端控制 | 切换 Claude / Codex、模型和思考强度，检测连接、停止生成。 |
-| 阅读模式 | 放大回复区域，返回后保留输入草稿。 |
+| LaTeX 改写 | 学术润色、修语法、精简、扩写、翻译、公式规范；可以点快捷按钮，也可以自己写要求。 |
+| 多个选段 | 把同一源码文件里不相邻的几段收集起来，用一条要求统一修改。 |
+| 先看差异再应用 | 每段都能看到新增和删除，也可以切到「新文本」直接阅读。点应用之前不会写入。 |
+| 写回前核对 | 写入前重新核对文件名和原文，内容已变或位置不对就拒绝写入。整组修改作为编辑器里的一步写入，**Cmd/Ctrl+Z** 一次就能撤销。 |
+| 问答模式 | 围绕选段或整篇论文提问，不会替换任何内容。 |
+| 附件 | 可以把项目里的其他文件（`.bib`、其他章节、`.cls`、`.sty`）或本地文本、图片、PDF 加进上下文。 |
+| 多轮与历史 | 继续细化、按项目找回历史会话、导出 Markdown、开新会话。 |
+| 后端设置 | 切换 Claude / Codex，选择模型和它支持的思考强度，检查连接，随时停止生成。 |
+| 中英文界面 | 默认跟随浏览器语言；可在面板「设置」或扩展弹窗里随时切换。说明文字跟随你输入要求所用的语言。 |
+| 阅读模式 | 放大回复区域，返回后输入草稿还在。 |
 
-当前界面为**简体中文**，支持 Overleaf 主站和 `cn.overleaf.com` 中文站。随项目提供的安装器面向 **macOS 的 Chrome / Chromium 浏览器**；Windows / Linux 暂无受支持的安装流程。修改需要在 **Code Editor（源码编辑）**中进行，不能通过 PDF 预览或可视化编辑器选区写回。
+支持 `overleaf.com` 和 `cn.overleaf.com` 的 **Code Editor（源码编辑器）**，不支持可视化编辑器和 PDF 预览里的选区。安装脚本支持 **macOS、Linux 和 Windows**，会为 Chrome、Edge、Brave、Chromium（以及可用时的 Arc、Vivaldi）注册本机桥。
 
-## 使用截图
+## 使用流程
 
-**第一步：选中源码，输入要求。** 将要修改的段落加入助手，在文稿旁输入具体的改写要求。
+**1. 收集选段。** 在 Code Editor 里选中 LaTeX，点浮出的 **✦ 改这段**；还要改别的段落，就选中后点 **＋ 添加选段**。
 
-![选中 LaTeX 源码并输入改写要求](docs/images/overleaf-selection.png)
+**2. 逐段查看差异。** 整个 `.tex` 文件会作为上下文一起发送，引用、标签和公式都能保持不变。
 
-**第二步：查看差异，再决定是否应用。** 左侧源码保持原样，右侧展示真实 Claude Code 回复中的新增和删除内容。
+![两个 LaTeX 选段各自的差异对比](docs/images/overleaf-diff.zh-CN.jpg)
 
-![查看真实模型改写结果的差异](docs/images/overleaf-diff.png)
+**3. 一起应用。** 扩展先核对原文，再把两段一起写进编辑器并提示成功；撤销一次就能还原整组修改。
 
-**第三步：应用修改，检查结果。** 扩展将新文本写回编辑器并显示成功提示，未选中的方法段落和公式保持不变，可通过 Cmd+Z 撤销。
+![两段都应用后的编辑器](docs/images/overleaf-applied.zh-CN.jpg)
 
-![改写应用后的 LaTeX 源码和成功提示](docs/images/overleaf-applied.png)
+**4. 围绕论文提问。** 从项目里加上 `refs.bib`，切换到「问答」模式，比如检查引用是否都有定义。
 
-截图来自本地演示页面中的真实扩展界面和 CodeMirror 编辑器，使用演示文稿与真实 CLI 回复，并非 Overleaf 官网实机截图。[截图说明](docs/images/README.md)。
+![问答模式检查 main.tex 的引用是否都在 refs.bib 里有定义](docs/images/overleaf-ask.zh-CN.jpg)
 
-## 安装（macOS）
+截图来自本地演示页面里运行的真实扩展和 CodeMirror 编辑器，文稿是专门编写的示例，不是 Overleaf 官网截图；所有回答都由 Claude Code 经本项目的本机桥实际生成。[截图说明](docs/images/README.md)。
 
-准备 Node.js **22.12+（22.x）或 24+**，安装至少一个本机后端，并通过 `claude auth login` 或 `codex login` 登录。
+## 安装
+
+准备 Node.js **22.12+（22.x）或 24+**，并至少安装、登录一个命令行工具：`claude auth login` 或 `codex login`。
+
+**1. 注册本机桥**（不需要管理员权限）：
 
 ```bash
 git clone https://github.com/ZJU-OmniAI/LLM_in_Work.git
 cd LLM_in_Work/LLM_in_Overleaf
-./install.sh
+./install.sh                     # macOS 和 Linux
 ```
 
-Chrome 打开 `chrome://extensions` → 开启**开发者模式** → **加载已解压的扩展程序** → 选择本子项目的 **`LLM_in_Overleaf/extension`** 目录。
+```powershell
+# Windows（PowerShell），在 LLM_in_Work\LLM_in_Overleaf 目录下
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
+```
 
-安装器注册本机消息桥，把当前 Node 路径、CLI 路径覆盖和代理环境写入仅当前用户可访问的启动脚本。浏览器按需拉起桥程序，不监听端口，也不需要你手动启动后台服务。日常使用无需 `npm ci`。
+安装脚本会把当前的 Node.js 路径、CLI 路径设置和代理设置写进一个只有你能读的启动脚本（`~/.llm_in_overleaf/host.sh`；Windows 为 `%LOCALAPPDATA%\LLM_in_Overleaf\host.cmd`），为浏览器注册本机桥，然后试启动一次，检查它能否正常工作、Claude Code 和 Codex 是否就绪。之后只有面板需要时浏览器才会启动本机桥：没有常驻后台，也不占用端口。日常使用不需要 `npm ci`。
 
-## 第一次改写
+**2. 加载扩展。** 打开 `chrome://extensions`（或 `edge://extensions`、`brave://extensions`），开启 **开发者模式**，点 **加载已解压的扩展程序**，选择 **`LLM_in_Overleaf/extension`** 文件夹。扩展 ID 是固定的，与第 1 步的注册自动对应。
 
-1. 在 Overleaf **Code Editor** 中打开 `.tex` 文件，选中一段源码。
-2. 点击浮标 **✦ 改这段**、右下角 **✦ 写作助手**，或扩展弹窗中的 **打开写作助手**。
-3. 需要多段时，继续选择同一文件中的其他内容，点击 **＋ 添加选段**。
-4. 输入要求，例如：“润色学术表达，保留全部引用、数字和公式，不增加新结论。”
-5. 在 **对比** 或 **新文本** 中审阅结果；不满意可继续输入要求。
-6. 点击 **应用替换** 或 **应用全部选段**。整组修改通过一个 CodeMirror 编辑事务写回，可用 **Cmd+Z** 一次撤销。
+**3. 刷新 Overleaf。** 打开扩展弹窗，看到后端「已就绪」即可。
 
-应用成功后当前整组选段会清空，对话仍保留。只提问时，在设置中切换为 **问答**。**⌘⇧E** 开合侧栏；点击 **阅读** 放大回复区域，通过 **返回** 或 Esc 恢复输入。
+移动了项目文件夹、重装了命令行工具或改了代理设置后，重新运行一次安装脚本。更新方法：`git pull`，重新运行安装脚本，在扩展页点 **重新加载**，再刷新 Overleaf。
 
-## 上下文和附件
+## 第一次修改
 
-首轮会把**当前 `.tex` 文件**作为上下文，而不只是选区；超长文件会缩减为导言区和目标附近内容。可兼容的后续轮次复用 CLI 会话，并发送新的要求、目标和附件。手动大改文档后，建议通过 **开新会话** 刷新全文上下文。缓存命中和计费由服务商决定，不保证固定折扣。
+1. 在 Overleaf 的 **Code Editor** 里打开 `.tex` 文件，选中一段源码。
+2. 点选区旁的 **✦ 改这段**。也可以点右下角的 **✦ 写作助手**、扩展弹窗里的 **打开写作助手**，或按 **⌘⇧E**（Windows / Linux：**Ctrl+Shift+E**）。
+3. 要同时修改同一文件里的其他段落，选中后点 **＋ 添加选段**。
+4. 输入要求，例如「修正语法、精简表达，保留所有引用和公式不变。」，或者直接点 **润色**、**公式规范** 等快捷按钮。
+5. 查看 **对比**（或 **新文本**），不满意就继续发消息细化。
+6. 点单段的 **应用替换**，或 **应用全部选段**。**Cmd+Z** / **Ctrl+Z** 可撤销整组修改。
 
-- **项目文件**：通过 Overleaf 下载源码接口读取文件，支持把 `.tex`、`.bib`、`.cls`、`.sty` 等文本加入参考。
-- **本地文件**：添加本机文本、图片和 PDF。PDF 通常优先使用 Claude 后端，具体能力随 CLI 和模型变化。
-- 面板最多允许 8 个附件；单个图片 / PDF 不超过 10 MB，合计不超过 25 MB。二进制附件由桥程序临时落盘，请求结束后清理。
+应用成功后，选段会自动清空，对话保留。想提问而不改文，点面板顶部的 **改写**，切换到 **问答**。**阅读** 可放大回复区域，点 **返回** 或按 Esc 回到草稿。
 
-会话按 Overleaf 项目保存在浏览器扩展存储中，CLI 也可能保存提示和回复。桥在本机运行，模型推理通常连接相应服务商。详见[安全与数据说明](../SECURITY.md)。
+## 上下文与附件
+
+第一轮会发送整个当前 `.tex` 文件，而不只是选区；文件特别长时，会保留导言区和选段附近的内容。后续对话复用 CLI 会话，只发送新的要求、选段和附件。手动改动较多之后，点 **开新会话**（**+** 按钮）重新读取全文。服务商侧的缓存和计费取决于你用的后端。
+
+- **项目文件**：通过 Overleaf 下载项目源码，可把 `.tex`、`.bib`、`.cls`、`.sty` 等文本文件加进上下文。
+- **本地文件**：从电脑添加文本、图片和 PDF。PDF 通常用 Claude 后端效果更好。
+- 最多 8 个附件；图片和 PDF 每个不超过 10 MB，合计不超过 25 MB。二进制文件只在请求期间写入临时文件夹，结束后删除。
+
+调用 Claude 时不加载你本机的 MCP 服务和斜杠命令；不带附件时不开放任何工具，带附件时只允许**读取**这些附件。Codex 在只读沙箱中运行，并关闭审批。
+
+会话按 Overleaf 项目保存在扩展的本地存储里，CLI 也可能保留自己的会话记录。本机桥在你电脑上运行，但模型推理通常在服务商那边进行。详见[安全与数据说明](../SECURITY.md)。
 
 ## 常见问题
 
-| 症状 | 处理 |
+| 现象 | 检查什么 |
 | --- | --- |
-| 选中了文字，没有浮标 | 确认选中的是 Code Editor 源码；从右下角入口或扩展弹窗打开后，点击「添加选段」。 |
-| 本机桥未就绪 | 在本子项目目录运行 `./install.sh`，再检查扩展弹窗的连接状态。 |
-| 移动目录后无法使用 | 重新运行安装器，并从新路径加载扩展。 |
-| 拒绝应用替换 | 切回原文件，或重新选择已经修改过的原文。过时目标会被拒绝。 |
-| CLI 登录或网络失败 | 在终端检查 CLI；代理或路径变更后重跑安装器。 |
-| 自建 Overleaf | 需同时修改 manifest 两处 `matches` 和后台脚本的网址校验；默认不支持。 |
+| 没有浮出按钮 | 确认在 Code Editor 里。从右下角按钮或扩展弹窗打开面板，再点 **＋ 添加选段**。 |
+| 提示「本机桥未就绪」 | 在本目录重新运行安装脚本，并查看扩展弹窗。移动文件夹或重装 Node.js 后都要重跑。 |
+| 找不到 CLI / 未登录 | 在终端运行 `claude --version` 或 `codex --version` 并完成登录，再重跑安装脚本。自定义位置可设置 `LLM_IN_OVERLEAF_CLAUDE_BIN` / `LLM_IN_OVERLEAF_CODEX_BIN`。 |
+| 替换被拒绝 | 选中之后源码又变了。重新选中当前内容即可。 |
+| 网络或代理报错 | 先在终端里确认 CLI 能用；改了代理设置后重跑安装脚本。 |
+| 请求超时 | 降低思考强度或少选一些内容。时限为 10 分钟（`LLM_IN_OVERLEAF_TIMEOUT_MS`）。 |
+| 自建 Overleaf | 需要把你的域名加进 `extension/manifest.json` 的两处 `matches`，以及 `background/service-worker.js` 的项目地址检查，然后重新加载。默认不支持。 |
 
-## 开发与测试
+## 开发
 
-在 `LLM_in_Overleaf/` 中运行：
+在 `LLM_in_Overleaf/` 目录下：
 
 ```bash
 npm ci
-npm test                   # 离线回归，不需要模型账号
-npm run test:ui            # 真实 CodeMirror，合成页面与模拟回复
-npm run test:ui:cn         # 中文站选区与开启入口回归
+npm test                 # 离线单元与回归测试，不需要模型账号
+npm run test:ui          # 真实 CodeMirror + 合成页面和模型回复（中文、英文界面）
+npm run test:ui:cn       # cn.overleaf.com 布局下的选区回归测试
+npm run test:install     # 在临时主目录里跑安装脚本冒烟测试
 ```
 
-macOS 默认使用标准路径下的 Google Chrome，可用 `CHROME_BIN` 指定其他路径。Linux CI 使用 `npx playwright-core install --with-deps chromium` 安装测试浏览器。浏览器测试不会修改真实 Overleaf 项目。
+Chrome 不在默认位置时设置 `CHROME_BIN`。界面测试不会碰真实的 Overleaf 项目。可选的在线测试会使用你的模型账号并消耗额度：`npm run test:live`、`npm run test:live:codex`、`npm run test:wrapper`（测试已安装的启动脚本）。
 
-可选的真实后端测试需要登录，可能消耗模型额度：
-
-```bash
-npm run test:live
-npm run test:live:codex
-npm run test:wrapper       # 通过 ~/.llm_in_overleaf/host.sh 验证已安装桥
-```
-
-技术结构：`extension/content/bridge.js` 在页面 MAIN world 访问 CodeMirror；`content.js` 提供面板；`background/service-worker.js` 通过原生消息连接 `server/native-host.js`，再调用选定的 CLI。
+结构：`extension/content/bridge.js` 在页面主环境里连接 CodeMirror；`content.js` 负责面板；`background/service-worker.js` 连接 `server/native-host.js`，由它调用所选的 CLI。界面文字集中在 `extension/shared/i18n.js`。
 
 ## 卸载
 
-在浏览器中移除扩展。移除 Chrome 消息桥注册和本地启动目录：
-
 ```bash
-rm "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.llm_in_overleaf.host.json"
-rm -rf "$HOME/.llm_in_overleaf"
+./install.sh --uninstall                                                            # macOS 和 Linux
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall   # Windows
 ```
 
-如同时安装了其他 Chromium 浏览器，还需删除对应的本机桥注册文件。CLI 管理的会话历史独立存在。
+这会删除本机桥注册和启动脚本；然后在浏览器里移除扩展。CLI 生成的会话记录保存在 `~/.llm_in_overleaf`（Windows：`%LOCALAPPDATA%\LLM_in_Overleaf`），不再需要时手动删除该文件夹。
 
 [更新记录](CHANGELOG.md) · [参与开发](../CONTRIBUTING.md) · [MIT 许可证](../LICENSE)

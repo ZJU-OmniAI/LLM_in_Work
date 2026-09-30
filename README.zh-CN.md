@@ -1,64 +1,133 @@
+<div align="center">
+
 # LLM_in_Work
 
-**把本机 Claude Code 与 Codex CLI，带进 Word 和 Overleaf。**
+**把你电脑上已登录的 Claude Code 和 Codex，带进 Word 和 Overleaf。**
 
-[English](README.md) · 简体中文
+选中文字，说出要求，先看差异，再决定是否写回。不用在聊天窗口和文档之间来回复制，也不需要额外的 API Key。
 
-选中文字，描述修改要求，查看差异，再写回你正在使用的编辑器。LLM_in_Work 包含两个可独立安装的写作助手，沿用本机 CLI 的登录和模型配置。
+[![CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ZJU-OmniAI/LLM_in_Work/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
+[![Word](https://img.shields.io/badge/Word-Windows%20%C2%B7%20macOS-2b579a)](LLM_in_Word/README.zh-CN.md)
+[![Overleaf](https://img.shields.io/badge/Overleaf-Chrome%20%C2%B7%20Edge%20%C2%B7%20Brave-47a141)](LLM_in_Overleaf/README.zh-CN.md)
+[![Backends](https://img.shields.io/badge/backend-Claude%20Code%20%C2%B7%20Codex%20CLI-555)](#快速开始)
+
+[English](README.md) · **简体中文**
+
+</div>
+
+https://github.com/user-attachments/assets/0acfe30e-81bf-4bdd-8bf5-264348143c28
+
+<p align="center"><sub>真实操作录屏，中文讲解，中英双语字幕 · <a href="README.md">English narration</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-09-30">下载 1080p 视频和字幕</a></sub></p>
+
+## 亮点
+
+- **不要 API Key，不用新注册。** 直接调用你电脑上已登录的 Claude Code 或 Codex 命令行工具，用的就是你现有的订阅。
+- **先看差异，再动文档。** 每处修改都先以差异对比显示（红色是删除，绿色是新增），点「应用」之前，文档一个字都不会变。
+- **按编辑器自己的方式写回。** Word 里写成真正的「修订」，可以在「审阅」里逐条接受或拒绝；Overleaf 里整组修改作为一步写入，撤销一次就全部还原。
+- **多段内容，一条要求。** Word 一次最多 8 段正文或整张表格；Overleaf 可以把同一个 `.tex` 文件里不相邻的几段一起修改。
+- **带着全文上下文。** 会把整篇文档或整个 `.tex` 文件一起交给模型，术语、引用和公式能保持一致；需要时还能加上 `.bib`、其他章节或 PDF。
+- **写回前再核对。** 写入前会重新核对原文，防止改错位置；表格只改真正变化的行和单元格。调用命令行时不加载你本机的 MCP 服务，也不开放额外工具。
+- **不只改写，还能提问。** Word 的「文档问答」和 Overleaf 的「问答」模式可以讨论全文，不会改动正文。
+- **中英文界面。** 随时切换；说明文字跟随你输入要求所用的语言。
+
+## 两个助手，同一套流程
 
 | | [LLM_in_Word](LLM_in_Word/README.zh-CN.md) | [LLM_in_Overleaf](LLM_in_Overleaf/README.zh-CN.md) |
 | --- | --- | --- |
-| 使用场景 | Microsoft Word 桌面文档 | Overleaf 的 LaTeX 源码编辑器 |
-| 审阅方式 | 段落、表格差异预览，可保留 Word 修订 | 逐段 LaTeX 差异预览，整组修改可一次撤销 |
-| 多目标修改 | 最多 8 个段落或表格 | 同一 `.tex` 文件中的多个不连续选段 |
-| 文档问答 | 以文档正文作为上下文 | 以当前 `.tex` 和附加项目文件作为上下文 |
-| 本机连接 | Office.js 加载项 → 本机 HTTPS → CLI | 浏览器扩展 → Native Messaging → CLI |
-| 安装平台 | Windows、macOS | macOS 安装器，适配 Chrome / Chromium 浏览器 |
-| 界面语言 | 中文、英文 | 中文 |
-| 详细介绍 | **[进入 Word 子项目 →](LLM_in_Word/README.zh-CN.md)** | **[进入 Overleaf 子项目 →](LLM_in_Overleaf/README.zh-CN.md)** |
+| 在哪里用 | Microsoft Word 桌面版 | Overleaf 的 Code Editor（`overleaf.com`、`cn.overleaf.com`） |
+| 怎么审阅 | 正文、表格差异预览，以 Word 修订写入 | 每个选段各有一份 LaTeX 差异，整组写入、一次撤销 |
+| 一起修改 | 最多 8 个段落或表格 | 同一 `.tex` 文件里多个不相邻的选段 |
+| 提问 | 「文档问答」围绕全文提问 | 「问答」模式，可带上项目里的其他文件 |
+| 支持平台 | Windows、macOS | Windows、macOS、Linux 上的 Chrome、Edge、Brave 等 Chromium 浏览器 |
+| 连接方式 | Office 加载项 → 本机 HTTPS 服务（`127.0.0.1:8377`）→ CLI | 浏览器扩展 → 原生消息（不占端口）→ CLI |
+| 界面语言 | English · 中文 | English · 中文 |
 
-## 能做什么
+## 效果一览
 
-- **润色、精简、翻译和改写**：直接在编辑器中完成，减少来回复制。
-- **先看差异，再应用**：生成结果先展示为预览，由你决定是否写回。
-- **多个选段统一修改**：用同一条要求修改多处内容，保留未选中的正文。
-- **多轮交流与参考附件**：继续细化结果、围绕文档提问、补充参考文件、查看本地会话历史。
-- **切换后端和模型**：支持 Claude Code、Codex CLI，以及对应模型支持的思考强度。
+<table>
+  <tr>
+    <td width="50%"><img src="LLM_in_Word/docs/images/word-diff.zh-CN.jpg" alt="Word 侧栏里两个目标之一的差异预览"></td>
+    <td width="50%"><img src="LLM_in_Overleaf/docs/images/overleaf-diff.zh-CN.jpg" alt="Overleaf 面板里两个 LaTeX 选段各自的差异"></td>
+  </tr>
+  <tr>
+    <td><b>Word：</b>每个目标都有自己的差异预览，可以单独应用，也可以全部应用。</td>
+    <td><b>Overleaf：</b>引用和公式保持不变，每个选段分别给出差异。</td>
+  </tr>
+  <tr>
+    <td><img src="LLM_in_Word/docs/images/word-table.zh-CN.jpg" alt="Word 表格预览，只高亮新插入的一行"></td>
+    <td><img src="LLM_in_Overleaf/docs/images/overleaf-ask.zh-CN.jpg" alt="Overleaf 问答模式检查引用是否都在 refs.bib 里有定义"></td>
+  </tr>
+  <tr>
+    <td><b>表格：</b>新增一行只插入这一行，其他单元格保持原样。</td>
+    <td><b>问答：</b>带上 <code>refs.bib</code>，检查引用是否都有定义。</td>
+  </tr>
+</table>
 
-### LLM_in_Word：在 Word 里审阅和修改
+截图取自演示录屏：Word 部分是 macOS 上真实的 Word 桌面版；Overleaf 部分是在本地演示页面里运行的真实扩展和 CodeMirror 编辑器（不是 Overleaf 官网）。所有回答都由 Claude Code（Sonnet 5.5，low 思考强度）实际生成。
 
-通过 Word 侧栏修改正文和表格，查看新增、删除内容，按需保留修订，并在 Word「审阅」中接受或拒绝。格式迁移尽力保留原样；无法支持的结构会明确提示纯文本回退。
+## 工作原理
 
-[功能、安装与使用指南](LLM_in_Word/README.zh-CN.md)
+```mermaid
+flowchart LR
+  subgraph PC["你的电脑"]
+    W["Microsoft Word<br/>LLM_in_Word 侧栏"] -- "HTTPS · 127.0.0.1:8377" --> S["本机服务<br/>(Node.js)"]
+    O["Overleaf 页面<br/>LLM_in_Overleaf 扩展"] -- "原生消息 · 不占端口" --> H["本机桥<br/>(Node.js)"]
+    S --> C["Claude Code / Codex CLI<br/>沿用你的登录和订阅"]
+    H --> C
+  end
+  C -- "推理" --> P[("模型服务商")]
+```
 
-### LLM_in_Overleaf：在 Overleaf 里修改 LaTeX
+两座「桥」都在本机运行，项目本身不增加任何云端服务。模型推理在哪里进行，取决于你的命令行工具连接的服务商。
 
-通过浏览器扩展，收集同一源码文件中的多个选段，逐段查看替换稿，再一次写回。应用前检查文件名和原文，避免把过时结果写到错误位置；整组操作可以一次撤销。支持 Overleaf 主站及中文站。
+## 快速开始
 
-[功能、安装与使用指南](LLM_in_Overleaf/README.zh-CN.md)
-
-## 开始使用
-
-准备 Node.js **22.12+（22.x）或 24+**，并安装、登录至少一个本机后端：Claude Code 或 Codex CLI。
+**准备：** Node.js 22.12+（22.x）或 24+；至少安装并登录一个命令行工具：[Claude Code](https://code.claude.com/docs/en/setup)（`claude auth login`）或 [Codex CLI](https://github.com/openai/codex)（`codex login`）。
 
 ```bash
 git clone https://github.com/ZJU-OmniAI/LLM_in_Work.git
 cd LLM_in_Work
 ```
 
-然后按照 [Word 安装指南](LLM_in_Word/README.zh-CN.md#安装前准备) 或 [Overleaf 安装指南](LLM_in_Overleaf/README.zh-CN.md#安装macos) 操作。两个子项目各有安装器，可以只安装其中一个，也可以同时使用。
+| | LLM_in_Word | LLM_in_Overleaf |
+| --- | --- | --- |
+| macOS | `cd LLM_in_Word && ./install.sh` | `cd LLM_in_Overleaf && ./install.sh` |
+| Linux | 不适用（没有 Word 桌面版） | `cd LLM_in_Overleaf && ./install.sh` |
+| Windows | 在 `LLM_in_Word` 目录运行：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1` | 在 `LLM_in_Overleaf` 目录运行同一条命令 |
+| 然后 | 重启 Word，点 **开始 → 加载项 → 开发人员加载项 → LLM_in_Word** | 打开 `chrome://extensions`，开启 **开发者模式**，**加载已解压的扩展程序** → 选 `LLM_in_Overleaf/extension` |
+
+可以只装一个，也可以都装。带截图的详细步骤：**[LLM_in_Word](LLM_in_Word/README.zh-CN.md)** · **[LLM_in_Overleaf](LLM_in_Overleaf/README.zh-CN.md)**。
+
+## 常见问题
+
+**需要 API Key 吗？**
+不需要。请求经过你已登录的 Claude Code 或 Codex 命令行工具，计入该账号的套餐或用量。
+
+**模型会收到哪些内容？**
+你的要求、选中的段落、整篇文档（Word）或当前 `.tex` 文件（Overleaf）作为上下文，以及你附加的文件。选中段落只是限定写回位置，**不代表只把选区交给模型**。处理敏感文档前，请先阅读[安全与数据说明](SECURITY.md)。
+
+**会不会不经确认就改我的文档？**
+不会。点「应用」之前都只是预览。Word 里还能逐条拒绝修订；Overleaf 里撤销一次就能还原整组修改。
+
+**支持哪些编辑器？**
+Windows 和 macOS 上的 Microsoft 365 Word 桌面版，以及 `overleaf.com`、`cn.overleaf.com` 的 Code Editor。Word 网页版、Overleaf 可视化编辑器和自建 Overleaf 默认不支持。
+
+**这是 Microsoft、Overleaf、Anthropic 或 OpenAI 的官方产品吗？**
+不是。这是 ZJU-OmniAI 独立维护的开源项目。
+
+## 仓库结构
 
 ```text
 LLM_in_Work/
-├── README.md              # 功能总览和子项目导航
-├── LLM_in_Word/           # Word 加载项、本机 HTTPS 服务及安装器
-└── LLM_in_Overleaf/       # Overleaf 浏览器扩展和原生消息桥
+├── LLM_in_Word/       Word 加载项、本机 HTTPS 服务、安装脚本
+├── LLM_in_Overleaf/   浏览器扩展、原生消息本机桥、安装脚本
+├── SECURITY.md        数据去向，以及如何调用命令行工具
+└── CONTRIBUTING.md    两个项目的测试和 CI
 ```
 
-## 开发与数据说明
+两个项目运行时都不依赖额外的 npm 包。离线测试使用模拟 CLI 和合成文档，[CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions) 在 Linux、macOS、Windows 上运行。详见[参与开发](CONTRIBUTING.md)和[更新记录](CHANGELOG.md)。
 
-两个项目运行时均无需额外 npm 依赖；开发测试使用模拟 CLI 和合成文档。[参与开发](CONTRIBUTING.md) 列出了独立测试命令和 CI 范围。
+## 许可证
 
-桥接程序在本机运行，但模型推理通常连接相应服务商。选区限定写回位置，**不代表只把选区交给模型**。详见[安全与数据说明](SECURITY.md)。
-
-[MIT 许可证](LICENSE)。由 ZJU-OmniAI 独立维护，并非 Microsoft、Overleaf、Anthropic 或 OpenAI 的官方产品。
+[MIT](LICENSE)。Office.js、Overleaf、各模型命令行工具及其服务，仍分别遵循各自的条款。
