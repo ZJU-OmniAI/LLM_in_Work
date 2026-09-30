@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title data-i18n="LLM_in_PowerPoint · 幻灯片写作助手">LLM_in_PowerPoint · 幻灯片写作助手</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <link rel="stylesheet" href="taskpane.css">
+</head>
+<body>
+  <div id="app">
+    <header class="hdr">
+      <div class="brand-mark" aria-hidden="true">p<span>✦</span></div>
+      <div class="brand-copy"><span class="hdr-title">LLM_in_PowerPoint <span id="status-dot" class="dot" role="img" aria-label="正在连接" data-i18n-aria-label="正在连接"></span></span><span class="brand-sub" data-i18n="让每一页，都讲得更清楚">让每一页，都讲得更清楚</span></div>
+      <span class="hdr-sp"></span>
+      <button id="btn-settings" class="hdr-btn" aria-expanded="false" aria-controls="settings-pop" title="模型、模式与目标设置" data-i18n-title="模型、模式与目标设置" data-i18n="设置">设置</button>
+      <button id="btn-new" class="ibtn" title="新会话，当前会话自动归档" aria-label="新会话" data-i18n-title="新会话，当前会话自动归档" data-i18n-aria-label="新会话">＋</button>
+      <button id="btn-hist" class="ibtn" title="会话历史" aria-label="会话历史" data-i18n-title="会话历史" data-i18n-aria-label="会话历史">◷</button>
+      <button id="btn-reload" class="ibtn" title="刷新面板" aria-label="刷新面板" data-i18n-title="刷新面板" data-i18n-aria-label="刷新面板">⟳</button>
+    </header>
+    <div id="banner" class="banner hidden" role="status"></div>
+    <div id="context-bar" class="context-bar">
+      <button id="mode-summary" class="summary-btn" aria-haspopup="true" aria-controls="settings-pop" title="切换改写或问答模式" data-i18n-title="切换改写或问答模式">改写 ▾</button>
+      <button id="context-summary" class="summary-btn" aria-haspopup="true" aria-controls="settings-pop" title="查看目标与设置" data-i18n-title="查看目标与设置">未选择内容</button>
+      <button id="btn-capture" class="btn capture-btn" title="把选中的文字、文本框、表格或当前页添加为改写目标" data-i18n-title="把选中的文字、文本框、表格或当前页添加为改写目标"><span aria-hidden="true">＋</span><span data-i18n="添加选中">添加选中</span></button>
+    </div>
+    <div id="sel-hint" class="sel-hint" role="status"></div>
+    <div class="pop-anchor">
+      <section id="settings-pop" class="settings-pop hidden" role="region" aria-label="写作设置" data-i18n-aria-label="写作设置">
+        <div class="pop-head"><b data-i18n="写作设置">写作设置</b><span class="pop-tools"><select id="sel-language" class="language-select" aria-label="Interface language / 界面语言" title="Interface language / 界面语言"><option value="en">English</option><option value="zh-CN">中文</option></select></span></div>
+        <button id="btn-connection" class="connection-button" title="查看连接状态与登录指引" data-i18n-title="查看连接状态与登录指引"><span id="status-text" data-i18n="正在连接">正在连接</span><span aria-hidden="true">›</span></button>
+        <div class="pop-section" aria-label="模型设置" data-i18n-aria-label="模型设置">
+          <div class="cfg-row engine-row">
+            <label class="field backend-field"><span data-i18n="后端">后端</span><select id="sel-backend" aria-label="后端" data-i18n-aria-label="后端"><option value="claude">Claude Code</option><option value="codex">Codex</option></select></label>
+            <label class="field model-field"><span data-i18n="模型">模型</span><select id="sel-model" aria-label="模型" data-i18n-aria-label="模型"></select></label>
+            <button id="btn-models" class="ibtn" title="刷新模型列表" aria-label="刷新模型列表" data-i18n-title="刷新模型列表" data-i18n-aria-label="刷新模型列表">⟳</button>
+          </div>
+          <div id="model-detail" class="model-detail" aria-live="polite"></div>
+          <div class="engine-footer"><label class="effort-label" for="sel-effort" data-i18n="思考强度">思考强度</label><select id="sel-effort" aria-label="思考强度" data-i18n-aria-label="思考强度"></select><span id="engine-hint" data-i18n="使用本机订阅">使用本机订阅</span></div>
+        </div>
+        <div class="pop-row">
+          <div class="mode-tabs" role="group" aria-label="工作模式" data-i18n-aria-label="工作模式"><button id="mode-edit" class="mode-tab active" aria-pressed="true" data-i18n="改写幻灯片">改写幻灯片</button><button id="mode-ask" class="mode-tab" aria-pressed="false" data-i18n="演示文稿问答">演示文稿问答</button></div>
+        </div>
+        <section id="target-bar" class="target empty" aria-label="改写目标" data-i18n-aria-label="改写目标">
+          <div class="section-heading"><span class="eyebrow" data-i18n="改写目标">改写目标</span><span class="target-tools"><span id="target-count" class="count-label">0 / 16</span><button id="btn-clear" class="ibtn" title="清除全部目标" aria-label="清除全部目标" data-i18n-title="清除全部目标" data-i18n-aria-label="清除全部目标">×</button></span></div>
+          <div id="target-info" class="target-info"></div><div id="target-list" class="target-list"></div>
+        </section>
+      </section>
+    </div>
+    <main id="messages" class="messages" aria-label="对话和改写结果" tabindex="0" data-i18n-aria-label="对话和改写结果"></main>
+    <section class="composer" aria-label="输入指令" data-i18n-aria-label="输入指令">
+      <div class="section-heading"><label for="input" class="eyebrow"><span id="instruction-label" data-i18n="告诉我怎么改">告诉我怎么改</span></label><span id="request-status" class="request-status" role="status"></span></div>
+      <div id="presets" class="presets" aria-label="快捷指令" data-i18n-aria-label="快捷指令"></div>
+      <div class="input-shell">
+        <textarea id="input" rows="3" placeholder="比如：每条要点压到一行，保留数据…" aria-label="改写指令" data-i18n-aria-label="改写指令" data-i18n-placeholder="比如：每条要点压到一行，保留数据…"></textarea>
+        <div id="att-chips" class="att-chips"></div>
+        <div class="input-actions"><button id="att-local" class="ibtn attach-button" title="添加参考文件，或拖拽文件到输入区" aria-label="添加参考文件" data-i18n-title="添加参考文件，或拖拽文件到输入区" data-i18n-aria-label="添加参考文件"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 13 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l9-9"></path></svg><span data-i18n="参考文件">参考文件</span></button><button id="att-slide" class="ibtn attach-button" title="把当前页渲染成图片附上，让模型看到版式" aria-label="附上当前页截图" data-i18n-title="把当前页渲染成图片附上，让模型看到版式" data-i18n-aria-label="附上当前页截图"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="13" rx="2"></rect><path d="m3 15 5-4 4 3 3-2 6 4"></path><circle cx="15.5" cy="9" r="1.3"></circle></svg><span data-i18n="当前页截图">当前页截图</span></button><span class="hdr-sp"></span><button id="btn-send" class="btn btn-primary"><span data-i18n="生成改写">生成改写 </span><span aria-hidden="true">↑</span></button><button id="btn-stop" class="btn btn-stop hidden" data-i18n="停止生成">停止生成</button></div>
+      </div>
+      <input type="file" id="file-input" multiple="" accept=".txt,.md,.csv,.pdf,.png,.jpg,.jpeg,.gif,.webp" class="hidden">
+      <div class="composer-caption"><span data-i18n="Enter 发送 · Shift + Enter 换行">Enter 发送 · Shift + Enter 换行</span><span data-i18n="预览后再写入">预览后再写入</span></div>
+    </section>
+    <section id="hist-view" class="overlay hidden" role="dialog" aria-modal="true" aria-label="会话历史" data-i18n-aria-label="会话历史"><div class="overlay-head"><b data-i18n="会话历史">会话历史</b><span class="hdr-sp"></span><button id="hist-close" class="ibtn" aria-label="关闭会话历史" data-i18n-aria-label="关闭会话历史">×</button></div><div id="hist-list" class="overlay-body"></div></section>
+    <section id="connection-view" class="overlay hidden" role="dialog" aria-modal="true" aria-label="连接设置" data-i18n-aria-label="连接设置">
+      <div class="overlay-head"><b data-i18n="连接设置">连接设置</b><span class="hdr-sp"></span><button id="connection-close" class="ibtn" aria-label="关闭连接设置" data-i18n-aria-label="关闭连接设置">×</button></div>
+      <div class="overlay-body"><p class="settings-intro" data-i18n="连接本机 Claude Code 和 Codex，沿用已登录的账户。">连接本机 Claude Code 和 Codex，沿用已登录的账户。</p><div id="connection-details" aria-live="polite"></div><button id="btn-diagnose" class="btn btn-primary" data-i18n="重新检测">重新检测</button><p class="settings-footnote" data-i18n="检测只检查 CLI 和登录状态，不调用模型生成。">检测只检查 CLI 和登录状态，不调用模型生成。</p></div>
+    </section>
+  </div>
+  <script src="i18n.js"></script><script src="table-utils.js"></script><script src="taskpane.js"></script>
+</body></html>

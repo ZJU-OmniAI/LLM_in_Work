@@ -43,3 +43,6 @@ pfx-password.txt
 # Overleaf local runtime and extension packaging secrets
 .llm_in_overleaf/
 *.crx
+
+# PowerPoint local runtime
+.llm_in_powerpoint/
