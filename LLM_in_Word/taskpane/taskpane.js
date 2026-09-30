@@ -1,5 +1,5 @@
 // LLM_in_Word 任务窗格逻辑：
-// 选中正文 → 🎯 添加为目标（用隐形内容控件锚定，可多段分散；文档再怎么编辑位置都不丢）→
+// 选中正文 → ＋ 添加为目标（用隐形内容控件锚定，可多段分散；文档再怎么编辑位置都不丢）→
 // 下指令 → 本机服务流式回复 → 每个目标一张 diff 预览卡 → ✅ 应用替换（可走 Word 修订模式，
 // 应用时做逐字格式迁移，尽量保留原格式）。
 // UI 流程从 LLM_in_Overleaf 的 content.js 移植，编辑器操作从 CM6 换成 Office.js。
@@ -593,7 +593,7 @@
         const text = normNL(getSel());
         if (!text.trim()) return { ok: false, error: 'empty' };
         if (selTabs.items.length) {
-          return { ok: false, error: tr('选区里混着表格：表格请单独添加（点表格内任意位置再点 🎯），正文和表格分开作为目标') };
+          return { ok: false, error: tr('选区里混着表格：表格请单独添加（点表格内任意位置再点「＋ 添加选中」），正文和表格分开作为目标') };
         }
       }
       // 和已有目标重叠的选区不收（嵌套锚点会乱）
@@ -615,7 +615,7 @@
       return { ok: true, isTable, rows, cols };
     });
     if (!r.ok) {
-      if (r.error === 'empty') addNote(tr('⚠️ 文档里还没有选中内容。先在正文里<b>拖选一段文字</b>（或点进表格）再点 🎯。'));
+      if (r.error === 'empty') addNote(tr('⚠️ 文档里还没有选中内容。先在正文里<b>拖选一段文字</b>（或点进表格）再点「＋ 添加选中」。'));
       else addNote(tr('⚠️ 添加目标失败：') + escapeHtml(uiText(r.error)));
       return;
     }
@@ -623,7 +623,7 @@
     const n = state.targets.length;
     addNote(r.isTable
       ? tr`📊 已把整张表格（${r.rows}×${r.cols}）添加为目标（当前共 ${n} 段）。可以下指令改单元格内容、增删行等。`
-      : tr`🎯 已添加目标（当前共 ${n} 段${n > 1 ? tr('，按文档顺序编号') : ''}）。可继续选中别处再点 🎯 添加，或直接下指令。`);
+      : tr`🎯 已添加目标（当前共 ${n} 段${n > 1 ? tr('，按文档顺序编号') : ''}）。可继续选中别处再点「＋ 添加选中」，或直接下指令。`);
     els.input.focus();
   }
 
@@ -922,6 +922,8 @@
     const ready = state.serverOk && (!backend || ['ready', 'unknown'].includes(backend.status));
     els.statusDot.className = 'dot ' + (ready ? 'ok' : state.serverOk === null ? '' : 'bad');
     els.statusText.textContent = state.serverOk === false ? tr('服务未连接') : state.serverOk === null ? tr('正在连接') : backend ? uiText(backend.label) : tr('服务已连接');
+    els.statusDot.setAttribute('aria-label', els.statusText.textContent);
+    els.statusDot.title = els.statusText.textContent;
     if (state.serverOk === false) {
       els.banner.textContent = tr('本机服务暂时无法连接。打开连接设置查看恢复方法，输入草稿会保留。');
     } else if (!state.wordReady) {
@@ -992,6 +994,7 @@
   // ---------- 目标条 ----------
   function renderTargetBar() {
     const ts = state.targets;
+    renderContextSummary();
     $('#target-count').textContent = `${ts.length} / ${MAX_TARGETS}`;
     $('#btn-clear').classList.toggle('hidden', !ts.length);
     els.targetList.innerHTML = '';
@@ -1031,6 +1034,16 @@
       row.append(loc, del);
       els.targetList.appendChild(row);
     });
+  }
+
+  // 顶部一行：目标数和字数；详情（目标列表、定位、移除）在设置浮层里，和 LLM_in_Overleaf 一致。
+  function renderContextSummary() {
+    const ts = state.targets;
+    const total = ts.reduce((s, t) => s + t.text.length, 0);
+    els.contextSummary.textContent = ts.length === 1 ? tr`1 个目标 · ${total} 字`
+      : ts.length ? tr`${ts.length} 个目标 · ${total} 字`
+      : state.cfg.mode === 'ask' ? tr('全文问答') : tr('未选择内容');
+    els.contextSummary.title = ts.length ? tr`查看、定位或移除 ${ts.length} 个目标` : tr('查看目标与设置');
   }
 
   // ---------- 附件 ----------
@@ -1278,7 +1291,7 @@
     const mode = cfg.mode;
     if (!state.wordReady) { addNote(tr('⚠️ Office 还没就绪，稍等或点 ⟳ 刷新面板')); return; }
     if (mode === 'edit' && !state.targets.length) {
-      addNote(tr('⚠️ 改写模式需要先有目标：在文档里选中一段正文，点 🎯（可多次添加多段）。<br>（只是想提问的话，切上面的「💬 问答」模式）'));
+      addNote(tr('⚠️ 改写模式需要先有目标：在文档里选中一段正文，点「＋ 添加选中」（可多次添加多段）。<br>（只是想提问的话，点上面的「改写 ▾」切换到文档问答）'));
       return;
     }
 
@@ -1770,7 +1783,7 @@
     }
   }
 
-  // ---------- 文档选区提示（帮用户意识到"先选中再点🎯"）----------
+  // ---------- 文档选区提示（帮用户意识到"先选中再点＋"）----------
   let selTimer = 0;
   function onDocSelectionChanged() {
     clearTimeout(selTimer);
@@ -1779,7 +1792,9 @@
         Office.context.document.getSelectedDataAsync(Office.CoercionType.Text, (res) => {
           if (res.status !== Office.AsyncResultStatus.Succeeded) { els.selHint.textContent = ''; return; }
           const n = normNL(res.value || '').length;
-          els.selHint.textContent = n > 1 ? tr`文档中已选中 ${n} 字符 → 点 🎯 添加为目标段` : '';
+          els.selHint.textContent = n > 1 ? tr`文档中已选中 ${n} 字符 → 点「＋ 添加选中」设为目标` : '';
+          els.capture.classList.toggle('has-selection', n > 1);
+          els.capture.title = n > 1 ? els.selHint.textContent : tr('把 Word 中选中的文字或表格添加为改写目标');
         });
       } catch { els.selHint.textContent = ''; }
     }, 350);
@@ -1790,6 +1805,11 @@
   function grabEls() {
     Object.assign(els, {
       statusDot: $('#status-dot'),
+      settingsBtn: $('#btn-settings'),
+      settingsPop: $('#settings-pop'),
+      modeSummary: $('#mode-summary'),
+      contextSummary: $('#context-summary'),
+      capture: $('#btn-capture'),
       statusText: $('#status-text'),
       banner: $('#banner'),
       backend: $('#sel-backend'),
@@ -1840,17 +1860,21 @@
     fillEffortOptions();
     renderModelDetail();
   }
-  // 引擎设置可收起成一行摘要，把侧栏高度留给改写结果（窄屏或 Word 未最大化时尤其需要）。
+  // 模型设置收在「设置」浮层里；当前后端 · 模型 · 思考强度显示在「设置」按钮的提示里。
   function renderEngineSummary() {
     const label = (select) => select.selectedOptions?.[0]?.textContent?.trim() || '';
     const effort = EFFORT_LABELS[els.effort.value] ? tr(EFFORT_LABELS[els.effort.value]) : els.effort.value;
-    $('#engine-summary').textContent = [label(els.backend), label(els.model), effort].filter(Boolean).join(' · ');
+    const summary = [label(els.backend), label(els.model), effort].filter(Boolean).join(' · ');
+    els.settingsBtn.title = summary ? `${tr('模型、模式与目标设置')} · ${summary}` : tr('模型、模式与目标设置');
   }
-  function setEngineCollapsed(collapsed) {
-    state.cfg.engineCollapsed = !!collapsed;
-    $('.engine-panel').classList.toggle('collapsed', !!collapsed);
-    $('#btn-engine').setAttribute('aria-expanded', String(!collapsed));
-    renderEngineSummary();
+  // 设置浮层：盖在对话区上方，点外面或按 Esc 收起，不再常驻占用侧栏高度。
+  function showSettings(open) {
+    els.settingsPop.classList.toggle('hidden', !open);
+    els.settingsBtn.setAttribute('aria-expanded', String(!!open));
+    if (open) {
+      const top = els.settingsPop.parentElement.getBoundingClientRect().top;
+      els.settingsPop.style.maxHeight = top > 0 ? `${Math.max(160, window.innerHeight - top - 14)}px` : '';
+    }
   }
   function fillEffortOptions() {
     const key = 'effort_' + state.cfg.backend;
@@ -1901,6 +1925,7 @@
     els.modeAsk.classList.toggle('active', mode === 'ask');
     els.modeEdit.setAttribute('aria-pressed', String(mode === 'edit'));
     els.modeAsk.setAttribute('aria-pressed', String(mode === 'ask'));
+    els.modeSummary.textContent = mode === 'edit' ? tr('改写 ▾') : tr('问答 ▾');
     els.trackWrap.classList.toggle('hidden', mode === 'ask');
     els.send.innerHTML = mode === 'edit' ? tr('生成改写 <span aria-hidden="true">↑</span>') : tr('发送提问 <span aria-hidden="true">↑</span>');
     $('#instruction-label').textContent = mode === 'edit' ? tr('告诉我怎么改') : tr('想了解文档的什么');
@@ -1908,6 +1933,7 @@
     els.input.placeholder = mode === 'edit'
       ? tr('比如：更简洁一些，保留关键数据…')
       : tr('比如：总结这份文档的核心观点…');
+    renderContextSummary();
     saveCfg();
   }
   function autoGrow() {
@@ -1964,9 +1990,15 @@
     });
     fillEffortOptions();
     els.effort.addEventListener('change', () => { state.cfg.effort = els.effort.value; state.cfg['effort_' + state.cfg.backend] = els.effort.value; renderEngineSummary(); saveCfg(); });
-    // 首次在较矮的侧栏里打开时默认收起；之后记住用户的选择。
-    setEngineCollapsed(state.cfg.engineCollapsed ?? window.innerHeight < 760);
-    $('#btn-engine').addEventListener('click', () => { setEngineCollapsed(!state.cfg.engineCollapsed); saveCfg(); });
+    els.settingsBtn.addEventListener('click', () => showSettings(els.settingsPop.classList.contains('hidden')));
+    els.modeSummary.addEventListener('click', () => { showSettings(true); (state.cfg.mode === 'ask' ? els.modeAsk : els.modeEdit).focus(); });
+    els.contextSummary.addEventListener('click', () => showSettings(true));
+    document.addEventListener('pointerdown', (e) => {
+      if (els.settingsPop.classList.contains('hidden') || els.settingsPop.contains(e.target)) return;
+      if ([els.settingsBtn, els.modeSummary, els.contextSummary].some((el) => el.contains(e.target))) return;
+      if (e.target.closest?.('.overlay')) return; // 连接设置、会话历史盖在最上层
+      showSettings(false);
+    });
     els.model.addEventListener('change', () => {
       if (state.cfg.backend === 'codex') state.cfg.model_codex = els.model.value;
       else state.cfg.model_claude = els.model.value;
@@ -2001,6 +2033,7 @@
         for (const [view, opener] of [['#connection-view', '#btn-connection'], ['#hist-view', '#btn-hist']]) {
           if (!$(view).classList.contains('hidden')) { $(view).classList.add('hidden'); $(opener).focus(); return; }
         }
+        if (!els.settingsPop.classList.contains('hidden')) { showSettings(false); els.settingsBtn.focus(); return; }
       }
       if (e.key === 'Tab') {
         const overlay = document.querySelector('.overlay:not(.hidden)');

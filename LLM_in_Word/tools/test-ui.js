@@ -106,7 +106,7 @@ test('English UI covers static labels, dynamic previews, model details, and pres
     const d = t.w.document;
     assert.equal(d.documentElement.lang, 'en');
     assert.equal(d.querySelector('#mode-ask').textContent, 'Document Q&A');
-    assert.equal(d.querySelector('#btn-capture').textContent.trim(), '＋Add Word selection');
+    assert.equal(d.querySelector('#btn-capture').textContent.trim(), '＋Add selection');
     assert.equal(d.querySelector('#btn-hist').getAttribute('aria-label'), 'Chat history');
     assert.match(d.querySelector('#input').placeholder, /Shorten this/);
     d.querySelector('#presets .chip').click();
@@ -202,19 +202,36 @@ test('backend hints from the local service are shown in the interface language',
     assert.equal(t.w.document.querySelector('#status-text').textContent, 'CLI not found');
   } finally { await t.close(); }
 });
-test('engine settings collapse to a one-line summary and the choice is remembered', async () => {
+test('settings and targets float over the conversation, like the Overleaf panel', async () => {
   const t = setup(good, { language: 'en' });
   try {
-    const panel = t.w.document.querySelector('.engine-panel');
-    const toggle = t.w.document.querySelector('#btn-engine');
-    if (panel.classList.contains('collapsed')) toggle.click();
-    assert.equal(panel.classList.contains('collapsed'), false);
-    toggle.click();
-    assert.equal(panel.classList.contains('collapsed'), true);
-    assert.equal(toggle.getAttribute('aria-expanded'), 'false');
-    assert.match(t.w.document.querySelector('#engine-summary').textContent, /^Claude Code · .+ · (Light|Balanced|Deep)/);
-    assert.equal(JSON.parse(t.w.localStorage.getItem('we:cfg')).engineCollapsed, true);
-    assert.equal(toggle.title, 'Show or hide writing engine settings');
+    const d = t.w.document, pop = d.querySelector('#settings-pop'), btn = d.querySelector('#btn-settings');
+    const key = (k) => d.dispatchEvent(new t.w.KeyboardEvent('keydown', { key: k, bubbles: true }));
+    // Only one compact row sits above the conversation; details stay folded away.
+    assert.equal(pop.classList.contains('hidden'), true);
+    assert.equal(d.querySelector('#context-summary').textContent, '1 target · 2 chars');
+    assert.equal(d.querySelector('#mode-summary').textContent, 'Rewrite ▾');
+    assert.ok(pop.contains(d.querySelector('#target-list')) && pop.contains(d.querySelector('#sel-backend')));
+    btn.click();
+    assert.equal(pop.classList.contains('hidden'), false);
+    assert.equal(btn.getAttribute('aria-expanded'), 'true');
+    assert.match(btn.title, /^Model, mode and target settings · Claude Code · .+ · (Light|Balanced|Deep)/);
+    d.querySelector('#sel-backend').dispatchEvent(new t.w.Event('pointerdown', { bubbles: true }));
+    assert.equal(pop.classList.contains('hidden'), false, 'clicks inside the card keep it open');
+    d.querySelector('#messages').dispatchEvent(new t.w.Event('pointerdown', { bubbles: true }));
+    assert.equal(pop.classList.contains('hidden'), true, 'clicking the conversation closes it');
+    d.querySelector('#mode-summary').click();
+    assert.equal(pop.classList.contains('hidden'), false);
+    d.querySelector('#mode-ask').click();
+    assert.equal(d.querySelector('#mode-summary').textContent, 'Q&A ▾');
+    key('Escape');
+    assert.equal(pop.classList.contains('hidden'), true);
+    t.w.ui.state.targets = []; t.w.ui.renderTargetBar();
+    assert.equal(d.querySelector('#context-summary').textContent, 'Whole document');
+    d.querySelector('#mode-edit').click();
+    assert.equal(d.querySelector('#context-summary').textContent, 'No selection');
+    d.querySelector('#context-summary').click();
+    assert.equal(pop.classList.contains('hidden'), false);
   } finally { await t.close(); }
 });
 test('Markdown tables in answers render as tables', async () => {

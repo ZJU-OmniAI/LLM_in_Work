@@ -1,6 +1,6 @@
 {
   "name": "llm-in-word",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "private": true,
   "type": "module",
   "description": "LLM_in_Word — Review and apply AI edits in desktop Microsoft Word with your local Claude Code or Codex CLI.",

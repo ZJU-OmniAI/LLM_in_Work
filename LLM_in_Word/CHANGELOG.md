@@ -1,10 +1,12 @@
 # 更新记录
 
-## Unreleased
+## 0.7.2 — 2026-09-30
 
+- A roomier pane, laid out like LLM_in_Overleaf. The top of the pane is now a single row: the mode (**Rewrite ▾**), a summary such as *2 targets · 401 chars*, and **＋ Add selection**. Model, reasoning effort, language, mode, track changes and the target list moved into a **Settings** card that floats over the conversation and closes when you click elsewhere or press Esc. With two targets in a typical pane, the conversation gets about three times as much height.
+- **＋ Add selection** lights up while text is selected in Word.
 - Find the Codex CLI that newer Codex and ChatGPT desktop apps ship in `Contents/Resources/codex-cli/bin`, so Codex works without a separate install.
 
-中文摘要：能找到新版 Codex / ChatGPT 桌面应用自带的 Codex CLI，不单独安装也能用 Codex。
+中文摘要：界面改成和 LLM_in_Overleaf 一样的布局：顶部只留一行（「改写 ▾」、目标数和字数、「＋ 添加选中」），模型、思考强度、界面语言、模式、保留修订和目标列表都收进「设置」浮层卡片，点别处或按 Esc 收起；两个目标时对话区高度约为原来的三倍。Word 里选中文字时「＋ 添加选中」会高亮。能找到新版 Codex / ChatGPT 桌面应用自带的 Codex CLI。更新：在仓库目录运行 `npm run update`，然后在侧栏点 ⟳。
 
 ## 0.7.1 — 2026-09-30
 
