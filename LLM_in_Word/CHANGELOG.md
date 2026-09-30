@@ -4,9 +4,13 @@
 
 - Explanations now follow the language of your instruction, falling back to the pane's interface language. Previously the model always explained its edits in Chinese, even in the English interface.
 - Replacements keep the document's language unless you ask for a translation; the assistant no longer introduces itself to the model as a Chinese-only writer.
+- Markdown tables in answers are rendered as tables instead of raw `|` text.
 - The pane sends its interface language with each request. The Windows installation check reads the expected version from `package.json`.
+- The **Writing engine** section can collapse to a one-line summary (backend · model · effort), roughly doubling the space for results in a short pane. It starts collapsed when the pane is shorter than 760 px and remembers your choice.
+- Table edits align rows by content. Inserting or deleting a row in the middle now produces a single tracked row insertion or deletion, instead of rewriting every following row; the preview highlights only the cells that really changed.
+- The connection banner shows CLI setup hints in the interface language; in the English interface they previously appeared in Chinese.
 
-中文摘要：说明文字跟随指令语言（此前英文界面下也总是中文说明）；改写结果保持原文语言；安装检查不再写死版本号。更新：在仓库目录运行 `npm run update`。
+中文摘要：说明文字跟随指令语言（此前英文界面下也总是中文说明）；改写结果保持原文语言；表格按内容对齐行，中间插入/删除一行不再把后面每行都改写一遍；写作引擎设置可折叠为一行摘要，结果区域约增大一倍；英文界面的连接提示不再显示中文；回答里的 Markdown 表格正常显示；安装检查不再写死版本号。更新：在仓库目录运行 `npm run update`。
 
 ## 0.7.0 — 2026-09-13
 

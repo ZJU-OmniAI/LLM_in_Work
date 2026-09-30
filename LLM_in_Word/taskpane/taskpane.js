@@ -131,7 +131,22 @@
     const out = [];
     let listType = null;
     const closeList = () => { if (listType) { out.push(`</${listType}>`); listType = null; } };
-    for (const line of lines) {
+    // GFM 表格：表头行 + 分隔线 + 若干数据行（单元格内容此前已转义并处理过行内格式）
+    const cells = (row) => row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+    const isSep = (row) => /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(row || '');
+    for (let li = 0; li < lines.length; li++) {
+      const line = lines[li];
+      if (/^\s*\|.*\|\s*$/.test(line) && isSep(lines[li + 1])) {
+        closeList();
+        const head = cells(line);
+        const body = [];
+        li += 2;
+        while (li < lines.length && /^\s*\|.*\|\s*$/.test(lines[li])) body.push(cells(lines[li++]));
+        li--;
+        out.push('<table class="md-table"><thead><tr>' + head.map((c) => `<th>${c}</th>`).join('') + '</tr></thead><tbody>'
+          + body.map((r) => '<tr>' + head.map((_, i) => `<td>${r[i] ?? ''}</td>`).join('') + '</tr>').join('') + '</tbody></table>');
+        continue;
+      }
       let m;
       if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
         closeList();
@@ -787,25 +802,33 @@
         await trackOn();
         let tblMode;
         if (newCols === oldCols && oldCols > 0) {
-          // 单元格级更新：先加行+改格（一批），再删多余行；失败报出卡在哪一步
+          // 行按内容对齐后逐步写入：先改单元格（旧行号），再从下往上删行，最后按新表顺序插行。
+          // 中间插入一行只产生一条插入修订，不会把后面每一行都改写一遍。失败时报出卡在哪一步。
+          const plan = TableUtils.planRows(oldVals, nv);
           let step = tr('加行/改单元格');
           try {
-            if (newRows > oldRows) table.addRows('End', newRows - oldRows, nv.slice(oldRows));
-            const lim = Math.min(oldRows, newRows);
-            for (let r2 = 0; r2 < lim; r2++) {
+            for (const op of plan) {
+              if (op.type !== 'change') continue;
               for (let c2 = 0; c2 < oldCols; c2++) {
-                if (String(oldVals[r2][c2] ?? '') !== nv[r2][c2]) {
-                  table.getCell(r2, c2).value = nv[r2][c2];
-                }
+                if (String(oldVals[op.old][c2] ?? '') !== nv[op.new][c2]) table.getCell(op.old, c2).value = nv[op.new][c2];
               }
             }
             await ctx.sync();
-            if (newRows < oldRows) {
+            const deletions = plan.filter((op) => op.type === 'delete').map((op) => op.old).sort((a, b) => b - a);
+            if (deletions.length) {
               step = tr('删多余行');
               const rows = table.rows;
               rows.load('items');
               await ctx.sync();
-              for (let i = oldRows - 1; i >= newRows; i--) rows.items[i].delete();
+              for (const i of deletions) rows.items[i].delete();
+              await ctx.sync();
+            }
+            step = tr('加行/改单元格');
+            // 此时表格 = 新表去掉待插入行后的顺序；按新表行号依次插入，前面的行都已就位。
+            for (const op of plan) {
+              if (op.type !== 'insert') continue;
+              if (op.new === 0) table.getCell(0, 0).parentRow.insertRows('Before', 1, [nv[0]]);
+              else table.getCell(op.new - 1, 0).parentRow.insertRows('After', 1, [nv[op.new]]);
               await ctx.sync();
             }
             tblMode = 'cells';
@@ -904,7 +927,7 @@
     } else if (!state.wordReady) {
       els.banner.textContent = tr('请在 Word 的「LLM_in_Word」加载项中使用。此处可预览界面、检查后端连接。');
     } else if (backend && ['missing', 'auth', 'error'].includes(backend.status)) {
-      els.banner.textContent = backend.hint;
+      els.banner.textContent = uiText(backend.hint);
     } else { els.banner.classList.add('hidden'); return; }
     els.banner.classList.remove('hidden');
   }
@@ -1211,11 +1234,16 @@
   function tablePreviewEl(oldVals, newVals) {
     const tbl = document.createElement('table');
     tbl.className = 'tblprev';
+    // 行按内容对齐：新增行整行标绿，修改行只标变化的单元格（见 TableUtils.planRows）。
+    const sameCols = oldVals && oldVals[0] && newVals[0] && oldVals[0].length === newVals[0].length;
+    const source = new Map();
+    if (sameCols) for (const op of TableUtils.planRows(oldVals, newVals)) if (op.new != null) source.set(op.new, op.old);
     newVals.forEach((row, r) => {
       const tr = document.createElement('tr');
+      const oldRow = !oldVals ? null : sameCols ? (source.get(r) == null ? null : oldVals[source.get(r)]) : oldVals[r];
       row.forEach((cell, c) => {
         const td = document.createElement('td');
-        const old = oldVals && oldVals[r] ? oldVals[r][c] : undefined;
+        const old = oldRow ? oldRow[c] : undefined;
         if (oldVals && old === undefined) {
           td.classList.add('cellnew');
           td.textContent = cell;
@@ -1812,6 +1840,18 @@
     fillEffortOptions();
     renderModelDetail();
   }
+  // 引擎设置可收起成一行摘要，把侧栏高度留给改写结果（窄屏或 Word 未最大化时尤其需要）。
+  function renderEngineSummary() {
+    const label = (select) => select.selectedOptions?.[0]?.textContent?.trim() || '';
+    const effort = EFFORT_LABELS[els.effort.value] ? tr(EFFORT_LABELS[els.effort.value]) : els.effort.value;
+    $('#engine-summary').textContent = [label(els.backend), label(els.model), effort].filter(Boolean).join(' · ');
+  }
+  function setEngineCollapsed(collapsed) {
+    state.cfg.engineCollapsed = !!collapsed;
+    $('.engine-panel').classList.toggle('collapsed', !!collapsed);
+    $('#btn-engine').setAttribute('aria-expanded', String(!collapsed));
+    renderEngineSummary();
+  }
   function fillEffortOptions() {
     const key = 'effort_' + state.cfg.backend;
     const levels = state.cfg.backend === 'codex' ? (modelEfforts.codex?.[els.model.value] || ['low', 'medium', 'high', 'xhigh']) : EFFORTS;
@@ -1819,6 +1859,7 @@
     els.effort.innerHTML = levels.map((e) => `<option value="${escapeHtml(e)}">${escapeHtml(tr(EFFORT_LABELS[e] || e))} · ${escapeHtml(e)}</option>`).join('');
     els.effort.value = levels.includes(want) ? want : levels.includes('medium') ? 'medium' : levels[0];
     state.cfg.effort = els.effort.value;
+    renderEngineSummary();
   }
   // 更新本机 CLI 模型目录及别名解析，见 server/models.js。
   // quiet=true 是面板启动时的自动刷新：失败不打扰，列表真变了才提示一句。
@@ -1922,7 +1963,10 @@
       saveCfg();
     });
     fillEffortOptions();
-    els.effort.addEventListener('change', () => { state.cfg.effort = els.effort.value; state.cfg['effort_' + state.cfg.backend] = els.effort.value; saveCfg(); });
+    els.effort.addEventListener('change', () => { state.cfg.effort = els.effort.value; state.cfg['effort_' + state.cfg.backend] = els.effort.value; renderEngineSummary(); saveCfg(); });
+    // 首次在较矮的侧栏里打开时默认收起；之后记住用户的选择。
+    setEngineCollapsed(state.cfg.engineCollapsed ?? window.innerHeight < 760);
+    $('#btn-engine').addEventListener('click', () => { setEngineCollapsed(!state.cfg.engineCollapsed); saveCfg(); });
     els.model.addEventListener('change', () => {
       if (state.cfg.backend === 'codex') state.cfg.model_codex = els.model.value;
       else state.cfg.model_claude = els.model.value;

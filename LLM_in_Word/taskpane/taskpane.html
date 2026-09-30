@@ -21,7 +21,8 @@
     </header>
     <div id="banner" class="banner hidden" role="status"></div>
     <section class="engine-panel" aria-label="模型设置" data-i18n-aria-label="模型设置">
-      <div class="section-heading"><span class="eyebrow" data-i18n="写作引擎">写作引擎</span><button id="btn-connection" class="connection-button" title="查看连接状态与登录指引" data-i18n-title="查看连接状态与登录指引"><span id="status-dot" class="dot"></span><span id="status-text" data-i18n="正在连接">正在连接</span><span aria-hidden="true">›</span></button></div>
+      <div class="section-heading"><button id="btn-engine" class="engine-toggle" type="button" aria-expanded="true" aria-controls="engine-body" title="收起或展开写作引擎设置" data-i18n-title="收起或展开写作引擎设置"><span class="chevron" aria-hidden="true">▾</span><span class="eyebrow" data-i18n="写作引擎">写作引擎</span><span id="engine-summary" class="engine-summary"></span></button><button id="btn-connection" class="connection-button" title="查看连接状态与登录指引" data-i18n-title="查看连接状态与登录指引"><span id="status-dot" class="dot"></span><span id="status-text" data-i18n="正在连接">正在连接</span><span aria-hidden="true">›</span></button></div>
+      <div id="engine-body">
       <div class="cfg-row engine-row">
         <label class="field backend-field"><span data-i18n="后端">后端</span><select id="sel-backend" aria-label="后端" data-i18n-aria-label="后端"><option value="claude">Claude Code</option><option value="codex">Codex</option></select></label>
         <label class="field model-field"><span data-i18n="模型">模型</span><select id="sel-model" aria-label="模型" data-i18n-aria-label="模型"></select></label>
@@ -29,6 +30,7 @@
       </div>
       <div id="model-detail" class="model-detail" aria-live="polite"></div>
       <div class="engine-footer"><label class="effort-label" for="sel-effort" data-i18n="思考强度">思考强度</label><select id="sel-effort" aria-label="思考强度" data-i18n-aria-label="思考强度"></select><span id="engine-hint" data-i18n="使用本机订阅">使用本机订阅</span></div>
+      </div>
     </section>
     <div class="workspace-toolbar">
       <div class="mode-tabs" role="group" aria-label="工作模式" data-i18n-aria-label="工作模式"><button id="mode-edit" class="mode-tab active" aria-pressed="true" data-i18n="改写文稿">改写文稿</button><button id="mode-ask" class="mode-tab" aria-pressed="false" data-i18n="文档问答">文档问答</button></div>

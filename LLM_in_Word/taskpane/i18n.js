@@ -197,6 +197,7 @@
   "刷新面板": "Refresh pane",
   "模型设置": "Model settings",
   "写作引擎": "Writing engine",
+  "收起或展开写作引擎设置": "Show or hide writing engine settings",
   "查看连接状态与登录指引": "Connection status and sign-in help",
   "后端": "Backend",
   "模型": "Model",

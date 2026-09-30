@@ -225,6 +225,14 @@ fs.mkdirSync(outputDir, { recursive: true });
   await en.evaluate(() => { const cb = fakeListeners.at(-1); cb({ type: 'error', error: '请求超时：模型超过时限仍未完成，请降低思考强度或缩小选段范围。', hint: '可重试，或在设置中检查后端连接状态。' }); cb({ type: 'done', ok: false }); });
   await en.waitForFunction(() => document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelector('#ole-messages').innerText.includes('Request timed out'));
   assert.match(await en.locator('#ole-messages').innerText(), /Retry, or check the backend connection in Settings\./);
+  // Markdown tables in answers render as real tables (models often answer with one).
+  await en.locator('#ole-input').fill('Compare the citations');
+  await en.locator('#ole-send').click();
+  await en.waitForFunction(() => mockMessages.length === 3);
+  await en.evaluate(() => { const cb = fakeListeners.at(-1); cb({ type: 'delta', text: 'All keys resolve.\n\n| Key | Used in | Defined |\n| --- | --- | --- |\n| `lee2024` | Introduction | yes |\n| **chen2025** | Method | yes |' }); cb({ type: 'done', ok: true }); });
+  await en.waitForFunction(() => document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelectorAll('.ole-md-table tbody tr').length === 2);
+  assert.equal(await en.locator('.ole-md-table th').first().innerText(), 'Key');
+  assert.equal(await en.locator('.ole-md-table code').first().innerText(), 'lee2024');
   // Switching language updates controls and existing card buttons, never conversation text.
   await en.locator('#ole-settings-toggle').click();
   await en.locator('#ole-language').selectOption('zh-CN');
