@@ -52,9 +52,12 @@ test('format prompts carry the slide snapshot, the slide image and the plan form
   const fmtDoc = { docTitle: 'deck.pptx', slideCount: 4, format: '【第 2 页（共 4 页）】幻灯片大小 960×540 pt\n可以修改的形状（用户选中的 1 个，每行一个，JSON）：\n{"id":"5","kind":"shape"}' };
   const files = [{ name: 'slide-2.png', path: '/tmp/a/slide-2.png', mime: 'image/png' }];
   const p = buildPrompt({ mode: 'format', uiLanguage: 'en', doc: fmtDoc, messages: [{ role: 'user', content: 'lighter' }, { role: 'assistant', content: 'done' }, { role: 'user', content: 'lighter still' }], files });
-  assert.match(p, /版式助手/);
-  assert.match(p, /```format 围栏，里面是 JSON：\{"changes"/);
-  assert.match(p, /只能用「可以修改的形状」里的 id/);
+  assert.match(p, /版式设计助手/);
+  assert.match(p, /```format 围栏，里面是 JSON：\{"changes": \[ … \]\}/);
+  assert.match(p, /只能用清单「可以修改的形状」里的 id/);
+  assert.match(p, /整页美化 \/ 重新排版：/, 'redesign requests are told apart from small tweaks');
+  assert.match(p, /"from": \{"id": "3", "para": "2"\}/, 'text moves into new cards only by copying it');
+  assert.match(p, /文字要放得下/);
   assert.match(p, /==== 当前页的格式清单 ====\n【第 2 页（共 4 页）】/);
   assert.match(p, /slide-N\.png 的图片是面板截取的第 N 页渲染图/);
   assert.match(p, /此前的对话（页面可能已按之前的方案改过，一律以上面的清单和截图为准）/);
@@ -64,4 +67,16 @@ test('format prompts carry the slide snapshot, the slide image and the plan form
   const turn = buildTurnPrompt({ mode: 'format', uiLanguage: 'zh-CN', doc: fmtDoc, instruction: '再浅一点', files });
   assert.match(turn, /当前页的格式清单/);
   assert.match(turn, /用户本轮的要求：\n再浅一点/);
+});
+
+test('the self-check prompt shows the result, the geometry problems and asks for a pass or a fix', () => {
+  const doc = { docTitle: 'deck.pptx', slideCount: 4, phase: 'check', format: '【第 2 页（共 4 页）】\n{"id":"9","kind":"shape"}', issues: ['形状 3 和形状 9 重叠（约 40 pt 见方）'] };
+  const files = [{ name: 'slide-2-after.png', path: '/tmp/a/slide-2-after.png', mime: 'image/png' }];
+  const p = buildPrompt({ mode: 'format', uiLanguage: 'zh-CN', doc, messages: [{ role: 'user', content: '整页美化' }], files });
+  assert.match(p, /刚才已经按用户的要求改了这一页/);
+  assert.match(p, /用户原来的要求：\n整页美化/);
+  assert.match(p, /==== 改完后的格式清单 ====\n【第 2 页/);
+  assert.match(p, /自动检测到的几何问题：\n- 形状 3 和形状 9 重叠/);
+  assert.match(p, /没问题就说"通过"/);
+  assert.doesNotMatch(p, /【先判断要做多大的改动】/, 'the design brief is not repeated');
 });

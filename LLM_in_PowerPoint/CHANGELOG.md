@@ -1,5 +1,20 @@
 # 更新记录
 
+## 0.3.0 — 2026-10-02
+
+**Whole-slide redesign in Format mode.** 0.2.0 could only adjust properties of existing shapes, so “polish this slide” produced small touch-ups. Format mode can now re-lay out a slide.
+
+- **Small changes vs. redesigns.** The prompt tells specific requests (“lighter border”) apart from redesigns (“polish”, “lay out again”, “too cluttered”) and gives the model a layout brief: margins and grid, size hierarchy, palette, common layouts (bullet cards, text left / picture right, big numbers, process, tables), and how to estimate whether text fits.
+- **New operations.** Add rectangles, rounded rectangles (with corner size), ovals, lines and text boxes; move paragraphs **unchanged** from an existing shape into a new card (`"from": {"id": "3", "para": "2"}`, keeping bold and colours); delete stray lines, empty shapes and text boxes whose every paragraph was moved; format some paragraphs only (`"para": "2-4"`, bullets off); text box margins, word wrap and autofit; a different table style. Typed text is limited to short labels, so the model cannot write content.
+- **Checks.** Pictures keep their aspect ratio, shapes are kept on the slide, titles, pictures and tables cannot be deleted, and a text shape is only deleted when all its paragraphs were moved.
+- **Self-check round.** After applying a big change, the pane sends a new image of the slide, the new formatting list and the geometry problems it detects (overlaps, off-slide, edge-touching) back to the model, applies its fix if any, and shows the slide before and after on the card. The card says so honestly when the check found problems it could not fix.
+- **Whole-slide undo.** Structural plans back the slide up with `slide.exportAsBase64()` (PowerPointApi 1.8) and undo by inserting the backup in its place: identical rendering, speaker notes kept. This also makes style-drawn table text and gradient fills undoable. Undo asks first if the slide changed after applying.
+- **Chinese fonts.** Latin font names are applied to Latin characters only, and Chinese text in new shapes gets the slide's Chinese font (or Microsoft YaHei), because PowerPoint otherwise shows it in SimSun.
+- Presets **整页美化 / Polish slide** and **重新排版 / New layout**.
+- Tested in real PowerPoint 16.109 on a text-heavy Chinese slide, three scattered boxes with a table, and an English chart slide; offline tests now cover redesign, self-check, whole-slide undo and fonts (104 tests).
+
+中文摘要：版式模式可以整页重排了。以前只能改现有形状的属性，「美化这一页」只会小修小补；现在能新增卡片、色块和线条，把要点原样搬进卡片（不改一个字），删掉多余的线和已搬空的文本框，按段落设格式，调文本框边距和自动调整，换表格样式。大改应用后自动截图自查一轮并修正，卡片上显示改前和改后；撤销时用应用前的整页备份原样换回（备注也在）。新建文字的中文不再落成宋体。
+
 ## 0.2.0 — 2026-10-01
 
 **Format mode: change how a slide looks, not just its words.** A third mode, **调整版式 / Format**, sits between Rewrite and Q&A.
