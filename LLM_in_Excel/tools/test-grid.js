@@ -42,7 +42,18 @@ test('the coordinate table survives a round trip, including pipes, line breaks a
   const r = G.parseGridMarkdown(md);
   assert.equal(r.ok, true);
   assert.equal(r.mode, 'coords');
-  assert.deepEqual(plain([...r.cells]), [['C4', 'a|b'], ['D4', 'line 1\nline 2'], ['C5', ' padded '], ['D5', '']]);
+  assert.deepEqual(plain([...r.cells]), [['C4', 'a|b'], ['D4', 'line 1\nline 2'], ['C5', ' padded ']], 'a blank cell is not a change');
+});
+
+test('a blank cell in a reply leaves the cell alone; only "" clears it', () => {
+  // Models leave the unchanged cells of a row blank; reading that as "clear" erased customer names in a real run.
+  const r = G.parseGridMarkdown('| | B | C |\n|---|---|---|\n| 4 | | North |\n| 5 | "" | West |\n| 6 | \u201c\u201d | |');
+  assert.deepEqual(plain([...r.cells]), [['C4', 'North'], ['B5', ''], ['C5', 'West'], ['B6', '']]);
+  const target = { r1: 4, c1: 2, r2: 6, c2: 3 };
+  const plan = G.planChanges(target, [['Initech', '"north "'], ['Umbrella Co.', 'West'], ['Globex', 'South']], r.cells);
+  assert.deepEqual(plain(plan.inside.map((c) => [c.addr, c.value])), [['C4', 'North'], ['B5', ''], ['B6', '']]);
+  const pos = G.parseGridMarkdown('| Product |\n| --- |\n|  |', { r1: 2, c1: 8, r2: 3, c2: 8 });
+  assert.deepEqual(plain([...pos.cells]), [['H2', 'Product']], 'positional tables follow the same rule');
 });
 
 test('replies may list only the rows and columns that change', () => {
