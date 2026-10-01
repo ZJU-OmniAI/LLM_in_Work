@@ -5,11 +5,11 @@ import { JSDOM } from 'jsdom';
 import { createFakePowerPoint, sampleDeck } from './fixtures/fake-powerpoint.js';
 
 const read = (p) => readFileSync(new URL(`../taskpane/${p}`, import.meta.url), 'utf8');
-const html = read('taskpane.html'), paneJs = read('taskpane.js'), i18nJs = read('i18n.js'), tableJs = read('table-utils.js');
+const html = read('taskpane.html'), paneJs = read('taskpane.js'), i18nJs = read('i18n.js'), tableJs = read('table-utils.js'), formatJs = read('format-utils.js');
 
 const EXPOSE = 'state, addTarget, getEditContext, getWholeDeck, applyText, applyTable, undoApply, revealTarget, refreshTargets, restoreTargets, ' +
   'sendInstruction, renderTargetBar, fillModelOptions, stopStream, contextKey, refreshModelList, refreshStatusUI, attachSlideImage, ' +
-  'clearTargets, removeTarget, onDocSelectionChanged, setMode';
+  'clearTargets, removeTarget, onDocSelectionChanged, setMode, readFormatSnapshot, applyFormat, undoFormat';
 
 export const tick = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -52,6 +52,7 @@ export async function loadPane({ deck = sampleDeck(), events = [], language = 'z
   };
   w.eval(i18nJs);
   w.eval(tableJs);
+  w.eval(formatJs);
   const hook = `  init();
     window.lp = { ${EXPOSE} };
     ${mockContext ? 'getEditContext = () => window.__context; getWholeDeck = () => window.__context;' : ''}

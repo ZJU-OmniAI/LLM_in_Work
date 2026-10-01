@@ -23,7 +23,7 @@ import { getModels } from './models.js';
 import { getHealth } from './health.js';
 import { classifyError } from './process.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 const activeRequests = new Set();
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url))); // 项目根目录
 
@@ -133,7 +133,7 @@ async function handleChat(req, res) {
   const backend = payload.backend === 'codex' ? 'codex' : 'claude';
   const model = payload.model || (backend === 'codex' ? '(default)' : 'sonnet');
   const effort = payload.effort || 'medium';
-  const mode = payload.mode === 'ask' ? 'ask' : 'edit';
+  const mode = ['ask', 'format'].includes(payload.mode) ? payload.mode : 'edit';
   const uiLanguage = payload.uiLanguage === 'en' ? 'en' : 'zh-CN';
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
 

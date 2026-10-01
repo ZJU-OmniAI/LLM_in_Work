@@ -229,7 +229,7 @@ button:focus-visible, select:focus-visible, summary:focus-visible, [tabindex]:fo
 .effort-label { color:#918682; }
 #sel-effort { background:#f5efee; color:#78645e; border:0; border-radius:4px; padding:2px 3px; font-size:10px; max-width:125px; }
 #engine-hint { margin-left:auto; color:#a39a98; font-size:9px; }
-.mode-tabs { border:0; background:#ede7e6; border-radius:8px; padding:3px; gap:2px; }
+.mode-tabs { border:0; background:#ede7e6; border-radius:8px; padding:3px; gap:2px; flex-wrap:wrap; }
 .mode-tab { background:transparent; font-size:11px; padding:5px 10px; color:#908886; border-radius:6px; }
 .mode-tab.active { color:var(--accent); background:#fff; box-shadow:0 1px 4px #3c28220b; font-weight:600; }
 .track-label { font-size:10px; color:#85736e; gap:5px; white-space:nowrap; }
@@ -397,3 +397,19 @@ html[lang="en"] .card-head { flex-wrap:wrap; }
 .tblprev td.cellchg .oldv { color:#b91c1c; }
 .applied { color:#15803d; }
 .connection-card.ready .health-badge { color:#3f7a4f; background:#e6f2e6; }
+
+/* ---------- 版式模式 ---------- */
+.fmt-scope-note { display: none; margin: 4px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted, #6b6b6b); }
+#app[data-mode="format"] .fmt-scope-note { display: block; }
+#app[data-mode="format"] #btn-capture,
+#app[data-mode="format"] #target-bar,
+#app[data-mode="format"] #att-slide { display: none; }
+.fmt-body { display: flex; flex-direction: column; gap: 10px; }
+.fmt-shape-head { font-size: 12px; font-weight: 600; color: var(--ink, #222); margin-bottom: 4px; word-break: break-word; }
+.fmt-rows { width: 100%; border-collapse: collapse; font-size: 12px; }
+.fmt-rows th { text-align: left; font-weight: 500; color: var(--muted, #6b6b6b); padding: 3px 6px 3px 0; white-space: nowrap; vertical-align: middle; }
+.fmt-rows td { padding: 3px 0; vertical-align: middle; font-variant-numeric: tabular-nums; }
+.fmt-rows .fmt-old { color: var(--muted, #6b6b6b); text-decoration: line-through; text-decoration-color: rgba(180, 60, 60, .55); }
+.fmt-rows .fmt-arrow { color: var(--muted, #999); padding: 0 6px; text-align: center; }
+.fmt-rows .fmt-new { color: var(--ink, #222); font-weight: 600; }
+.sw { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1px solid rgba(0, 0, 0, .18); }

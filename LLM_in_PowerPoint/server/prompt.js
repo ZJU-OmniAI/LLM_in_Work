@@ -1,8 +1,9 @@
 // 把"演示文稿上下文 + 历史对话 + 本轮指令"拼成一段完整 prompt。
 // claude -p / codex exec 都是一问一答、不记忆，所以首轮把全部上下文带上，续轮只发变化的部分。
-// 两种模式：
-//   edit：改写选中的幻灯片文字，要求模型把替换文本放进 ```text 围栏（前端解析后做 diff/应用）
-//   ask ：针对选中内容或整份演示文稿答疑，普通 Markdown 回答
+// 三种模式：
+//   edit  ：改写选中的幻灯片文字，要求模型把替换文本放进 ```text 围栏（前端解析后做 diff/应用）
+//   format：调整当前页的格式和版面，模型看截图和格式清单，把修改方案放进 ```format 围栏（JSON，前端校验后写入）
+//   ask   ：针对选中内容或整份演示文稿答疑，普通 Markdown 回答
 // 与 LLM_in_Word 的区别：幻灯片文字按"页 → 文本框 → 段落"组织，一行就是一个要点；
 // 项目符号属于段落格式，不是文字，所以必须禁止模型在围栏里写 "- " "•" 之类的记号。
 
@@ -56,10 +57,35 @@ const ASK_SYSTEM = `你是嵌入 Microsoft PowerPoint 的演示文稿助手，�
 - 提到具体内容时注明页码（如"第 3 页"），方便用户在幻灯片里找到。
 - 用 Markdown 组织，简明清晰。`;
 
+const FORMAT_SYSTEM = `你是嵌入 Microsoft PowerPoint 的版式助手，负责调整幻灯片的格式和版面：位置、大小、填充、边框、字体、对齐、层次、表格样式和背景色。文字内容不在这里改。
+下面会给你当前这一页的截图（slide-N.png）和这页上每个形状的格式清单：每行一个形状的 JSON，单位是磅（pt），颜色是 #RRGGBB；"mixed" 表示这段文字里有多种取值，"none" 表示没有填充或没有边框。
+
+【可以修改的属性】只写需要改的属性；颜色一律写 #RRGGBB。
+- 形状：x、y、w、h（位置和大小）；rotation（角度）；fill（"#RRGGBB"、{"color": "#RRGGBB", "transparency": 0.3} 或 "none"）；
+  line（形状和图片的边框/轮廓：{"color": "#RRGGBB", "weight": 1, "dash": "solid|dash|dot", "transparency": 0}，或 "none" 去掉边框）；
+  font（作用于这个形状里的全部文字：{"name": "字体名", "size": 18, "color": "#RRGGBB", "bold": true, "italic": false, "underline": false}）；
+  align（left / center / right / justify）；valign（top / middle / bottom）；zOrder（front / back / forward / backward）。
+- 表格（kind 为 table）：在同一条修改里用 cells 指定范围（"all"、"header"、"body"、"first-col"、"last-row"，或 "r2c1:r4c3" 这样的行列区域，从 1 开始数），
+  再写 fill（单元格底色）、font、align、valign，或 border（{"sides": "all|outer|inner|top|bottom|left|right|horizontal|vertical", "color": …, "weight": …, "dash": …}）。表格的 x、y、w、h 也可以改。
+- 背景：{"id": "background", "fill": "#RRGGBB"}（清单里写明可以改时才行）。
+
+【输出格式，必须严格遵守】
+1. 先用一两句话说明打算怎么改、为什么。
+2. 然后输出一个 \`\`\`format 围栏，里面是 JSON：{"changes": [{"id": "形状 id", …要改的属性…}, …]}。只能用「可以修改的形状」里的 id；同一个形状可以有多条（比如表格的不同区域）。
+3. 只改和用户要求相关的属性，不要顺手改别的。
+4. 文字内容在这里改不了；用户要改措辞时，说明需要切换到「改写」模式，不要输出围栏。做不到的（动画、裁剪图片、渐变、阴影、插入新形状、改母版……）也直接说明原因和手动做法，不要输出围栏。
+
+【版式原则】
+- 「浅一些」通常是把颜色往白色方向调（比如黑色 #000000 → 深灰 #7F7F7F 或浅灰 #BFBFBF），线条可以同时变细；「醒目」是加深颜色、加大字号或加粗。
+- 颜色优先用主题色或页面上已有的颜色，保持整页协调。
+- 对齐和间距成组考虑：同类元素对齐到同一条线、间距一致；形状不要超出幻灯片。
+- 字号保持层级：标题大于小标题大于正文，正文一般不小于 12 pt。`;
+
 // 回复语言：说明文字跟随用户本轮指令的语言；判断不了时跟随面板界面语言。
 // 替换内容本身保持原文语言（除非用户要求翻译），避免英文界面收到中文说明、或幻灯片被顺手翻译。
 export function languageRule(mode, uiLanguage) {
   const fallback = uiLanguage === 'en' ? '英文（English）' : '中文';
+  if (mode === 'format') return `【回复语言】说明文字使用用户本轮要求所用的语言；难以判断时使用${fallback}。JSON 里的键和取值按上面的规定写。`;
   return mode === 'edit'
     ? `【回复语言】代码块外的说明、以及无法执行时的解释，使用用户本轮指令所用的语言；难以判断时使用${fallback}。替换内容本身保持原文的语言，除非用户明确要求翻译。`
     : `【回复语言】使用用户本轮提问所用的语言回答；难以判断时使用${fallback}。`;
@@ -68,6 +94,7 @@ export function languageRule(mode, uiLanguage) {
 // 英文界面时在结尾再用英文提醒一次回复语言：中文的系统提示词容易把小模型带偏成先写几句中文。
 export function closingLanguageHint(mode, uiLanguage) {
   if (uiLanguage !== 'en') return '';
+  if (mode === 'format') return 'Write the explanation in the language of the request above (English if unsure); keep the JSON keys and values exactly as specified.';
   return mode === 'edit'
     ? 'Write any explanation outside the code fences in the language of the instruction above (English if unsure). Keep the replacement text in the slide\'s original language unless asked to translate.'
     : 'Answer entirely in the language of the question above (English if unsure), including headings and labels.';
@@ -102,6 +129,7 @@ const where = (t) => (t.where ? `，${t.where}` : '');
 // 续轮的短 prompt：CLI 会话里已有系统规则、全文和此前对话（走服务端缓存），
 // 本轮只发：最新的目标（权威版本）+ 新增附件 + 指令 + 输出格式提醒。
 export function buildTurnPrompt({ mode, backend = 'claude', uiLanguage = 'zh-CN', doc = {}, instruction = '', files = [] }) {
+  if (mode === 'format') return buildFormatPrompt({ backend, uiLanguage, doc, messages: [{ role: 'user', content: instruction }], files });
   const isEdit = mode === 'edit';
   const targets = Array.isArray(doc.targets) ? doc.targets : [];
   const parts = [];
@@ -158,7 +186,33 @@ function pushDocInfo(parts, doc) {
 // doc: { docTitle, slideCount, docChars, targets: [{k, text, kind, rows, cols, where}], fullText, truncated }
 //   fullText 由前端拼好：按页列出各文本框，单目标用【选中段开始/结束】、多目标用【目标k开始/结束】标出，超长已截取
 // files: [{name, path, mime}]  ← 已落盘的二进制附件（图片/PDF），backend 决定提示读法
+// 版式模式：系统规则 + 当前页格式清单 + 截图说明 + 此前对话 + 本轮要求
+function buildFormatPrompt({ backend, uiLanguage, doc, messages, files }) {
+  const parts = [FORMAT_SYSTEM, languageRule('format', uiLanguage), ''];
+  pushDocInfo(parts, doc);
+  parts.push('\n==== 当前页的格式清单 ====');
+  parts.push(String(doc.format || '（没有读到形状）'));
+  parts.push('==== 清单结束 ====');
+  pushBinFilesSection(parts, files, backend);
+  const history = messages.slice(0, -1);
+  const current = messages[messages.length - 1];
+  if (history.length) {
+    parts.push('\n==== 此前的对话（页面可能已按之前的方案改过，一律以上面的清单和截图为准）====');
+    for (const m of history) {
+      const c = m.content.length > 4000 ? m.content.slice(0, 4000) + '…（截断）' : m.content;
+      parts.push(`${m.role === 'assistant' ? '助手' : '用户'}：${c}`);
+    }
+    parts.push('==== 对话历史结束 ====');
+  }
+  parts.push(`\n用户本轮的要求：\n${current ? current.content : ''}`);
+  parts.push('\n请按上面的输出格式给出方案：先一两句说明，再一个 ```format 围栏。');
+  const hint = closingLanguageHint('format', uiLanguage);
+  if (hint) parts.push(hint);
+  return parts.join('\n');
+}
+
 export function buildPrompt({ mode, backend = 'claude', uiLanguage = 'zh-CN', doc = {}, messages = [], files = [] }) {
+  if (mode === 'format') return buildFormatPrompt({ backend, uiLanguage, doc, messages, files });
   const isEdit = mode === 'edit';
   const targets = Array.isArray(doc.targets) ? doc.targets : [];
   const parts = [];

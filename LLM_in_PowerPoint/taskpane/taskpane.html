@@ -21,7 +21,7 @@
     </header>
     <div id="banner" class="banner hidden" role="status"></div>
     <div id="context-bar" class="context-bar">
-      <button id="mode-summary" class="summary-btn" aria-haspopup="true" aria-controls="settings-pop" title="切换改写或问答模式" data-i18n-title="切换改写或问答模式">改写 ▾</button>
+      <button id="mode-summary" class="summary-btn" aria-haspopup="true" aria-controls="settings-pop" title="切换改写、版式或问答模式" data-i18n-title="切换改写、版式或问答模式">改写 ▾</button>
       <button id="context-summary" class="summary-btn" aria-haspopup="true" aria-controls="settings-pop" title="查看目标与设置" data-i18n-title="查看目标与设置">未选择内容</button>
       <button id="btn-capture" class="btn capture-btn" title="把选中的文字、文本框、表格或当前页添加为改写目标" data-i18n-title="把选中的文字、文本框、表格或当前页添加为改写目标"><span aria-hidden="true">＋</span><span data-i18n="添加选中">添加选中</span></button>
     </div>
@@ -40,8 +40,9 @@
           <div class="engine-footer"><label class="effort-label" for="sel-effort" data-i18n="思考强度">思考强度</label><select id="sel-effort" aria-label="思考强度" data-i18n-aria-label="思考强度"></select><span id="engine-hint" data-i18n="使用本机订阅">使用本机订阅</span></div>
         </div>
         <div class="pop-row">
-          <div class="mode-tabs" role="group" aria-label="工作模式" data-i18n-aria-label="工作模式"><button id="mode-edit" class="mode-tab active" aria-pressed="true" data-i18n="改写幻灯片">改写幻灯片</button><button id="mode-ask" class="mode-tab" aria-pressed="false" data-i18n="演示文稿问答">演示文稿问答</button></div>
+          <div class="mode-tabs" role="group" aria-label="工作模式" data-i18n-aria-label="工作模式"><button id="mode-edit" class="mode-tab active" aria-pressed="true" data-i18n="改写文字">改写文字</button><button id="mode-format" class="mode-tab" aria-pressed="false" data-i18n="调整版式">调整版式</button><button id="mode-ask" class="mode-tab" aria-pressed="false" data-i18n="演示文稿问答">演示文稿问答</button></div>
         </div>
+        <p id="fmt-scope-note" class="fmt-scope-note" data-i18n="版式模式按当前选中的形状工作：选中要调整的形状（可多选），什么都不选就是整页。模型会看到当前页的截图。">版式模式按当前选中的形状工作：选中要调整的形状（可多选），什么都不选就是整页。模型会看到当前页的截图。</p>
         <section id="target-bar" class="target empty" aria-label="改写目标" data-i18n-aria-label="改写目标">
           <div class="section-heading"><span class="eyebrow" data-i18n="改写目标">改写目标</span><span class="target-tools"><span id="target-count" class="count-label">0 / 16</span><button id="btn-clear" class="ibtn" title="清除全部目标" aria-label="清除全部目标" data-i18n-title="清除全部目标" data-i18n-aria-label="清除全部目标">×</button></span></div>
           <div id="target-info" class="target-info"></div><div id="target-list" class="target-list"></div>
@@ -66,5 +67,5 @@
       <div class="overlay-body"><p class="settings-intro" data-i18n="连接本机 Claude Code 和 Codex，沿用已登录的账户。">连接本机 Claude Code 和 Codex，沿用已登录的账户。</p><div id="connection-details" aria-live="polite"></div><button id="btn-diagnose" class="btn btn-primary" data-i18n="重新检测">重新检测</button><p class="settings-footnote" data-i18n="检测只检查 CLI 和登录状态，不调用模型生成。">检测只检查 CLI 和登录状态，不调用模型生成。</p></div>
     </section>
   </div>
-  <script src="i18n.js"></script><script src="table-utils.js"></script><script src="taskpane.js"></script>
+  <script src="i18n.js"></script><script src="table-utils.js"></script><script src="format-utils.js"></script><script src="taskpane.js"></script>
 </body></html>

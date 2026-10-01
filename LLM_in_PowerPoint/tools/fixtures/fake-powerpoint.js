@@ -6,18 +6,59 @@
 //   - an inserted \r starts a new paragraph at the same indent level;
 //   - the selected text range of a selected shape is its whole text; getItemOrNullObject finds grouped shapes by ID.
 // Writes apply immediately (the real API queues them until sync, in the same order), so reads are always current.
+// Formatting (format mode): shapes carry width/height/rotation, fill, lineFormat and a z-order (their index among
+// siblings); characters carry font name/size/color/bold/italic/underline and their paragraph's alignment, and a
+// range's font property reads null when the range mixes values (as PowerPoint does). Table cells carry fill, font,
+// four borders and alignment. pageSetup, slide backgrounds and theme colours need PowerPointApi 1.10.
+// Readings as observed in PowerPoint 16.109: horizontal alignment reads as the enum's index (0 = Left; writes take the
+// name or the index); a shape without fill reads foregroundColor "" and transparency -1, a hidden line color "" and
+// weight/transparency -1. A table with a table style (spec.tableStyle) draws its fills, borders and text colours from
+// the style: such cells read NoFill (color null, transparency 1), borders with every property null, and the default
+// black, non-bold font. A border that was set reads transparency 1 and dashStyle null unless a dash was written.
+// fill.clear() on a cell returns it to the style; re-applying styleSettings.style drops every cell's direct fill and
+// borders but keeps fonts; a font property cannot be unset (null throws InvalidArgument).
 
 const nullObject = () => ({ isNullObject: true, load() { return this; } });
 
+const FONT_DEFAULT = { name: 'Calibri', size: 18, color: '#000000', bold: false, italic: false, underline: 'None' };
+const ALIGN_ENUM = ['Left', 'Center', 'Right', 'Justify', 'JustifyLow', 'Distributed', 'ThaiDistributed'];
+const alignIn = (v) => (typeof v === 'number' ? ALIGN_ENUM[v] : v);
+const alignOut = (v) => (v == null ? null : ALIGN_ENUM.indexOf(v));
+const invalid = () => Object.assign(new Error('InvalidArgument'), { code: 'InvalidArgument' });
+function charOf(ch, fmt, p) {
+  return { ch, ...FONT_DEFAULT, ...(p.font || {}), ...fmt, bold: !!fmt.bold, color: fmt.color || (p.font && p.font.color) || FONT_DEFAULT.color, level: p.level || 0, align: p.align || 'Left' };
+}
 function makeChars(spec) {
   const chars = [];
-  const paras = spec.paras || [{ text: spec.text || '' }];
+  const paras = spec.paras || [{ text: spec.text || '', font: spec.font, align: spec.align }];
   paras.forEach((p, i) => {
+    const pp = { ...p, font: p.font || spec.font, align: p.align || spec.align };
     const runs = p.runs || [[p.text || '', {}]];
-    for (const [text, fmt] of runs) for (const ch of text) chars.push({ ch, bold: !!fmt.bold, color: fmt.color || null, level: p.level || 0 });
-    if (i < paras.length - 1) chars.push({ ch: '\r', bold: false, color: null, level: p.level || 0 });
+    for (const [text, fmt] of runs) for (const ch of text) chars.push(charOf(ch, fmt, pp));
+    if (i < paras.length - 1) chars.push(charOf('\r', {}, pp));
   });
   return chars;
+}
+const FILL = (f) => (f == null || f === 'none' ? { type: 'NoFill', color: '#FFFFFF', transparency: 0 } : typeof f === 'string' ? { type: 'Solid', color: f, transparency: 0 } : { type: 'Solid', transparency: 0, ...f });
+const LINE = (l) => (l == null || l === 'none' ? { visible: false, color: '#000000', weight: 0.75, dashStyle: 'Solid', transparency: 0 } : { visible: true, color: '#000000', weight: 1, dashStyle: 'Solid', transparency: 0, ...(typeof l === 'string' ? { color: l } : l) });
+const BORDER = (b) => ({ color: '#000000', weight: 1, dashStyle: 'Solid', transparency: 0, ...(b || {}) });
+const STYLE_FILL = () => ({ type: 'NoFill', color: null, transparency: 1, style: true });
+const STYLE_BORDER = () => ({ color: null, weight: null, dashStyle: null, transparency: null });
+function cellFormats(sh) {
+  if (!sh.values) return null;
+  if (sh.tableStyle) {
+    return sh.values.map((row) => row.map(() => ({
+      fill: STYLE_FILL(), font: { ...FONT_DEFAULT, name: null },
+      borders: { top: STYLE_BORDER(), bottom: STYLE_BORDER(), left: STYLE_BORDER(), right: STYLE_BORDER() },
+      align: 'Left', valign: 'Top',
+    })));
+  }
+  return sh.values.map((row, r) => row.map(() => ({
+    fill: FILL(r === 0 ? (sh.headerFill ?? '#4472C4') : (sh.bodyFill ?? null)),
+    font: { ...FONT_DEFAULT, size: 14, ...(r === 0 ? { bold: true, color: '#FFFFFF' } : {}) },
+    borders: { top: BORDER(sh.border), bottom: BORDER(sh.border), left: BORDER(sh.border), right: BORDER(sh.border) },
+    align: 'Left', valign: 'Top',
+  })));
 }
 
 export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
@@ -26,21 +67,73 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
     slides: deckSpec.slides.map((s) => ({ id: s.id, shapes: s.shapes.map(function mk(sh) {
       return {
         id: sh.id, name: sh.name || `Shape ${sh.id}`, type: sh.type || 'TextBox', left: sh.left ?? 0, top: sh.top ?? 0,
+        width: sh.width ?? 300, height: sh.height ?? 60, rotation: sh.rotation ?? 0,
+        fill: FILL(sh.fill), line: LINE(sh.line), valign: sh.valign || 'Top',
+        cellFmt: null,
         ph: sh.ph || null,
         chars: ['Table', 'Group', 'Image'].includes(sh.type) ? null : makeChars(sh),
         values: sh.values ? sh.values.map((r) => [...r]) : null,
+        tableStyle: sh.values ? sh.tableStyle || 'NoStyleNoGrid' : null,
         merged: !!sh.merged,
         children: sh.shapes ? sh.shapes.map(mk) : null,
       };
-    }) })),
+    }), background: s.background ? { follows: false, fill: FILL(s.background) } : { follows: true, fill: FILL('#FFFFFF') } })),
     selection: { slides: [deckSpec.slides[0].id], shapes: [], text: null },
+    page: deckSpec.page || { w: 960, h: 540 },
+    theme: deckSpec.theme || { Dark1: '#000000', Light1: '#FFFFFF', Dark2: '#44546A', Light2: '#E7E6E6', Accent1: '#4472C4', Accent2: '#ED7D31' },
   };
+  const minor = Number(String(apiVersion).split('.')[1]);
+  const needs = (v, what) => { if (minor < v) throw Object.assign(new Error(`${what} requires PowerPointApi 1.${v}`), { code: 'ApiNotFound' }); };
+  // table cell formats are created lazily so that existing table specs need nothing new
+  deckSpec.slides.forEach((s, i) => deck.slides[i].shapes.forEach(function init(sh, k) {
+    const spec = s.shapes[k];
+    if (sh.values) sh.cellFmt = cellFormats({ ...spec, values: sh.values });
+    if (sh.children) sh.children.forEach((c, j) => { if (c.values) c.cellFmt = cellFormats({ ...spec.shapes[j], values: c.values }); });
+  }));
   const textOf = (shape) => shape.chars.map((c) => c.ch).join('');
   const findShape = (slide, id) => {
     const walk = (list) => { for (const s of list) { if (s.id === id) return s; if (s.children) { const f = walk(s.children); if (f) return f; } } return null; };
     return walk(slide.shapes);
   };
   const slideOf = (shape) => deck.slides.find((sl) => findShape(sl, shape.id) === shape);
+
+  // A range's font: reads a value only when every character agrees (otherwise null), writes to every character.
+  function fontOf(chars, shape) {
+    const o = { load() { return this; } };
+    for (const k of ['name', 'size', 'color', 'bold', 'italic', 'underline']) {
+      Object.defineProperty(o, k, {
+        get: () => { const cs = chars().filter((c) => c.ch !== '\r'); return cs.length && cs.every((c) => c[k] === cs[0][k]) ? cs[0][k] : null; },
+        set: (v) => { for (const c of chars()) c[k] = v; log.push({ op: 'font', shape: shape.id, k, v }); },
+        enumerable: true,
+      });
+    }
+    return o;
+  }
+  function plainFont(get, set) {
+    const o = { load() { return this; } };
+    for (const k of ['name', 'size', 'color', 'bold', 'italic', 'underline']) Object.defineProperty(o, k, { get: () => get()[k], set: (v) => { if (v == null) throw invalid(); set(k, v); }, enumerable: true });
+    return o;
+  }
+  function fillApi(get, set, cell) {
+    const none = (f) => f.type === 'NoFill';
+    return {
+      get type() { return get().type; },
+      get foregroundColor() { return none(get()) ? (cell ? null : '') : get().color; },
+      get transparency() { return none(get()) ? (cell ? 1 : -1) : get().transparency; }, set transparency(v) { set({ ...get(), transparency: v }); },
+      setSolidColor(c) { set({ type: 'Solid', color: c, transparency: 0 }); },
+      clear() { set(cell ? STYLE_FILL() : { type: 'NoFill', color: get().color, transparency: 0 }); },
+      load() { return this; },
+    };
+  }
+  const siblings = (shape) => {
+    for (const sl of deck.slides) {
+      if (sl.shapes.includes(shape)) return sl.shapes;
+      const walk = (list) => { for (const s of list) { if (s.children) { if (s.children.includes(shape)) return s.children; const f = walk(s.children); if (f) return f; } } return null; };
+      const f = walk(sl.shapes);
+      if (f) return f;
+    }
+    return [shape];
+  };
 
   function textRange(shape, start, length) {
     const full = () => textOf(shape);
@@ -53,13 +146,28 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
         const s = String(value);
         const len = length == null ? shape.chars.length - start : length;
         const src = len > 0 ? shape.chars[start] : (shape.chars[start - 1] && shape.chars[start - 1].ch !== '\r' ? shape.chars[start - 1] : shape.chars[start] || shape.chars[start - 1]);
-        const base = src || { bold: false, color: null, level: 0 };
-        const fresh = [...s].map((ch) => ({ ch, bold: base.bold, color: base.color, level: base.level }));
+        const base = src || { ...FONT_DEFAULT, level: 0, align: 'Left' };
+        const fresh = [...s].map((ch) => ({ ...base, ch }));
         shape.chars.splice(start, len, ...fresh);
         log.push({ op: 'text', shape: shape.id, start, del: len, ins: s });
         if (length != null) length = s.length;
       },
-      font: { get bold() { const cs = shape.chars.slice(start, start + (length ?? shape.chars.length)); return cs.every((c) => c.bold) ? true : cs.some((c) => c.bold) ? null : false; }, load() { return this; } },
+      get font() { return fontOf(() => shape.chars.slice(start, start + (length ?? shape.chars.length)), shape); },
+      get paragraphFormat() {
+        const paras = () => {
+          const text = full();
+          const end = start + (length ?? text.length);
+          let a = text.lastIndexOf('\r', start - 1) + 1, b = text.indexOf('\r', Math.max(start, end - 1));
+          if (b < 0) b = text.length;
+          return shape.chars.slice(a, b);
+        };
+        return {
+          get horizontalAlignment() { const cs = paras(); return cs.length && cs.every((c) => c.align === cs[0].align) ? alignOut(cs[0].align) : null; },
+          set horizontalAlignment(v) { for (const c of paras()) c.align = alignIn(v); log.push({ op: 'align', shape: shape.id, v }); },
+          bulletFormat: { visible: true, load() { return this; } },
+          load() { return this; },
+        };
+      },
       load() { return this; },
       getSubstring(s, l) {
         const base = start;
@@ -75,19 +183,65 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
       isNullObject: false,
       get hasText() { return textOf(shape).length > 0; },
       get textRange() { return textRange(shape, 0, null); },
+      get verticalAlignment() { return shape.valign; },
+      set verticalAlignment(v) { shape.valign = v; log.push({ op: 'valign', shape: shape.id, v }); },
       load() { return this; },
       getParentShape() { return shapeApi(shape); },
     };
   }
   function table(shape) {
+    const fmtAll = () => { if (!shape.cellFmt) shape.cellFmt = cellFormats(shape); return shape.cellFmt; };
     return {
+      get styleSettings() {
+        needs(9, 'styleSettings');
+        return {
+          get style() { return shape.tableStyle; },
+          set style(v) {
+            // Re-applying a table style drops every cell's direct fill and borders; fonts stay.
+            shape.tableStyle = v;
+            for (const row of fmtAll()) for (const f of row) { f.fill = STYLE_FILL(); for (const k of Object.keys(f.borders)) f.borders[k] = STYLE_BORDER(); }
+            log.push({ op: 'tableStyle', shape: shape.id, v });
+          },
+          load() { return this; },
+        };
+      },
       get values() { return shape.values.map((r) => [...r]); },
       get rowCount() { return shape.values.length; },
       get columnCount() { return shape.values[0] ? shape.values[0].length : 0; },
       load() { return this; },
       getCellOrNullObject(r, c) {
         if (!shape.values[r] || c >= shape.values[r].length) return nullObject();
-        return { isNullObject: false, get text() { return shape.values[r][c]; }, set text(v) { shape.values[r][c] = String(v); log.push({ op: 'cell', r, c, v }); }, load() { return this; } };
+        if (!shape.cellFmt || !shape.cellFmt[r]) shape.cellFmt = cellFormats(shape);
+        const fmt = () => shape.cellFmt[r][c];
+        return {
+          isNullObject: false, rowIndex: r, columnIndex: c,
+          get text() { return shape.values[r][c]; }, set text(v) { shape.values[r][c] = String(v); log.push({ op: 'cell', r, c, v }); },
+          get fill() { needs(9, 'cell.fill'); return fillApi(() => fmt().fill, (v) => { fmt().fill = v; log.push({ op: 'cellFill', r, c, v }); }, true); },
+          get font() { needs(9, 'cell.font'); return plainFont(() => fmt().font, (k, v) => { fmt().font[k] = v; log.push({ op: 'cellFont', r, c, k, v }); }); },
+          get borders() {
+            needs(9, 'cell.borders');
+            const side = (s) => {
+              const b = () => fmt().borders[s];
+              const o = { load() { return this; } };
+              for (const k of ['color', 'weight', 'dashStyle', 'transparency']) {
+                Object.defineProperty(o, k, {
+                  get: () => (k === 'transparency' ? (b().weight == null ? null : 1) : b()[k]),
+                  set: (v) => {
+                    if (v == null) throw invalid();
+                    if (b().weight == null) fmt().borders[s] = { color: '#000000', weight: 1, dashStyle: null, transparency: 0 };
+                    b()[k] = v; log.push({ op: 'border', r, c, s, k, v });
+                  },
+                  enumerable: true,
+                });
+              }
+              return o;
+            };
+            return { top: side('top'), bottom: side('bottom'), left: side('left'), right: side('right'), load() { return this; } };
+          },
+          get horizontalAlignment() { return alignOut(fmt().align); }, set horizontalAlignment(v) { needs(9, 'cell alignment'); fmt().align = alignIn(v); },
+          get verticalAlignment() { return fmt().valign; }, set verticalAlignment(v) { needs(9, 'cell alignment'); fmt().valign = v; },
+          load() { return this; },
+        };
       },
       getMergedAreas() { return { items: shape.merged ? [{}] : [], load() { return this; } }; },
       rows: {
@@ -112,6 +266,31 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
       isNullObject: false,
       get id() { return shape.id; }, get name() { return shape.name; }, get type() { return shape.type; },
       get left() { return shape.left; }, get top() { return shape.top; },
+      set left(v) { shape.left = v; log.push({ op: 'left', shape: shape.id, v }); }, set top(v) { shape.top = v; log.push({ op: 'top', shape: shape.id, v }); },
+      get width() { return shape.width; }, set width(v) { shape.width = v; log.push({ op: 'width', shape: shape.id, v }); },
+      get height() { return shape.height; }, set height(v) { shape.height = v; log.push({ op: 'height', shape: shape.id, v }); },
+      get rotation() { needs(10, 'rotation'); return shape.rotation; }, set rotation(v) { needs(10, 'rotation'); shape.rotation = v; },
+      get fill() {
+        if (['Group', 'Table'].includes(shape.type)) throw Object.assign(new Error('InvalidArgument'), { code: 'InvalidArgument' });
+        return fillApi(() => shape.fill, (v) => { shape.fill = v; log.push({ op: 'fill', shape: shape.id, v }); });
+      },
+      get lineFormat() {
+        if (['Group', 'Table'].includes(shape.type)) throw Object.assign(new Error('InvalidArgument'), { code: 'InvalidArgument' });
+        const o = { load() { return this; } };
+        const hidden = { color: '', weight: -1, transparency: -1 };
+        for (const k of ['visible', 'color', 'weight', 'dashStyle', 'transparency']) Object.defineProperty(o, k, { get: () => (!shape.line.visible && k in hidden ? hidden[k] : shape.line[k]), set: (v) => { shape.line[k] = v; log.push({ op: 'line', shape: shape.id, k, v }); }, enumerable: true });
+        return o;
+      },
+      get zOrderPosition() { needs(8, 'zOrderPosition'); return siblings(shape).indexOf(shape); },
+      setZOrder(pos) {
+        needs(8, 'setZOrder');
+        const list = siblings(shape);
+        const i = list.indexOf(shape);
+        list.splice(i, 1);
+        const j = pos === 'BringToFront' ? list.length : pos === 'SendToBack' ? 0 : pos === 'BringForward' ? Math.min(list.length, i + 1) : Math.max(0, i - 1);
+        list.splice(j, 0, shape);
+        log.push({ op: 'zOrder', shape: shape.id, pos });
+      },
       load() { return this; },
       get textFrame() { if (!shape.chars) throw Object.assign(new Error('The shape has no text frame'), { code: 'InvalidArgument' }); return textFrame(shape); },
       getTextFrameOrNullObject() { return shape.chars ? textFrame(shape) : nullObject(); },
@@ -137,6 +316,22 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
       get shapes() { return collection(slide.shapes, slide); },
       setSelectedShapes(ids) { deck.selection = { slides: [slide.id], shapes: [...ids], text: null }; },
       getImageAsBase64() { return { value: Buffer.from(`PNG:${slide.id}`).toString('base64') }; },
+      get background() {
+        needs(10, 'background');
+        const bg = slide.background;
+        return {
+          get isMasterBackgroundFollowed() { return bg.follows; },
+          fill: {
+            get type() { return bg.fill.type; },
+            getSolidFillOrNullObject() { return bg.fill.type === 'Solid' ? { isNullObject: false, color: bg.fill.color, transparency: bg.fill.transparency, load() { return this; } } : nullObject(); },
+            setSolidFill(o) { bg.follows = false; bg.fill = { type: 'Solid', color: o.color, transparency: o.transparency || 0 }; log.push({ op: 'background', slide: slide.id, o }); },
+            load() { return this; },
+          },
+          reset() { bg.follows = true; bg.fill = FILL('#FFFFFF'); log.push({ op: 'backgroundReset', slide: slide.id }); },
+          load() { return this; },
+        };
+      },
+      get themeColorScheme() { needs(10, 'themeColorScheme'); return { getThemeColor: (k) => ({ value: deck.theme[k] || '#000000' }) }; },
     };
   }
   const slides = {
@@ -147,6 +342,7 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
   };
   const presentation = {
     slides,
+    get pageSetup() { needs(10, 'pageSetup'); return { slideWidth: deck.page.w, slideHeight: deck.page.h, load() { return this; } }; },
     getSelectedSlides() { return { items: deck.selection.slides.map((id) => slideApi(deck.slides.find((s) => s.id === id))), load() { return this; } }; },
     getSelectedShapes() {
       const slide = deck.slides.find((s) => s.id === deck.selection.slides[0]);

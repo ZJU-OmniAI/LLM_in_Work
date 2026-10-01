@@ -2,6 +2,8 @@
 // 在幻灯片里选中文字 / 文本框 / 表格 / 整页 → ＋ 添加为目标（按「页 ID + 形状 ID + 字符位置」锚定，
 // 写回前核对原文，对不上就不写）→ 下指令 → 本机服务流式回复 → 每个目标一张 diff 预览卡 →
 // ✅ 应用（只改动变化的文字：没改的字保留原有字体、颜色、加粗和项目符号层级）→ ↩ 撤销。
+// 版式模式：选中形状（不选就是整页）→ 模型看当前页截图和格式清单，给出格式方案（format-utils.js 校验）→
+// 「旧值 → 新值」预览 → ✅ 应用 → ↩ 撤销（记下每个属性的旧值，混合字体逐字记录）。
 // UI 与 LLM_in_Word 0.7.2 一致；文档操作从 Word API 换成 PowerPoint API。
 (() => {
   'use strict';
@@ -9,6 +11,7 @@
   const I18N = window.PptI18n;
   const tr = I18N.t;
   const uiText = I18N.known;
+  const F = window.FormatUtils;
 
   const API = ''; // 面板和服务同源，相对路径即可
 
@@ -32,6 +35,14 @@
       ['统一句式', '统一这些要点的句式和措辞（比如都用动词开头），语气与全篇一致'],
       ['提炼标题', '把标题改得更短、更有力，直接点出这一页的结论'],
       ['译成英文', '把这些文字翻译成地道的英文，语域与原文一致'],
+    ],
+    format: [
+      ['边框变浅', '把边框改得浅一些、细一些，颜色和页面配色协调'],
+      ['统一字号', '统一同类文字的字体和字号：同级标题一样大，正文一样大'],
+      ['对齐排版', '把形状对齐、间距排均匀，内容不要超出幻灯片'],
+      ['配色协调', '调整填充、边框和文字的颜色，让整页配色协调，优先用主题色'],
+      ['标题醒目', '让标题更醒目：适当加大字号、加粗，颜色加深'],
+      ['表格清爽', '让表格更清爽：边框改细改浅，表头用浅色底，文字对齐'],
     ],
     ask: [
       ['写讲稿', '为选中的幻灯片（没有选中就为整份演示文稿）逐页写口语化的演讲稿，每页 3–5 句，可直接放进演讲者备注'],
@@ -59,6 +70,32 @@
   const ROLE_ZH = { title: '标题', subtitle: '副标题', body: '正文', textbox: '文本框', shape: '形状', table: '表格', footer: '页脚' };
   const FOOTER_PH = ['Date', 'SlideNumber', 'Footer', 'Header'];
   const SHAPE_PROPS = 'items/id,items/name,items/type,items/left,items/top';
+  // 版式模式：预览里属性名和取值的显示文字（界面按语言翻译）
+  const FMT_LABELS = {
+    x: '水平位置', y: '垂直位置', w: '宽度', h: '高度', rotation: '旋转',
+    fill: '填充', 'fill.transparency': '填充透明度',
+    line: '边框', 'line.color': '边框颜色', 'line.weight': '边框粗细', 'line.dash': '边框线型', 'line.transparency': '边框透明度',
+    'font.name': '字体', 'font.size': '字号', 'font.color': '文字颜色', 'font.bold': '加粗', 'font.italic': '倾斜', 'font.underline': '下划线',
+    align: '水平对齐', valign: '垂直对齐', zOrder: '层次',
+    background: '背景色', 'background.transparency': '背景透明度',
+    'cells.fill': '单元格底色', 'cells.font.name': '字体', 'cells.font.size': '字号', 'cells.font.color': '文字颜色',
+    'cells.font.bold': '加粗', 'cells.font.italic': '倾斜', 'cells.font.underline': '下划线',
+    'cells.align': '水平对齐', 'cells.valign': '垂直对齐',
+    'cells.border': '表格边框', 'cells.border.color': '边框颜色', 'cells.border.weight': '边框粗细', 'cells.border.dash': '边框线型', 'cells.border.transparency': '边框透明度',
+  };
+  const FMT_VALUES = {
+    none: '无', mixed: '混合', on: '是', off: '否',
+    Left: '左对齐', Center: '居中', Right: '右对齐', Justify: '两端对齐', JustifyLow: '两端对齐', Distributed: '分散对齐',
+    Top: '顶端', Middle: '居中', Bottom: '底端', TopCentered: '顶端居中', MiddleCentered: '居中', BottomCentered: '底端居中',
+    BringToFront: '置于顶层', SendToBack: '置于底层', BringForward: '上移一层', SendBackward: '下移一层',
+    Solid: '实线', Dash: '虚线', RoundDot: '圆点线', SquareDot: '方点线', DashDot: '点划线', DashDotDot: '双点划线',
+    LongDash: '长虚线', LongDashDot: '长点划线', LongDashDotDot: '长双点划线', SystemDash: '虚线',
+    gradient: '渐变', pattern: '图案', pictureandtexture: '图片或纹理', pictureortexture: '图片或纹理', slidebackground: '跟随背景', unsupported: '其他',
+    'table-style': '表格样式',
+  };
+  const FMT_KIND = { title: '标题', subtitle: '副标题', body: '正文', footer: '页脚', textbox: '文本框', shape: '形状', picture: '图片', line: '线条', table: '表格', group: '分组', callout: '标注', chart: '图表', diagram: '图示' };
+  const FMT_REGION = { all: '全部单元格', header: '表头行', body: '正文行', 'first-col': '第一列', 'last-row': '最后一行' };
+  const FMT_SIDES = { all: '全部边框', outer: '外框', inner: '内部线', top: '上边框', bottom: '下边框', left: '左边框', right: '右边框', horizontal: '横线', vertical: '竖线' };
 
   // ---------- 运行状态 ----------
   const state = {
@@ -76,7 +113,8 @@
     stopRequested: false,
     serverOk: null,
     pptReady: false,
-    api: { v18: false, v19: false, v110: false }, // PowerPointApi 1.8（表格/分组/截图）、1.9（增删表格行）、1.10（安全读文本框）
+    api: { v18: false, v19: false, v110: false }, // PowerPointApi 1.8（表格/分组/截图/层次）、1.9（增删表格行、单元格格式）、1.10（安全读文本框、背景、主题色、页面大小）
+    fmtScope: null,    // 版式模式的范围提示 { slideNo, shapes }（跟随选区变化）
     longNoteShown: false,
     attachments: [],   // { id, name, kind:'text'|'binary', mime, text?, b64?, size, truncated }
     cliSession: { claude: null, codex: null }, // CLI 会话 id：有值=后续轮"续写+服务端缓存"，新会话清空
@@ -1025,6 +1063,639 @@
     });
   }
 
+  // ---------- 版式模式：读当前页的格式 / 按方案写入 / 撤销 ----------
+  // 范围是当前选中的形状（可多选，含分组里的形状）；什么都没选就是当前页全部形状。
+  // 每次请求都重新读一遍当前页（不走目标列表），模型看到的格式和截图都是最新的。
+  const FMT_MAX_SHAPES = 60;       // 一页最多列出的形状数
+  const FMT_MAX_CELLS = 150;       // 表格摘要最多读的单元格数
+  const FMT_MAX_RUN_CHARS = 3000;  // 混合字体逐字记录（撤销用）的上限
+  const FMT_MAX_TABLE_RESTORE = 400; // 改表格边框时整张表记录直接格式（撤销用）的单元格上限
+  const THEME_KEYS = ['Dark1', 'Light1', 'Dark2', 'Light2', 'Accent1', 'Accent2', 'Accent3', 'Accent4', 'Accent5', 'Accent6'];
+  const FONT_PROPS = 'name,size,color,bold,italic,underline';
+  const SIDE_NAMES = ['top', 'bottom', 'left', 'right'];
+
+  // 实测：无填充 / 隐藏的线读出来颜色是 ""、粗细和透明度是 -1
+  const pickFill = (f) => (f ? { type: f.type, color: f.type === 'Solid' ? F.normColor(f.foregroundColor) : null, transparency: f.type === 'Solid' ? (f.transparency > 0 ? f.transparency : 0) : null } : null);
+  const pickLine = (l) => (l ? { visible: !!l.visible, color: l.visible ? F.normColor(l.color) : null, weight: l.visible && l.weight > 0 ? l.weight : null, dash: l.dashStyle || null, transparency: l.transparency > 0 ? l.transparency : 0 } : null);
+  const pickFont = (f) => (f ? { name: f.name ?? null, size: f.size ?? null, color: f.color == null ? null : F.normColor(f.color), bold: f.bold ?? null, italic: f.italic ?? null, underline: f.underline ?? null } : null);
+  // 单元格边框：没单独设置（由表格样式画）时各项都是 null；设置过的边框透明度也读成 1，所以不看透明度
+  const pickBorder = (b) => (b ? { visible: b.weight > 0 && !!b.color, color: F.normColor(b.color), weight: b.weight > 0 ? b.weight : 0, dash: b.dashStyle || null } : null);
+
+  // 安全地批量加载：整批同步失败（某些形状不支持某属性）就逐个重试，失败的那个记为 null
+  async function loadEach(ctx, items, queue) {
+    const objs = items.map((it) => queue(it));
+    try { await ctx.sync(); return objs; } catch {}
+    const out = [];
+    for (const it of items) {
+      const o = queue(it);
+      try { await ctx.sync(); out.push(o); } catch { out.push(null); }
+    }
+    return out;
+  }
+
+  async function readFormatSnapshot() {
+    return await pptRun(async (ctx) => {
+      const pres = ctx.presentation;
+      const all = pres.slides;
+      all.load('items/id');
+      const selSlides = pres.getSelectedSlides();
+      selSlides.load('items/id');
+      const selShapes = pres.getSelectedShapes();
+      selShapes.load('items/id');
+      let page = null;
+      if (state.api.v110) { page = pres.pageSetup; page.load('slideWidth,slideHeight'); }
+      await ctx.sync();
+      const slideId = selSlides.items[0]?.id || all.items[0]?.id;
+      if (!slideId) return { ok: false, error: tr('演示文稿里还没有幻灯片') };
+      const slide = all.getItem(slideId);
+      const slideNo = all.items.findIndex((s) => s.id === slideId) + 1;
+      const props = 'items/id,items/name,items/type,items/left,items/top,items/width,items/height' +
+        (state.api.v18 ? ',items/zOrderPosition' : '') + (state.api.v110 ? ',items/rotation' : '');
+      const top = slide.shapes;
+      top.load(props);
+      await ctx.sync();
+      // 分组展开（最多 3 层）；组内形状记下所在分组
+      const entries = top.items.map((sh) => ({ sh, group: null }));
+      if (state.api.v18) {
+        let groups = entries.filter((e) => e.sh.type === 'Group');
+        for (let depth = 0; groups.length && depth < 3; depth++) {
+          const kids = groups.map((g) => { const c = g.sh.group.shapes; c.load(props); return [g, c]; });
+          await ctx.sync();
+          groups = [];
+          for (const [g, c] of kids) for (const sh of c.items) { const e = { sh, group: g.sh.id }; entries.push(e); if (sh.type === 'Group') groups.push(e); }
+        }
+      }
+      const list = entries.slice(0, FMT_MAX_SHAPES);
+      // 填充和边框（表格、分组没有；图片有边框）
+      const plain = list.filter((e) => !['Group', 'Table'].includes(e.sh.type));
+      const fills = await loadEach(ctx, plain, (e) => { const f = e.sh.fill; f.load('type,foregroundColor,transparency'); return f; });
+      const lines = await loadEach(ctx, plain, (e) => { const l = e.sh.lineFormat; l.load('visible,color,weight,dashStyle,transparency'); return l; });
+      plain.forEach((e, i) => { e.fill = pickFill(fills[i]); e.line = pickLine(lines[i]); });
+      // 占位符类型（标题 / 正文 …）
+      if (state.api.v18) {
+        const phs = list.filter((e) => e.sh.type === 'Placeholder');
+        const got = await loadEach(ctx, phs, (e) => { const p = e.sh.placeholderFormat; p.load('type'); return p; });
+        phs.forEach((e, i) => { e.ph = got[i] ? got[i].type : null; });
+      }
+      // 文字：预览、整体字体、对齐
+      const texty = list.filter((e) => !['Group', 'Table', 'Image', 'Line'].includes(e.sh.type));
+      const frames = await loadEach(ctx, texty, (e) => {
+        const tf = state.api.v110 ? e.sh.getTextFrameOrNullObject() : e.sh.textFrame;
+        tf.load('hasText,verticalAlignment');
+        return tf;
+      });
+      const withText = [];
+      texty.forEach((e, i) => { const tf = frames[i]; if (tf && !tf.isNullObject && tf.hasText) { e.tf = tf; withText.push(e); } });
+      const ranges = await loadEach(ctx, withText, (e) => {
+        const r = e.tf.textRange;
+        r.load('text');
+        r.font.load(FONT_PROPS);
+        r.paragraphFormat.load('horizontalAlignment');
+        return r;
+      });
+      withText.forEach((e, i) => {
+        const r = ranges[i];
+        if (!r) return;
+        const text = normNL(r.text || '');
+        e.text = {
+          preview: text.length > 80 ? text.slice(0, 80) + '…' : text, length: text.length,
+          font: pickFont(r.font), align: F.alignName(r.paragraphFormat.horizontalAlignment), valign: F.valignName(e.tf.verticalAlignment),
+        };
+      });
+      // 表格：行列数 + 表头 / 正文 / 边框摘要（PowerPointApi 1.9 才能读单元格格式）
+      if (state.api.v18) {
+        for (const e of list.filter((x) => x.sh.type === 'Table')) {
+          const tbl = e.sh.getTable();
+          tbl.load('rowCount,columnCount');
+          await ctx.sync();
+          e.table = { rows: tbl.rowCount, cols: tbl.columnCount };
+          if (!state.api.v19) continue;
+          const [st] = await loadEach(ctx, [tbl], (t) => { t.styleSettings.load('style'); return t.styleSettings; });
+          if (st) e.table.style = st.style || null;
+          const coords = [];
+          for (let r = 0; r < tbl.rowCount; r++) {
+            if (coords.length >= FMT_MAX_CELLS) break;
+            if (tbl.rowCount * tbl.columnCount > FMT_MAX_CELLS && r > 3 && r < tbl.rowCount - 1) continue; // 大表只看表头、前几行和最后一行
+            for (let c = 0; c < tbl.columnCount; c++) coords.push([r, c]);
+          }
+          const cells = await loadEach(ctx, coords, ([r, c]) => {
+            const cell = tbl.getCellOrNullObject(r, c);
+            cell.load('rowIndex');
+            cell.fill.load('type,foregroundColor,transparency');
+            cell.font.load(FONT_PROPS);
+            for (const s of SIDE_NAMES) cell.borders[s].load('color,weight,dashStyle,transparency');
+            return cell;
+          });
+          const info = coords.map(([r, c], i) => {
+            const cell = cells[i];
+            if (!cell || cell.isNullObject) return null;
+            return { r, c, fill: pickFill(cell.fill), font: pickFont(cell.font), borders: Object.fromEntries(SIDE_NAMES.map((s) => [s, pickBorder(cell.borders[s])])) };
+          }).filter(Boolean);
+          const last = tbl.rowCount - 1, lastC = tbl.columnCount - 1;
+          const head = info.filter((x) => x.r === 0), body = info.filter((x) => x.r > 0);
+          const outer = [], inner = [];
+          for (const x of info) {
+            (x.r === 0 ? outer : inner).push(x.borders.top);
+            (x.r === last ? outer : inner).push(x.borders.bottom);
+            (x.c === 0 ? outer : inner).push(x.borders.left);
+            (x.c === lastC ? outer : inner).push(x.borders.right);
+          }
+          e.table.header = { fill: F.mostCommon(head.map((x) => x.fill)), font: F.mostCommon(head.map((x) => x.font)) };
+          if (body.length) e.table.body = { fill: F.mostCommon(body.map((x) => x.fill)), font: F.mostCommon(body.map((x) => x.font)) };
+          e.table.borders = { outer: F.mostCommon(outer.filter(Boolean)), inner: inner.length ? F.mostCommon(inner.filter(Boolean)) : null };
+        }
+      }
+      // 背景、主题色、页面大小（PowerPointApi 1.10）
+      let background = null, theme = null;
+      if (state.api.v110) {
+        try {
+          const bg = slide.background;
+          bg.load('isMasterBackgroundFollowed');
+          bg.fill.load('type');
+          await ctx.sync();
+          background = { type: bg.fill.type, followsMaster: bg.isMasterBackgroundFollowed };
+          if (bg.fill.type === 'Solid') {
+            const sf = bg.fill.getSolidFillOrNullObject();
+            sf.load('color,transparency');
+            await ctx.sync();
+            if (!sf.isNullObject) Object.assign(background, { color: F.normColor(sf.color), transparency: sf.transparency || 0 });
+          }
+        } catch { background = null; }
+        try {
+          const scheme = slide.themeColorScheme;
+          const vals = THEME_KEYS.map((k) => scheme.getThemeColor(k));
+          await ctx.sync();
+          theme = {};
+          THEME_KEYS.forEach((k, i) => { const c = F.normColor(vals[i].value); if (c) theme[k] = c; });
+        } catch { theme = null; }
+      }
+      const selected = new Set(selShapes.items.map((s) => s.id));
+      const listed = new Set(list.map((e) => e.sh.id));
+      const scoped = [...selected].filter((id) => listed.has(id));
+      const shapes = list.map((e) => ({
+        id: e.sh.id, name: e.sh.name, type: e.sh.type, group: e.group,
+        role: roleOf(e.sh.type, e.ph),
+        x: e.sh.left, y: e.sh.top, w: e.sh.width, h: e.sh.height,
+        rotation: state.api.v110 ? e.sh.rotation || 0 : null, z: state.api.v18 ? e.sh.zOrderPosition : null,
+        fill: e.fill || null, line: e.line || null, text: e.text || null, table: e.table || null,
+        inScope: scoped.length ? selected.has(e.sh.id) : true,
+      }));
+      return {
+        ok: true,
+        snap: {
+          slideId, slideNo, slideCount: all.items.length,
+          size: page ? { w: page.slideWidth, h: page.slideHeight } : null,
+          theme, background, shapes,
+          scopeKind: scoped.length ? 'selection' : 'slide',
+          truncated: entries.length > list.length,
+          canBackground: state.api.v110, canRotate: state.api.v110, canZOrder: state.api.v18, canTableFormat: state.api.v19,
+        },
+      };
+    });
+  }
+
+  // 按方案写入。先读出要改的每个属性的现值（撤销用，也用来发现发送后被手动改过），再写，最后回读核对。
+  // 返回 { ok, undo, written, needConfirm? }；undo 记录可以交给 undoFormat 原样恢复。
+  async function applyFormat(snap, changes, force) {
+    return await pptRun(async (ctx) => {
+      const slide = ctx.presentation.slides.getItemOrNullObject(snap.slideId);
+      slide.load('id');
+      await ctx.sync();
+      if (slide.isNullObject) return { ok: false, error: tr('这一页已经不在了（可能被删除），无法应用') };
+      const byId = new Map(snap.shapes.map((s) => [String(s.id), s]));
+      const jobs = [];
+      const tableRecs = new Map(); // 表格 id → 整张表的直接格式记录（改边框时才需要，见 undoFormat）
+      for (const ch of changes) {
+        const job = { ch };
+        if (ch.kind === 'background') {
+          job.bg = slide.background;
+          job.bg.load('isMasterBackgroundFollowed');
+          job.bg.fill.load('type');
+          job.solid = job.bg.fill.getSolidFillOrNullObject();
+          job.solid.load('color,transparency');
+        } else {
+          job.sh = slide.shapes.getItemOrNullObject(ch.id);
+          job.sh.load('id,left,top,width,height' + (state.api.v110 ? ',rotation' : '') + (state.api.v18 ? ',zOrderPosition' : ''));
+          if (ch.kind === 'shape') {
+            if (ch.set.fill) { job.fill = job.sh.fill; job.fill.load('type,foregroundColor,transparency'); }
+            if (ch.set.line) { job.line = job.sh.lineFormat; job.line.load('visible,color,weight,dashStyle,transparency'); }
+            if (ch.set.font || ch.set.align || ch.set.valign) {
+              job.tf = state.api.v110 ? job.sh.getTextFrameOrNullObject() : job.sh.textFrame;
+              job.tf.load('verticalAlignment');
+              job.range = job.tf.textRange;
+              job.range.load('text');
+              job.range.font.load(FONT_PROPS);
+              job.range.paragraphFormat.load('horizontalAlignment');
+            }
+          } else if (ch.kind === 'cells') {
+            job.tbl = job.sh.getTable();
+            job.cells = [];
+            const t = byId.get(ch.id)?.table;
+            if (ch.set.border && state.api.v19 && t && !tableRecs.has(ch.id) && t.rows * t.cols <= FMT_MAX_TABLE_RESTORE) {
+              const rec = { rows: t.rows, cols: t.cols, settings: job.tbl.styleSettings, cells: [] };
+              rec.settings.load('style');
+              job.tbl.load('rowCount,columnCount');
+              for (let r = 0; r < t.rows; r++) {
+                for (let c = 0; c < t.cols; c++) {
+                  const cell = job.tbl.getCellOrNullObject(r, c);
+                  cell.load('rowIndex');
+                  cell.fill.load('type,foregroundColor,transparency');
+                  for (const side of SIDE_NAMES) cell.borders[side].load('color,weight,dashStyle');
+                  rec.cells.push({ r, c, cell });
+                }
+              }
+              tableRecs.set(ch.id, rec);
+              job.rec = rec;
+            }
+            const sides = ch.set.border ? F.borderPlan(ch.range, ch.set.border.sides) : [];
+            const sideMap = new Map(sides.map(([r, c, s]) => [`${r},${c}`, s]));
+            for (let r = ch.range.r1; r <= ch.range.r2; r++) {
+              for (let c = ch.range.c1; c <= ch.range.c2; c++) {
+                const cell = job.tbl.getCellOrNullObject(r, c);
+                cell.load('rowIndex,horizontalAlignment,verticalAlignment');
+                if (ch.set.fill) cell.fill.load('type,foregroundColor,transparency');
+                if (ch.set.font) cell.font.load(FONT_PROPS);
+                const s = sideMap.get(`${r},${c}`) || [];
+                for (const side of s) cell.borders[side].load('color,weight,dashStyle,transparency');
+                job.cells.push({ r, c, cell, sides: s });
+              }
+            }
+          }
+        }
+        jobs.push(job);
+      }
+      await ctx.sync();
+      // 形状还在吗？发送后被手动改过吗？
+      const changed = [];
+      for (const job of jobs) {
+        if (job.ch.kind === 'background') continue;
+        if (job.sh.isNullObject) return { ok: false, error: tr`找不到形状 ${job.ch.id}（可能已被删除），没有写入任何内容` };
+        const s = byId.get(job.ch.id);
+        const set = job.ch.set;
+        const moved = ['x', 'y', 'w', 'h'].some((k) => set[k] != null && Math.abs({ x: job.sh.left, y: job.sh.top, w: job.sh.width, h: job.sh.height }[k] - s[k]) > 0.5);
+        const refilled = job.fill && s.fill && JSON.stringify(pickFill(job.fill)) !== JSON.stringify(s.fill);
+        const relined = job.line && s.line && JSON.stringify(pickLine(job.line)) !== JSON.stringify(s.line);
+        const refont = job.range && s.text && JSON.stringify(pickFont(job.range.font)) !== JSON.stringify(s.text.font);
+        if (moved || refilled || relined || refont) changed.push(job.ch.id);
+      }
+      if (changed.length && !force) return { ok: false, needConfirm: true, changed };
+      // 混合字体：撤销时要逐段恢复，先逐字记下要改的那几个属性
+      for (const job of jobs) {
+        if (!job.range || !job.ch.set.font) continue;
+        const mixed = Object.keys(job.ch.set.font).filter((k) => job.range.font[k] == null);
+        const len = (job.range.text || '').length;
+        if (!mixed.length || !len || len > FMT_MAX_RUN_CHARS) { job.mixed = []; continue; }
+        job.mixed = mixed;
+        job.charFonts = [];
+        for (let i = 0; i < len; i++) { const f = job.range.getSubstring(i, 1).font; f.load(mixed.join(',')); job.charFonts.push(f); }
+      }
+      if (jobs.some((j) => j.charFonts)) await ctx.sync();
+      // 写入，同时记录撤销所需的旧值
+      const undo = { slideId: snap.slideId, items: [] };
+      let written = 0;
+      for (const job of jobs) {
+        const ch = job.ch, set = ch.set;
+        if (ch.kind === 'background') {
+          undo.items.push({ kind: 'background', followsMaster: job.bg.isMasterBackgroundFollowed, type: job.bg.fill.type,
+            color: job.solid.isNullObject ? null : job.solid.color, transparency: job.solid.isNullObject ? 0 : job.solid.transparency || 0, applied: set.fill.color });
+          job.bg.fill.setSolidFill({ color: set.fill.color, transparency: set.fill.transparency ?? 0 });
+          written++;
+          continue;
+        }
+        if (ch.kind === 'shape') {
+          const old = { x: job.sh.left, y: job.sh.top, w: job.sh.width, h: job.sh.height, rotation: state.api.v110 ? job.sh.rotation : null, z: state.api.v18 ? job.sh.zOrderPosition : null };
+          const u = { kind: 'shape', id: ch.id, keys: Object.keys(set), old };
+          if (set.x != null) job.sh.left = set.x;
+          if (set.y != null) job.sh.top = set.y;
+          if (set.w != null) job.sh.width = set.w;
+          if (set.h != null) job.sh.height = set.h;
+          if (set.rotation != null) job.sh.rotation = set.rotation;
+          if (set.fill) {
+            u.fill = pickFill(job.fill);
+            if (set.fill.none) job.sh.fill.clear();
+            else {
+              if (set.fill.color) job.sh.fill.setSolidColor(set.fill.color);
+              if (set.fill.transparency != null) job.sh.fill.transparency = set.fill.transparency;
+            }
+          }
+          if (set.line) {
+            u.line = pickLine(job.line);
+            const lf = job.sh.lineFormat;
+            if (set.line.visible === false) lf.visible = false;
+            else {
+              lf.visible = true;
+              if (set.line.color) lf.color = set.line.color;
+              if (set.line.weight != null) lf.weight = set.line.weight;
+              if (set.line.dash) lf.dashStyle = set.line.dash;
+              if (set.line.transparency != null) lf.transparency = set.line.transparency;
+            }
+          }
+          if (set.font) {
+            u.font = pickFont(job.range.font);
+            if (job.charFonts) u.runs = Object.fromEntries(job.mixed.map((k) => [k, F.compressRuns(job.charFonts.map((f) => (k === 'color' ? F.normColor(f[k]) : f[k])))]));
+            for (const [k, v] of Object.entries(set.font)) job.range.font[k] = v;
+          }
+          if (set.align) { u.align = F.alignName(job.range.paragraphFormat.horizontalAlignment); job.range.paragraphFormat.horizontalAlignment = set.align; }
+          if (set.valign) { u.valign = F.valignName(job.tf.verticalAlignment); job.tf.verticalAlignment = set.valign; }
+          if (set.zOrder) job.sh.setZOrder(set.zOrder);
+          undo.items.push(u);
+          written++;
+          continue;
+        }
+        // 表格单元格
+        const u = { kind: 'cells', id: ch.id, cells: [] };
+        if (job.rec && job.tbl.rowCount === job.rec.rows && job.tbl.columnCount === job.rec.cols) {
+          u.table = {
+            style: job.rec.settings.style,
+            cells: job.rec.cells.filter((x) => !x.cell.isNullObject).map(({ r, c, cell }) => ({
+              r, c, fill: pickFill(cell.fill), borders: Object.fromEntries(SIDE_NAMES.map((side) => [side, pickBorder(cell.borders[side])])),
+            })),
+          };
+        }
+        for (const { r, c, cell, sides } of job.cells) {
+          if (cell.isNullObject) continue; // 合并单元格里被并掉的格子
+          const o = { r, c };
+          if (set.fill) {
+            o.fill = pickFill(cell.fill);
+            if (set.fill.none) cell.fill.clear();
+            else { if (set.fill.color) cell.fill.setSolidColor(set.fill.color); if (set.fill.transparency != null) cell.fill.transparency = set.fill.transparency; }
+          }
+          if (set.font) { o.font = pickFont(cell.font); for (const [k, v] of Object.entries(set.font)) cell.font[k] = v; }
+          if (set.align) { o.align = F.alignName(cell.horizontalAlignment); cell.horizontalAlignment = set.align; }
+          if (set.valign) { o.valign = F.valignName(cell.verticalAlignment); cell.verticalAlignment = set.valign; }
+          if (set.border && sides.length) {
+            o.borders = {};
+            for (const side of sides) {
+              const b = cell.borders[side];
+              o.borders[side] = pickBorder(b);
+              if (set.border.visible === false) b.weight = 0;
+              else {
+                if (set.border.color) b.color = set.border.color;
+                if (set.border.weight != null) b.weight = set.border.weight;
+                if (set.border.dash) b.dashStyle = set.border.dash;
+                if (set.border.transparency != null) b.transparency = set.border.transparency;
+              }
+            }
+          }
+          u.cells.push(o);
+          written++;
+        }
+        undo.items.push(u);
+      }
+      await ctx.sync();
+      return { ok: true, undo, written };
+    });
+  }
+
+  // 撤销：把记录下来的旧值写回。层次（zOrder）没有绝对设置的接口，就一步一步挪回原来的位置。
+  async function undoFormat(undo) {
+    return await pptRun(async (ctx) => {
+      const slide = ctx.presentation.slides.getItemOrNullObject(undo.slideId);
+      slide.load('id');
+      await ctx.sync();
+      if (slide.isNullObject) return { ok: false, error: tr('这一页已经不在了，无法撤销') };
+      let restored = 0;
+      const zMoves = [];
+      // 改过边框的表格：边框没有「取消设置」的写法（null 会报错，粗细 0 会盖掉样式的线），
+      // 只能重新套一次表格样式（实测会清掉所有单元格的直接底色和边框、保留文字格式），再写回原来单独设置过的底色和边框
+      const wholeTables = new Set();
+      for (const u of undo.items) {
+        if (u.kind !== 'cells' || !u.table || wholeTables.has(u.id)) continue;
+        const sh = slide.shapes.getItemOrNullObject(u.id);
+        sh.load('id');
+        await ctx.sync();
+        if (sh.isNullObject) continue;
+        wholeTables.add(u.id);
+        const tbl = sh.getTable();
+        if (u.table.style) tbl.styleSettings.style = u.table.style;
+        await ctx.sync();
+        for (const x of u.table.cells) {
+          const cell = tbl.getCellOrNullObject(x.r, x.c);
+          if (x.fill && x.fill.type === 'Solid' && x.fill.color) { cell.fill.setSolidColor(x.fill.color); cell.fill.transparency = x.fill.transparency || 0; }
+          for (const [side, b] of Object.entries(x.borders || {})) {
+            if (!b || !b.visible) continue;
+            const tb = cell.borders[side];
+            tb.color = b.color;
+            tb.weight = b.weight;
+            if (b.dash) tb.dashStyle = b.dash;
+          }
+        }
+      }
+      for (const u of undo.items) {
+        if (u.kind === 'background') {
+          // 原来跟随母版就复原成跟随母版（这时读到的填充只是母版的效果）；原来是自定义纯色就写回那个颜色
+          if (!u.followsMaster && u.type === 'Solid' && u.color) slide.background.fill.setSolidFill({ color: u.color, transparency: u.transparency || 0 });
+          else slide.background.reset();
+          restored++;
+          continue;
+        }
+        const sh = slide.shapes.getItemOrNullObject(u.id);
+        sh.load('id');
+        await ctx.sync();
+        if (sh.isNullObject) continue;
+        if (u.kind === 'shape') {
+          const o = u.old;
+          if (u.keys.includes('x')) sh.left = o.x;
+          if (u.keys.includes('y')) sh.top = o.y;
+          if (u.keys.includes('w')) sh.width = o.w;
+          if (u.keys.includes('h')) sh.height = o.h;
+          if (u.keys.includes('rotation') && o.rotation != null) sh.rotation = o.rotation;
+          if (u.fill) {
+            if (u.fill.type === 'Solid' && u.fill.color) { sh.fill.setSolidColor(u.fill.color); sh.fill.transparency = u.fill.transparency || 0; }
+            else sh.fill.clear(); // 无填充；渐变 / 图片填充无法还原，只能清掉（预览里已提示）
+          }
+          if (u.line) {
+            const lf = sh.lineFormat;
+            if (!u.line.visible) lf.visible = false;
+            else { lf.visible = true; if (u.line.color) lf.color = u.line.color; if (u.line.weight != null) lf.weight = u.line.weight; if (u.line.dash) lf.dashStyle = u.line.dash; lf.transparency = u.line.transparency || 0; }
+          }
+          if (u.font || u.align || u.valign) {
+            const tf = state.api.v110 ? sh.getTextFrameOrNullObject() : sh.textFrame;
+            const range = tf.textRange;
+            if (u.font) {
+              for (const [k, v] of Object.entries(u.font)) if (v != null && !(u.runs && u.runs[k])) range.font[k] = v;
+              for (const [k, runs] of Object.entries(u.runs || {})) for (const [start, len, v] of runs) if (v != null) range.getSubstring(start, len).font[k] = v;
+            }
+            if (u.align) range.paragraphFormat.horizontalAlignment = u.align;
+            if (u.valign) tf.verticalAlignment = u.valign;
+          }
+          if (u.keys.includes('zOrder') && o.z != null) zMoves.push({ sh, z: o.z });
+          restored++;
+          continue;
+        }
+        const tbl = sh.getTable();
+        const whole = wholeTables.has(u.id); // 底色和边框已经整张表恢复过了
+        for (const o of u.cells) {
+          const cell = tbl.getCellOrNullObject(o.r, o.c);
+          if (o.fill && !whole) { if (o.fill.type === 'Solid' && o.fill.color) { cell.fill.setSolidColor(o.fill.color); cell.fill.transparency = o.fill.transparency || 0; } else cell.fill.clear(); }
+          if (o.font) for (const [k, v] of Object.entries(o.font)) if (v != null) cell.font[k] = v;
+          if (o.align) cell.horizontalAlignment = o.align;
+          if (o.valign) cell.verticalAlignment = o.valign;
+          for (const [side, b] of whole ? [] : Object.entries(o.borders || {})) {
+            const tb = cell.borders[side];
+            if (b && b.visible) { tb.color = b.color; tb.weight = b.weight; if (b.dash) tb.dashStyle = b.dash; } else tb.weight = 0; // 表格太大没整表记录时的退路
+          }
+          restored++;
+        }
+      }
+      await ctx.sync();
+      for (const { sh, z } of zMoves) {
+        for (let step = 0; step < 200; step++) {
+          sh.load('zOrderPosition');
+          await ctx.sync();
+          if (sh.zOrderPosition === z) break;
+          sh.setZOrder(sh.zOrderPosition > z ? 'SendBackward' : 'BringForward');
+          await ctx.sync();
+        }
+      }
+      return { ok: true, restored };
+    });
+  }
+
+  // ---------- 格式预览卡片（旧值 → 新值 + 应用 + 撤销）----------
+  function fmtValue(v) {
+    if (v == null) return '—';
+    const s = String(v);
+    if (FMT_VALUES[s]) return tr(FMT_VALUES[s]);
+    return s;
+  }
+  function swatch(color) {
+    return color ? `<span class="sw" style="background:${escapeHtml(color)}"></span>` : '';
+  }
+  function fmtGroupTitle(g, snap) {
+    if (g.label === 'background') return tr('幻灯片背景');
+    const s = snap.shapes.find((x) => String(x.id) === String(g.id));
+    const kind = tr(FMT_KIND[g.label] || '形状');
+    const name = s && s.text && s.text.preview ? `「${s.text.preview.length > 18 ? s.text.preview.slice(0, 18) + '…' : s.text.preview}」` : s && s.name ? `「${s.name}」` : '';
+    let range = '';
+    if (g.kind === 'cells') {
+      const r = g.range.region;
+      range = ' · ' + (FMT_REGION[r] ? tr(FMT_REGION[r]) : tr`单元格 ${r.toUpperCase()}`);
+      if (g.sides) range += ` · ${tr(FMT_SIDES[g.sides] || '全部边框')}`;
+    }
+    return `${kind}${name}${range}`;
+  }
+  // 撤销后无法完全还原的修改（渐变 / 图片填充、非纯色背景），在预览里提前说明
+  function lossyNotes(changes, snap) {
+    const notes = [];
+    for (const ch of changes) {
+      if (ch.kind === 'background') {
+        const b = snap.background;
+        if (b && b.type !== 'Solid' && !b.followsMaster) notes.push(tr('背景原来不是纯色，撤销时会恢复成跟随母版的背景。'));
+        continue;
+      }
+      const s = snap.shapes.find((x) => String(x.id) === String(ch.id));
+      if (ch.kind === 'shape' && ch.set.fill && s && s.fill && !['NoFill', 'Solid'].includes(s.fill.type)) {
+        notes.push(tr`形状 ${ch.id} 原来是渐变或图片填充，撤销时只能清除填充，不能还原。`);
+      }
+      const t = s && s.table;
+      if (ch.kind === 'cells' && t) {
+        const f = ch.set.font || {};
+        if (F.hasTableStyle(t.style) && ['color', 'bold', 'italic', 'underline'].some((k) => f[k] != null)) {
+          notes.push(tr`表格 ${ch.id} 的文字颜色和加粗来自表格样式，读不到原来的值；撤销时会写回默认值（黑色、不加粗），可能和原来不一样。`);
+        }
+        if (ch.set.border && t.rows * t.cols > FMT_MAX_TABLE_RESTORE) {
+          notes.push(tr`表格 ${ch.id} 超过 ${FMT_MAX_TABLE_RESTORE} 个单元格，撤销时表格样式画的边框无法恢复。`);
+        }
+      }
+    }
+    return [...new Set(notes)];
+  }
+
+  function attachFormatCard(bubble, snap, changes, problems, via) {
+    const card = document.createElement('div');
+    card.className = 'card fmt-card';
+    const groups = F.planRows(changes, snap);
+    const nRows = groups.reduce((n, g) => n + g.rows.length, 0);
+    card.innerHTML =
+      `<div class="card-head"><span class="card-title">${tr('格式预览')}<span class="card-where">${escapeHtml(tr`第 ${snap.slideNo} 页 · ${groups.length} 处`)}</span></span></div>` +
+      `<div class="card-body fmt-body"></div>` +
+      `<div class="card-actions">` +
+      tr`<button class="btn btn-primary apply">✅ 应用</button>` +
+      tr`<button class="btn undo hidden" title="把这些形状改回应用前的格式">↩ 撤销</button>` +
+      tr`<button class="btn copy">📋 复制</button>` +
+      tr`<button class="btn retry" title="用同样的指令重新生成">🔁 重试</button>` +
+      `<span class="card-status"></span>` +
+      `</div>`;
+    bubble.appendChild(card);
+    const body = card.querySelector('.fmt-body');
+    for (const g of groups) {
+      const box = document.createElement('div');
+      box.className = 'fmt-shape';
+      box.innerHTML = `<div class="fmt-shape-head">${escapeHtml(fmtGroupTitle(g, snap))}</div>` +
+        `<table class="fmt-rows">` + g.rows.map((r) =>
+          `<tr><th>${escapeHtml(tr(FMT_LABELS[r.key] || r.key))}</th>` +
+          `<td class="fmt-old">${swatch(r.oldColor)}${escapeHtml(fmtValue(r.old))}</td><td class="fmt-arrow">→</td>` +
+          `<td class="fmt-new">${swatch(r.newColor)}${escapeHtml(fmtValue(r.value))}</td></tr>`).join('') + `</table>`;
+      body.appendChild(box);
+    }
+    const notes = [...problems.map((p) => (p.id && p.id !== '?' ? `${p.id}：` : '') + uiText(p.text)), ...lossyNotes(changes, snap)];
+    if (notes.length) {
+      const w = document.createElement('div');
+      w.className = 'warnbox';
+      w.innerHTML = notes.map((n) => escapeHtml(n)).join('<br>');
+      body.appendChild(w);
+    }
+    const applyBtn = card.querySelector('.apply');
+    const undoBtn = card.querySelector('.undo');
+    const statusEl = card.querySelector('.card-status');
+    if (!nRows) { applyBtn.disabled = true; statusEl.textContent = tr('方案里没有可以应用的修改'); }
+    let done = false, undoRec = null, forceNext = false;
+    applyBtn.addEventListener('click', async () => {
+      if (state.streaming || done || !nRows) return;
+      applyBtn.disabled = true;
+      statusEl.textContent = tr('应用中…');
+      const r = await applyFormat(snap, changes, forceNext);
+      if (r.needConfirm) {
+        forceNext = true;
+        applyBtn.disabled = false;
+        statusEl.textContent = tr('⚠️ 这些形状在发送后被手动改过。确认按方案覆盖请再点一次「✅ 应用」');
+        return;
+      }
+      forceNext = false;
+      if (!r.ok) { statusEl.textContent = '⚠️ ' + (uiText(r.error) || tr('应用失败')); applyBtn.disabled = false; return; }
+      done = true;
+      undoRec = r.undo;
+      undoBtn.classList.remove('hidden');
+      statusEl.textContent = tr`✅ 已应用 ${nRows} 项格式修改；不满意可点「↩ 撤销」。`;
+    });
+    undoBtn.addEventListener('click', async () => {
+      if (!undoRec || state.streaming) return;
+      undoBtn.disabled = true;
+      statusEl.textContent = tr('撤销中…');
+      const r = await undoFormat(undoRec);
+      if (!r.ok) { statusEl.textContent = '⚠️ ' + (uiText(r.error) || tr('撤销失败')); undoBtn.disabled = false; return; }
+      undoRec = null;
+      done = false;
+      undoBtn.classList.add('hidden');
+      undoBtn.disabled = false;
+      applyBtn.disabled = false;
+      statusEl.textContent = tr('↩ 已撤销，这些形状恢复为应用前的格式。');
+    });
+    card.querySelector('.copy').addEventListener('click', (e) => copyText(JSON.stringify({ changes: changes.map(({ id, kind, range, set }) => ({ id, kind, range, set })) }, null, 2), e.target));
+    card.querySelector('.retry').addEventListener('click', () => {
+      if (state.streaming) return;
+      const lastUser = [...state.messages].reverse().find((m) => m.role === 'user');
+      if (lastUser) sendInstruction(lastUser.content, { isRetry: true });
+    });
+    if (via) {
+      const foot = document.createElement('div');
+      foot.innerHTML = footHtml(via);
+      if (foot.firstChild) bubble.appendChild(foot.firstChild);
+    }
+  }
+
+  // 截取一页的渲染图（版式模式自动附上，让模型看到实际效果）
+  async function captureSlide(slideId) {
+    if (!state.api.v18) return null;
+    const r = await pptRun(async (ctx) => {
+      const img = ctx.presentation.slides.getItem(slideId).getImageAsBase64({ width: SNAPSHOT_WIDTH });
+      await ctx.sync();
+      return { ok: true, b64: img.value };
+    });
+    return r.ok ? r.b64 : null;
+  }
+
   // ---------- 本机服务 ----------
   async function fetchJson(url, timeout = 15000) {
     const ac = new AbortController();
@@ -1169,6 +1840,12 @@
 
   // 顶部一行：目标数和字数；详情（目标列表、定位、移除）在设置浮层里。
   function renderContextSummary() {
+    if (state.cfg.mode === 'format') {
+      const sc = state.fmtScope;
+      els.contextSummary.textContent = !sc ? tr('当前页') : sc.shapes ? tr`第 ${sc.slideNo} 页 · 选中 ${sc.shapes} 个形状` : tr`第 ${sc.slideNo} 页 · 整页`;
+      els.contextSummary.title = tr('版式模式按当前选中的形状工作；什么都不选就是整页');
+      return;
+    }
     const ts = state.targets;
     const total = ts.reduce((s, t) => s + t.text.length, 0);
     const pages = [...new Set(ts.map((t) => t.slideNo).filter(Boolean))];
@@ -1498,7 +2175,19 @@
       // 组上下文；sentTargets 是本轮请求的目标快照（编号按页码顺序）
       let doc = { docTitle: docTitle() };
       let sentTargets = [];
-      if (state.targets.length) {
+      let fmtSnap = null, fmtImage = null;
+      if (mode === 'format') {
+        // 版式模式：每次都重新读当前页的格式和截图，不走文字目标
+        const fr = await readFormatSnapshot();
+        if (state.curReq !== myReq || ac.signal.aborted) return;
+        if (!fr.ok) { addNote(tr('读取幻灯片格式失败：') + escapeHtml(uiText(fr.error) || tr('请稍后重试'))); return; }
+        fmtSnap = fr.snap;
+        if (!fmtSnap.shapes.some((sh) => sh.inScope) && !fmtSnap.canBackground) { addNote(tr('⚠️ 这一页上没有可以调整的形状')); return; }
+        $('#request-status').textContent = tr('正在截取当前页…');
+        fmtImage = await captureSlide(fmtSnap.slideId);
+        if (state.curReq !== myReq || ac.signal.aborted) return;
+        Object.assign(doc, { slideCount: fmtSnap.slideCount, slideNo: fmtSnap.slideNo, format: F.describeSnapshot(fmtSnap) });
+      } else if (state.targets.length) {
         const ctx = await getEditContext();
         if (state.curReq !== myReq || ac.signal.aborted) return;
         if (!ctx.ok) {
@@ -1528,7 +2217,7 @@
           });
         }
       }
-      if (!doc.fullText) {
+      if (mode !== 'format' && !doc.fullText) {
         const w = await getWholeDeck();
         if (!w.ok) { addNote(tr('读取幻灯片失败：') + escapeHtml(uiText(w.error) || tr('请稍后重试'))); return; }
         Object.assign(doc, { fullText: w.fullText, truncated: w.truncated, docChars: w.docChars, slideCount: w.slideCount });
@@ -1541,7 +2230,7 @@
       const sendBackend = cfg.backend;
       const sentContextKey = contextKey(doc, cfg);
       const prior = state.cliContext[sendBackend];
-      if (!prior || prior.key !== sentContextKey || prior.turns !== state.messages.length) {
+      if (mode === 'format' || !prior || prior.key !== sentContextKey || prior.turns !== state.messages.length) {
         state.cliSession[sendBackend] = null; state.sentAtts[sendBackend] = [];
       }
       const requestAttachments = [...state.attachments];
@@ -1560,9 +2249,9 @@
       // 用户气泡
       const uBubble = addMessageEl('user');
       let uHtml = `<div>${(isRetry ? '🔁 ' : '') + escapeHtml(text).replace(/\n/g, '<br>')}</div>`;
-      if (state.attachments.length) {
-        uHtml += `<div class="att-line">📎 ${state.attachments.map((a) => escapeHtml(a.slide ? tr`第 ${a.slide} 页截图` : a.name)).join(' · ')}</div>`;
-      }
+      const attNames = state.attachments.map((a) => escapeHtml(a.slide ? tr`第 ${a.slide} 页截图` : a.name));
+      if (fmtImage) attNames.unshift(escapeHtml(tr`第 ${fmtSnap.slideNo} 页截图（自动附上）`));
+      if (attNames.length) uHtml += `<div class="att-line">📎 ${attNames.join(' · ')}</div>`;
       uBubble.innerHTML = uHtml;
       state.messages.push({ role: 'user', content: text });
 
@@ -1609,7 +2298,10 @@
         mode,
         uiLanguage: I18N.language,
         doc,
-        attachments: binAtts.map((a) => ({ name: a.name, mime: a.mime, b64: a.b64 })),
+        attachments: [
+          ...binAtts.map((a) => ({ name: a.name, mime: a.mime, b64: a.b64 })),
+          ...(fmtImage ? [{ name: `slide-${fmtSnap.slideNo}.png`, mime: 'image/png', b64: fmtImage }] : []),
+        ],
         cliSession: { ...state.cliSession },
         newAttIdx,
         messages: state.messages.filter((m) => !m.failed).map((m) => ({ role: m.role, content: m.content })),
@@ -1759,11 +2451,18 @@
         setTimeout(() => addNote(tr('💡 这个会话有点长了。建议点右上角 <b>＋</b> 开新会话：旧会话自动归档到 ◷ 历史，并<b>重新读取全篇上下文</b>，回复会更快更准。')), 400);
       }
       const reps = mode === 'edit' && successful ? parseReplacements(raw, sentTargets.length) : null;
+      const fmt = mode === 'format' && successful ? F.parseFormatReply(raw) : null;
       let html = '';
       if (thinking.trim()) {
         html += tr`<details class="think"><summary>💭 思考过程</summary><div>${escapeHtml(thinking)}</div></details>`;
       }
-      if (reps && reps.length) {
+      if (fmt && fmt.ok) {
+        const { changes, problems } = F.normalizeChanges(fmt.changes, fmtSnap);
+        const note = F.stripFormatFence(raw, fmt);
+        if (note) html += renderMarkdown(note);
+        aBubble.innerHTML = html;
+        attachFormatCard(aBubble, fmtSnap, changes, problems, via);
+      } else if (reps && reps.length) {
         const note = stripFences(raw, reps);
         if (note) html += renderMarkdown(note);
         aBubble.innerHTML = html;
@@ -1804,10 +2503,12 @@
           html += tr('<div class="warnbox">本轮未完成，已保留输出供查看。请重试后再应用改写。</div>');
         } else if (mode === 'edit' && raw.trim()) {
           html += tr`<div class="warnbox">未能把回复解析成替换文本${sentTargets.length > 1 ? tr('（多目标需要每段带【目标k】标签的 \`\`\`text 围栏）') : tr('（需要 \`\`\`text 围栏）')}，无法一键应用。可以「🔁 重试」或换个说法。</div>`;
+        } else if (fmt && /```/.test(raw)) {
+          html += tr`<div class="warnbox">格式方案没能解析（${escapeHtml(uiText(fmt.error))}），无法一键应用。可以「🔁 重试」或换个说法。</div>`;
         }
         html += footHtml(via);
         aBubble.innerHTML = html;
-        if (!successful || (mode === 'edit' && raw.trim())) {
+        if (!successful || (mode === 'edit' && raw.trim()) || (fmt && /```/.test(raw))) {
           const retryBtn = document.createElement('button');
           retryBtn.className = 'btn';
           retryBtn.textContent = tr('🔁 重试');
@@ -1984,11 +2685,24 @@
       const mySeq = ++selSeq;
       const r = await pptRun(async (ctx) => {
         const cur = await readSelection(ctx);
-        return { ok: true, chars: cur.text ? cur.text.text.trim().length : 0, shapes: cur.shapes.length, slides: cur.slides.length };
+        let slideNo = 0;
+        if (state.cfg.mode === 'format' && cur.slides.length) {
+          const all = ctx.presentation.slides;
+          all.load('items/id');
+          await ctx.sync();
+          slideNo = all.items.findIndex((s) => s.id === cur.slides[0]) + 1;
+        }
+        return { ok: true, chars: cur.text ? cur.text.text.trim().length : 0, shapes: cur.shapes.length, slides: cur.slides.length, slideNo };
       });
       if (mySeq !== selSeq) return;
       let hint = '';
       let strong = false;
+      if (r.ok && state.cfg.mode === 'format') {
+        state.fmtScope = { slideNo: r.slideNo || 1, shapes: r.shapes };
+        renderContextSummary();
+        els.selHint.textContent = r.shapes ? tr`已选中 ${r.shapes} 个形状 → 直接说要怎么改格式` : tr('没有选中形状时，会调整当前整页');
+        return;
+      }
       if (r.ok) {
         if (r.chars && r.shapes <= 1) { hint = tr`已选中 ${r.chars} 字 → 点「＋ 添加选中」设为目标`; strong = true; }
         else if (r.shapes === 1) { hint = tr('已选中 1 个对象 → 点「＋ 添加选中」设为目标'); strong = true; }
@@ -2018,6 +2732,7 @@
       model: $('#sel-model'),
       effort: $('#sel-effort'),
       modeEdit: $('#mode-edit'),
+      modeFormat: $('#mode-format'),
       modeAsk: $('#mode-ask'),
       targetBar: $('#target-bar'),
       targetInfo: $('#target-info'),
@@ -2131,19 +2846,24 @@
     });
   }
   function setMode(mode) {
+    if (!['edit', 'format', 'ask'].includes(mode)) mode = 'edit';
     state.cfg.mode = mode;
-    els.modeEdit.classList.toggle('active', mode === 'edit');
-    els.modeAsk.classList.toggle('active', mode === 'ask');
-    els.modeEdit.setAttribute('aria-pressed', String(mode === 'edit'));
-    els.modeAsk.setAttribute('aria-pressed', String(mode === 'ask'));
-    els.modeSummary.textContent = mode === 'edit' ? tr('改写 ▾') : tr('问答 ▾');
-    els.send.innerHTML = mode === 'edit' ? tr('生成改写 <span aria-hidden="true">↑</span>') : tr('发送提问 <span aria-hidden="true">↑</span>');
-    $('#instruction-label').textContent = mode === 'edit' ? tr('告诉我怎么改') : tr('想了解演示文稿的什么');
+    for (const [m, el] of [['edit', els.modeEdit], ['format', els.modeFormat], ['ask', els.modeAsk]]) {
+      el.classList.toggle('active', mode === m);
+      el.setAttribute('aria-pressed', String(mode === m));
+    }
+    $('#app').dataset.mode = mode; // 版式模式隐藏「添加选中」和文字目标列表（范围跟随当前选中）
+    els.modeSummary.textContent = mode === 'edit' ? tr('改写 ▾') : mode === 'format' ? tr('版式 ▾') : tr('问答 ▾');
+    els.send.innerHTML = mode === 'edit' ? tr('生成改写 <span aria-hidden="true">↑</span>')
+      : mode === 'format' ? tr('生成方案 <span aria-hidden="true">↑</span>')
+      : tr('发送提问 <span aria-hidden="true">↑</span>');
+    $('#instruction-label').textContent = mode === 'edit' ? tr('告诉我怎么改') : mode === 'format' ? tr('想怎么调整格式和版面') : tr('想了解演示文稿的什么');
     renderPresets();
-    els.input.placeholder = mode === 'edit'
-      ? tr('比如：每条要点压到一行，保留数据…')
+    els.input.placeholder = mode === 'edit' ? tr('比如：每条要点压到一行，保留数据…')
+      : mode === 'format' ? tr('比如：把黑色边框改成浅灰色、细一点…')
       : tr('比如：这份演示文稿的主线清楚吗？…');
     renderContextSummary();
+    onDocSelectionChanged();
     saveCfg();
   }
   function autoGrow() {
@@ -2200,7 +2920,7 @@
     fillEffortOptions();
     els.effort.addEventListener('change', () => { state.cfg.effort = els.effort.value; state.cfg['effort_' + state.cfg.backend] = els.effort.value; renderEngineSummary(); saveCfg(); });
     els.settingsBtn.addEventListener('click', () => showSettings(els.settingsPop.classList.contains('hidden')));
-    els.modeSummary.addEventListener('click', () => { showSettings(true); (state.cfg.mode === 'ask' ? els.modeAsk : els.modeEdit).focus(); });
+    els.modeSummary.addEventListener('click', () => { showSettings(true); ({ ask: els.modeAsk, format: els.modeFormat }[state.cfg.mode] || els.modeEdit).focus(); });
     els.contextSummary.addEventListener('click', () => showSettings(true));
     document.addEventListener('pointerdown', (e) => {
       if (els.settingsPop.classList.contains('hidden') || els.settingsPop.contains(e.target)) return;
@@ -2216,6 +2936,7 @@
       saveCfg();
     });
     els.modeEdit.addEventListener('click', () => setMode('edit'));
+    els.modeFormat.addEventListener('click', () => setMode('format'));
     els.modeAsk.addEventListener('click', () => setMode('ask'));
 
     els.input.addEventListener('keydown', (e) => {
@@ -2251,7 +2972,7 @@
     loadCfg();
     bindEvents();
     fillModelOptions();
-    setMode(state.cfg.mode === 'ask' ? 'ask' : 'edit');
+    setMode(state.cfg.mode);
     renderTargetBar();
     renderWelcome(); restoreDraft(); ping();
     if (typeof fetch === 'function') setInterval(ping, 30000);

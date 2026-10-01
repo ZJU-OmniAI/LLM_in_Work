@@ -47,3 +47,21 @@ test('ask prompts ask for slide numbers; the slide-image note appears only with 
   assert.doesNotMatch(turn, /slide-N\.png/);
   assert.match(turn, /禁 Markdown 记号和项目符号/);
 });
+
+test('format prompts carry the slide snapshot, the slide image and the plan format; follow-ups resend the snapshot', () => {
+  const fmtDoc = { docTitle: 'deck.pptx', slideCount: 4, format: '【第 2 页（共 4 页）】幻灯片大小 960×540 pt\n可以修改的形状（用户选中的 1 个，每行一个，JSON）：\n{"id":"5","kind":"shape"}' };
+  const files = [{ name: 'slide-2.png', path: '/tmp/a/slide-2.png', mime: 'image/png' }];
+  const p = buildPrompt({ mode: 'format', uiLanguage: 'en', doc: fmtDoc, messages: [{ role: 'user', content: 'lighter' }, { role: 'assistant', content: 'done' }, { role: 'user', content: 'lighter still' }], files });
+  assert.match(p, /版式助手/);
+  assert.match(p, /```format 围栏，里面是 JSON：\{"changes"/);
+  assert.match(p, /只能用「可以修改的形状」里的 id/);
+  assert.match(p, /==== 当前页的格式清单 ====\n【第 2 页（共 4 页）】/);
+  assert.match(p, /slide-N\.png 的图片是面板截取的第 N 页渲染图/);
+  assert.match(p, /此前的对话（页面可能已按之前的方案改过，一律以上面的清单和截图为准）/);
+  assert.match(p, /用户本轮的要求：\nlighter still/);
+  assert.match(p.split('\n').at(-1), /^Write the explanation in the language of the request above/);
+  assert.doesNotMatch(p, /当前演示文稿的全部文字/, 'format mode does not send the deck text');
+  const turn = buildTurnPrompt({ mode: 'format', uiLanguage: 'zh-CN', doc: fmtDoc, instruction: '再浅一点', files });
+  assert.match(turn, /当前页的格式清单/);
+  assert.match(turn, /用户本轮的要求：\n再浅一点/);
+});
