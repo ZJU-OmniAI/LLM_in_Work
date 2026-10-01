@@ -18,9 +18,9 @@ Select text, describe the change, review the diff, apply. No copying between a c
 
 </div>
 
-https://github.com/user-attachments/assets/f6d255d1-0f46-4867-aaf6-50513a279c16
+https://github.com/user-attachments/assets/51987efc-5e60-48ad-a36c-67aa7bd611b1
 
-<p align="center"><sub>Real recordings, English narration, bilingual subtitles · <a href="README.zh-CN.md">中文配音版</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-09-30">Download 1080p + subtitles</a></sub></p>
+<p align="center"><sub>Real recordings, English narration, bilingual subtitles · <a href="README.zh-CN.md">中文配音版</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-01">Download 1080p + subtitles</a></sub></p>
 
 ## Why LLM_in_Work
 
@@ -82,7 +82,7 @@ https://github.com/user-attachments/assets/f6d255d1-0f46-4867-aaf6-50513a279c16
   </tr>
 </table>
 
-Word and Overleaf screenshots come from the demo recordings: real desktop Word on macOS, and the real extension and CodeMirror editor on a local demo page (not the hosted Overleaf site), with answers from Claude Code (Sonnet 5.5, low effort). PowerPoint and Excel screenshots are from real desktop PowerPoint and Excel on macOS, with answers from Claude Code (Haiku 4.5, low effort). The demo video covers Word and Overleaf.
+Screenshots come from real apps on macOS: desktop Word, PowerPoint and Excel, and for Overleaf the real extension and CodeMirror editor on a local demo page (not the hosted Overleaf site). The Word, Excel and Overleaf images are frames from the demo recordings, with answers from Claude Code (Sonnet 5.5, low effort); the PowerPoint images were taken separately, with answers from Claude Code (Haiku 4.5, low effort). The demo video covers all four assistants.
 
 ## How it works
 
