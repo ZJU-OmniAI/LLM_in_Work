@@ -12,7 +12,7 @@
 
 ![把客户和地区两列添加为目标，侧栏的单元格预览里划掉了每个旧值](docs/images/excel-preview.zh-CN.jpg)
 
-*macOS 上真实的桌面版 Excel 与 LLM_in_Excel 侧栏，工作簿为截图专门编写。*
+*macOS 上真实的桌面版 Excel 与 LLM_in_Excel 侧栏，工作簿为录屏专门编写。*
 
 ## 能做什么
 
@@ -44,7 +44,7 @@
 
 ![表格问答按单元格地址列出表里的问题](docs/images/excel-ask.zh-CN.jpg)
 
-截图来自 macOS 上真实的桌面版 Excel（16.109），工作簿为演示专门编写；所有回复均由 Claude Code（Haiku 4.5，思考强度 low）生成。[截图说明](docs/images/README.md)。
+截图取自 macOS 上真实桌面版 Excel（16.109）的演示录屏，工作簿为演示专门编写；所有回复均由 Claude Code（Sonnet 5.5，思考强度 low）生成。[截图说明](docs/images/README.md)。
 
 ## 平台支持
 
