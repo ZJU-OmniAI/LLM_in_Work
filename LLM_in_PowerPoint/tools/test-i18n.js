@@ -17,7 +17,7 @@ function dynamicKeys() {
   const keys = new Set();
   const block = (start, end) => js.slice(js.indexOf(start), js.indexOf(end, js.indexOf(start)));
   for (const m of block('const PRESETS = {', 'const SOFT_SEL_LIMIT').matchAll(/\['([^']+)', '([^']+)'\]/g)) { keys.add(m[1]); keys.add(m[2]); }
-  for (const name of ['ROLE_ZH', 'EFFORT_LABELS']) for (const m of block(`const ${name} = {`, '};').matchAll(/:\s*'([^']+)'/g)) keys.add(m[1]);
+  for (const name of ['ROLE_ZH', 'EFFORT_LABELS', 'FMT_LABELS', 'FMT_VALUES', 'FMT_KIND', 'FMT_REGION', 'FMT_SIDES']) for (const m of block(`const ${name} = {`, '};').matchAll(/:\s*'([^']+)'/g)) keys.add(m[1]);
   for (const m of block('const MODELS = {', 'const EFFORTS').matchAll(/\['[^']+', '([^']+)'\]/g)) keys.add(m[1]);
   return keys;
 }

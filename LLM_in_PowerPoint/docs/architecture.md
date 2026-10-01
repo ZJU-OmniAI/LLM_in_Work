@@ -19,8 +19,9 @@ The service is the LLM_in_Word service with PowerPoint prompts, its own port, da
 | `server/server.js` | Loopback HTTPS, same-origin API checks, request cancellation and attachment cleanup. |
 | `server/cli.js`, `server/process.js`, `server/launch.js` | Backend arguments, streaming events, timeouts, error classification, process-tree cancellation. |
 | `server/models.js`, `server/health.js` | Model discovery and CLI/login diagnostics without paid generation. |
-| `server/prompt.js` | Slide-aware system prompts, target markers, table rules and follow-up prompts. |
+| `server/prompt.js` | Slide-aware system prompts, target markers, table rules, follow-up prompts and the format-mode prompt. |
 | `taskpane/taskpane.js` | Selection reading, target anchoring, deck context, minimal-edit write-back, undo, tables, slide images, chat UI. |
+| `taskpane/format-utils.js` | Format mode: formatting snapshot text, `format` plan parsing and validation, preview rows, table border plans. |
 | `taskpane/table-utils.js` | Markdown table protocol, row alignment and cell differences (shared with LLM_in_Word). |
 | `tools/fixtures/fake-powerpoint.js` | In-memory PowerPoint API stand-in used by the offline tests. |
 
@@ -47,6 +48,24 @@ The old and new target text are compared token by token (words; single CJK chara
 After writing, the text is read back and compared with the expected result. The applied card records the raw text before and after, and **Undo** applies the reverse edits if that text is still in place.
 
 Tables: rows are aligned by content (`TableUtils.planRows`). Changed cells are written with `getCellOrNullObject(r, c).text`, removed rows are deleted from the bottom up, then new rows are added with `rows.add(index, 1)` (PowerPointApi 1.9) in their new positions. Column changes and merged cells are refused.
+
+## Format mode
+
+Format mode works on the current slide. `readFormatSnapshot` takes the selected shapes (or every shape on the slide when nothing is selected), expands groups up to three levels (60 shapes at most) and loads, per shape: `left/top/width/height`, `rotation` (1.10), `fill` (`type`, `foregroundColor`, `transparency`), `lineFormat` (`visible`, `color`, `weight`, `dashStyle`, `transparency`), the text's `font` and `paragraphFormat.horizontalAlignment`, and `textFrame.verticalAlignment`. A font property that PowerPoint reports as `null` differs between runs; it is shown to the model as `"mixed"`. Tables (1.9) report per-region shading, font and border colours (large tables: header, first rows and last row, 150 cells at most). The slide's background (`slide.background`, 1.10), theme colours (`themeColorScheme.getThemeColor`) and page size (`pageSetup`) are added. `FormatUtils.describeSnapshot` turns this into one JSON line per shape, and the slide image (`slide-N.png`) is attached automatically. Format requests always start a fresh CLI session, because the snapshot is the source of truth after every apply.
+
+The reply's ```` ```format ```` fence is parsed by `parseFormatReply` and checked by `normalizeChanges`: ids must be in scope; colours are normalized to `#RRGGBB`; line weight 0–20 pt, font size 1–400 pt, positions within three slide sizes, sizes above 0.5 pt; properties the API level cannot write are refused. `planRows` produces the old → new preview.
+
+`applyFormat` re-reads the shapes, asks for confirmation when they changed since the snapshot, records the old values, then writes:
+
+- fill: `fill.setSolidColor` + `transparency`, or `fill.clear()`; line: `lineFormat.visible/color/weight/dashStyle/transparency`;
+- font: `textFrame.textRange.font.*`; when the old font was mixed, every character's font is read with `getSubstring(i, 1)` (up to 3,000 characters) and stored as runs, so Undo can restore them;
+- stacking order: `setZOrder` (1.8) one step at a time, with the original `zOrderPosition` recorded;
+- table regions: `getCellOrNullObject(r, c)` `fill`, `font`, `horizontalAlignment`, `verticalAlignment` and `borders.top/bottom/left/right` (1.9); `"none"` borders are written as weight 0. `borderPlan` maps `outer`, `inner`, `horizontal`, `vertical` to the sides of each cell;
+- background: `background.fill.setSolidFill({ color })`; Undo calls `background.reset()` when the slide followed the master before.
+
+Undo writes the recorded values back.
+
+Readings observed in PowerPoint 16.109 for Mac, reproduced in the stand-in: `paragraphFormat.horizontalAlignment` and `TableCell.horizontalAlignment` read as the enum's index (`0` = Left; `FormatUtils.alignName` turns them into names, and writes accept names); a shape without fill reads `foregroundColor: ""` and `transparency: -1`, a hidden line `color: ""` and `weight`/`transparency: -1`; `toJSON()` on fill and line objects returns `{}`, so properties are read one by one. Cells of a table with a table style read what was set directly, not what the style draws: no fill (`color: null`, `transparency: 1`), borders with every property `null`, and black, non-bold text. A border that was set reads `transparency: 1` and `dashStyle: null`, so visibility is judged by weight and colour only. None of these can be unset: `null` throws InvalidArgument, weight 0 or transparency 1 hide the style's line, and `table.clear({ format: true })` writes plain formatting rather than removing it. What does work: `cell.fill.clear()` returns a cell to the style's fill, and assigning `styleSettings.style` (PowerPointApi 1.9) drops every cell's direct fill and borders while keeping fonts. So before the first border change on a table (up to 400 cells), `applyFormat` records the style and every cell's direct fill and borders; Undo re-applies the style and writes those back. Text colour and bold drawn by the style cannot be restored; the preview says so before applying.
 
 ## Context and requests
 

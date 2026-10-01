@@ -1,5 +1,11 @@
 # 更新记录 / Changelog
 
+## 2026-10-01 — LLM_in_PowerPoint 0.2.0
+
+- **New in PowerPoint: Format mode.** Change how a slide looks, not only its words. Select shapes (or nothing for the whole slide) and ask, for example, “make this black border lighter and thinner”. The model sees an image of the slide and a formatting list of its shapes and returns a plan: position and size, rotation, fill, border, font, alignment, stacking order, table shading/borders/header, and the background colour. The plan is previewed as old → new with colour swatches; out-of-range values and shapes outside the selection are rejected. **↩ Undo** restores every property, including mixed font sizes and colours character by character.
+
+中文：PowerPoint 新增「调整版式」模式，改格式不改文字。选中形状（不选就是整页），说「把这个黑框改浅一点、细一点」之类的要求；模型看到本页截图和每个形状的格式清单，给出修改方案（位置大小、旋转、填充、边框、字体、对齐、上下层次、表格底色/边框/表头、背景色）。方案按「旧值 → 新值」带色块预览，不合理的数值和没选中的形状会被拦下；应用后一键撤销，混用的字号和颜色也能逐字恢复。
+
 ## 2026-10-01 — LLM_in_Excel 0.1.0
 
 - **New: LLM_in_Excel.** The same workflow for spreadsheets: add one or several cell ranges (Cmd/Ctrl multi-select), including empty columns to fill, describe the change, review a cell preview with the old values struck through, and apply. Clean up names and regions, sort rows into categories, write formulas, fill blanks, fix typos or translate. Only changed cells are written, as if typed: number formats stay, IDs like `00123` stay text, and every applied edit has a one-click Undo that also restores number formats. **Workbook Q&A** summarizes, finds problems, explains formulas and suggests charts, citing cell addresses.

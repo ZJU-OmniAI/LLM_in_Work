@@ -30,6 +30,7 @@ https://github.com/user-attachments/assets/51987efc-5e60-48ad-a36c-67aa7bd611b1
 - **Several passages, one instruction.** Up to eight paragraphs or whole tables in Word; up to sixteen text boxes, tables or whole slides in PowerPoint; up to eight cell ranges in Excel, including empty columns to fill; several separate selections in one `.tex` file in Overleaf.
 - **Whole-document context.** The full document, the whole deck, the workbook's sheets or the `.tex` file goes along with your request, so terminology, citations and math stay consistent. Add `.bib` files, other chapters or PDFs when you need more.
 - **Careful by design.** The original text is checked again before writing, so an edit never lands in the wrong place. Table and spreadsheet edits touch only the rows and cells that changed. CLI calls run without your MCP servers and without extra tools.
+- **Formatting and layout in PowerPoint.** Format mode changes how a slide looks, not its words: “make this black border lighter”, “same font size for all bullets”, “clean up this table”. The plan is shown as old → new with colour swatches, and Undo restores every property.
 - **Ask, not only edit.** Document Q&A in Word, Presentation Q&A in PowerPoint (speaker notes, consistency checks, with an image of the slide if you like), Workbook Q&A in Excel (summaries, outliers, formula explanations, with cell addresses) and Ask mode in Overleaf answer questions without changing your text.
 - **English and 中文.** Switch the interface at any time. Explanations follow the language of your instruction.
 
