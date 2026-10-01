@@ -36,7 +36,7 @@ The model sees and writes cells as text, so every cell needs one unambiguous for
 
 ## The coordinate table protocol / 带坐标的表格
 
-Every sheet and every target is a Markdown table whose header row holds column letters (first cell empty) and whose first column holds row numbers. The model replies in a ```` ```table ```` fence in the same form, so it can list only the rows and columns that change; cells it does not list are left alone, and a listed empty cell means “clear it”. With several targets, each fence is preceded by `【目标k】`. `parseGridMarkdown` also accepts a table without coordinates when its size matches the target exactly; anything else is refused and the card offers **Retry**.
+Every sheet and every target is a Markdown table whose header row holds column letters (first cell empty) and whose first column holds row numbers. The model replies in a ```` ```table ```` fence in the same form, so it can list only the rows and columns that change. Cells it does not list, and cells it leaves blank, are left alone; clearing a cell takes an explicit `""`. (Models leave the unchanged cells of a row blank; an early version read that as “clear” and erased data in a live test.) With several targets, each fence is preceded by `【目标k】`. `parseGridMarkdown` also accepts a table without coordinates when its size matches the target exactly; anything else is refused and the card offers **Retry**.
 
 ## Targets
 

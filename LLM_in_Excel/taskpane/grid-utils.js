@@ -111,9 +111,18 @@
     return cells;
   }
 
+  // 回复里的一格：留空 = 不改（返回 null）；"" = 明确清空；其余按表示法还原。
+  // 模型常把同一行里不需要改的格子留空，所以留空绝不能当成「清空」，否则会误删数据（2026-10-01 实测）。
+  function decodeCell(raw) {
+    const t = String(raw).trim();
+    if (t === '') return null;
+    if (t === '""' || t === '\u201c\u201d') return '';
+    return unquote(unescapeCell(t));
+  }
+
   // 解析模型回复里的表格 → { ok, cells: Map(地址 → 内容), mode }。
   // 带坐标（第一行列字母、每行第一格行号）时可以只给部分行和列；没坐标时只有大小和目标区域完全一致才按位置对应。
-  // 行比表头短时，缺的单元格视为「没给出」（保持原样），写成空格才表示清空。
+  // 缺的和留空的单元格都视为「没给出」（保持原样），写成 "" 才表示清空。
   function parseGridMarkdown(md, target) {
     const lines = String(md || '').split('\n').map((l) => l.trim()).filter((l) => l.startsWith('|') && l.length > 1);
     const rows = lines.map(splitRow).filter((r) => !(r.length && r.every((c) => /^:?-{2,}:?$/.test(c))));
@@ -126,14 +135,17 @@
       const colNums = head.slice(1).map(colNumber);
       for (const r of body) {
         const rowNum = Number(r[0]);
-        colNums.forEach((c, j) => { if (j + 1 < r.length) cells.set(cellAddress(rowNum, c), unquote(unescapeCell(r[j + 1]))); });
+        colNums.forEach((c, j) => {
+          const v = j + 1 < r.length ? decodeCell(r[j + 1]) : null;
+          if (v !== null) cells.set(cellAddress(rowNum, c), v);
+        });
       }
       return { ok: true, cells, mode: 'coords' };
     }
     if (target) {
       const tRows = target.r2 - target.r1 + 1, tCols = target.c2 - target.c1 + 1;
       if (rows.length === tRows && rows.every((r) => r.length === tCols)) {
-        rows.forEach((r, i) => r.forEach((v, j) => cells.set(cellAddress(target.r1 + i, target.c1 + j), unquote(unescapeCell(v)))));
+        rows.forEach((r, i) => r.forEach((raw, j) => { const v = decodeCell(raw); if (v !== null) cells.set(cellAddress(target.r1 + i, target.c1 + j), v); }));
         return { ok: true, cells, mode: 'positional' };
       }
     }
@@ -211,7 +223,7 @@
 
   return {
     colName, colNumber, parseAddress, cellAddress, rangeAddress, quoteSheet, overlaps,
-    looksTyped, cellRepr, contextRepr, escapeCell, unescapeCell, unquote, toGridMarkdown, parseGridMarkdown,
+    looksTyped, cellRepr, contextRepr, escapeCell, unescapeCell, unquote, decodeCell, toGridMarkdown, parseGridMarkdown,
     numberOf, sameValue, lossyWithoutMarker, unchanged, planChanges, toExcelInput, restoreInput, MAX_ROWS, MAX_COLS,
   };
 });
