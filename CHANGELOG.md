@@ -4,8 +4,9 @@
 
 - **New: LLM_in_Excel.** The same workflow for spreadsheets: add one or several cell ranges (Cmd/Ctrl multi-select), including empty columns to fill, describe the change, review a cell preview with the old values struck through, and apply. Clean up names and regions, sort rows into categories, write formulas, fill blanks, fix typos or translate. Only changed cells are written, as if typed: number formats stay, IDs like `00123` stay text, and every applied edit has a one-click Undo that also restores number formats. **Workbook Q&A** summarizes, finds problems, explains formulas and suggests charts, citing cell addresses.
 - Runs as its own local service on `127.0.0.1:8397`. On macOS it reuses the trusted certificate of LLM_in_Word or LLM_in_PowerPoint.
+- **Demo videos updated** (English and Chinese narration): they now cover Word, PowerPoint, Excel and Overleaf, recorded in the real desktop apps.
 
-中文：新增 **LLM_in_Excel**：选中一块或几块单元格区域（也可以是要填写的空白列），说出要做什么，预览里划掉旧值、显示新值，确认后应用。可以清洗整理、分类打标、写公式、补全空白、修错别字、翻译。只写入有变化的单元格，写法和手动输入一致：数字格式不变，`00123` 这样的编号仍是文本；每处修改都能一键撤销（连数字格式一起恢复）。「表格问答」可以总结、找异常、解释公式、推荐图表，回答注明单元格地址。独立服务 `127.0.0.1:8397`，macOS 上沿用 Word 版或 PowerPoint 版已信任的证书。
+中文：新增 **LLM_in_Excel**：选中一块或几块单元格区域（也可以是要填写的空白列），说出要做什么，预览里划掉旧值、显示新值，确认后应用。可以清洗整理、分类打标、写公式、补全空白、修错别字、翻译。只写入有变化的单元格，写法和手动输入一致：数字格式不变，`00123` 这样的编号仍是文本；每处修改都能一键撤销（连数字格式一起恢复）。「表格问答」可以总结、找异常、解释公式、推荐图表，回答注明单元格地址。独立服务 `127.0.0.1:8397`，macOS 上沿用 Word 版或 PowerPoint 版已信任的证书。演示视频（中英文讲解）同步更新，新增 PowerPoint 和 Excel 两段真实操作录屏。
 
 ## 2026-10-01 — LLM_in_PowerPoint 0.1.0
 

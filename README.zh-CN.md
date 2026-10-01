@@ -18,9 +18,9 @@
 
 </div>
 
-https://github.com/user-attachments/assets/0acfe30e-81bf-4bdd-8bf5-264348143c28
+https://github.com/user-attachments/assets/41635394-a69f-4f4a-8112-b293cead1e64
 
-<p align="center"><sub>真实操作录屏，中文讲解，中英双语字幕 · <a href="README.md">English narration</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-09-30">下载 1080p 视频和字幕</a></sub></p>
+<p align="center"><sub>真实操作录屏，中文讲解，中英双语字幕 · <a href="README.md">English narration</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-01">下载 1080p 视频和字幕</a></sub></p>
 
 ## 亮点
 
@@ -82,7 +82,7 @@ https://github.com/user-attachments/assets/0acfe30e-81bf-4bdd-8bf5-264348143c28
   </tr>
 </table>
 
-Word 和 Overleaf 的截图取自演示录屏：Word 部分是 macOS 上真实的 Word 桌面版；Overleaf 部分是在本地演示页面里运行的真实扩展和 CodeMirror 编辑器（不是 Overleaf 官网），回答由 Claude Code（Sonnet 5.5，low 思考强度）生成。PowerPoint 和 Excel 的截图来自 macOS 上真实的 PowerPoint、Excel 桌面版，回答由 Claude Code（Haiku 4.5，low 思考强度）生成。演示视频介绍的是 Word 和 Overleaf。
+截图都来自 macOS 上的真实应用：Word、PowerPoint、Excel 桌面版；Overleaf 部分是在本地演示页面里运行的真实扩展和 CodeMirror 编辑器（不是 Overleaf 官网）。Word、Excel 和 Overleaf 的截图取自演示录屏，回答由 Claude Code（Sonnet 5.5，low 思考强度）生成；PowerPoint 的截图单独拍摄，回答由 Claude Code（Haiku 4.5，low 思考强度）生成。演示视频介绍了全部四个助手。
 
 ## 工作原理
 
