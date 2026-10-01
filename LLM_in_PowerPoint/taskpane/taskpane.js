@@ -37,6 +37,8 @@
       ['译成英文', '把这些文字翻译成地道的英文，语域与原文一致'],
     ],
     format: [
+      ['整页美化', '把这一页整体美化：统一字体、字号和配色，对齐排整齐，留白均匀，层次清楚；可以加卡片底色或强调色条，文字内容一个字都不改'],
+      ['重新排版', '重新排这一页的版式：要点太挤就拆成并排的卡片，图文分区，标题醒目，文字内容一个字都不改'],
       ['边框变浅', '把边框改得浅一些、细一些，颜色和页面配色协调'],
       ['统一字号', '统一同类文字的字体和字号：同级标题一样大，正文一样大'],
       ['对齐排版', '把形状对齐、间距排均匀，内容不要超出幻灯片'],
@@ -82,6 +84,8 @@
     'cells.font.bold': '加粗', 'cells.font.italic': '倾斜', 'cells.font.underline': '下划线',
     'cells.align': '水平对齐', 'cells.valign': '垂直对齐',
     'cells.border': '表格边框', 'cells.border.color': '边框颜色', 'cells.border.weight': '边框粗细', 'cells.border.dash': '边框线型', 'cells.border.transparency': '边框透明度',
+    'add.type': '形状', 'add.box': '位置和大小', 'add.from': '文字', 'add.text': '文字', corner: '圆角', delete: '删除',
+    autoSize: '自动调整', margin: '内边距', wrap: '自动换行', tableStyle: '表格样式', bullet: '项目符号',
   };
   const FMT_VALUES = {
     none: '无', mixed: '混合', on: '是', off: '否',
@@ -91,7 +95,9 @@
     Solid: '实线', Dash: '虚线', RoundDot: '圆点线', SquareDot: '方点线', DashDot: '点划线', DashDotDot: '双点划线',
     LongDash: '长虚线', LongDashDot: '长点划线', LongDashDotDot: '长双点划线', SystemDash: '虚线',
     gradient: '渐变', pattern: '图案', pictureandtexture: '图片或纹理', pictureortexture: '图片或纹理', slidebackground: '跟随背景', unsupported: '其他',
-    'table-style': '表格样式',
+    'table-style': '表格样式', deleted: '删除（文字已搬进新形状）',
+    Rectangle: '矩形', RoundRectangle: '圆角矩形', Ellipse: '椭圆', Line: '线条', TextBox: '文本框',
+    AutoSizeNone: '不自动调整', AutoSizeTextToFitShape: '文字过多时缩小', AutoSizeShapeToFitText: '形状随文字伸缩', AutoSizeMixed: '混合',
   };
   const FMT_KIND = { title: '标题', subtitle: '副标题', body: '正文', footer: '页脚', textbox: '文本框', shape: '形状', picture: '图片', line: '线条', table: '表格', group: '分组', callout: '标注', chart: '图表', diagram: '图示' };
   const FMT_REGION = { all: '全部单元格', header: '表头行', body: '正文行', 'first-col': '第一列', 'last-row': '最后一行' };
@@ -115,6 +121,7 @@
     pptReady: false,
     api: { v18: false, v19: false, v110: false }, // PowerPointApi 1.8（表格/分组/截图/层次）、1.9（增删表格行、单元格格式）、1.10（安全读文本框、背景、主题色、页面大小）
     fmtScope: null,    // 版式模式的范围提示 { slideNo, shapes }（跟随选区变化）
+    slideRedirect: new Map(), // 整页撤销换掉的页：旧页 ID → 新页 ID
     longNoteShown: false,
     attachments: [],   // { id, name, kind:'text'|'binary', mime, text?, b64?, size, truncated }
     cliSession: { claude: null, codex: null }, // CLI 会话 id：有值=后续轮"续写+服务端缓存"，新会话清空
@@ -1069,6 +1076,8 @@
   const FMT_MAX_SHAPES = 60;       // 一页最多列出的形状数
   const FMT_MAX_CELLS = 150;       // 表格摘要最多读的单元格数
   const FMT_MAX_RUN_CHARS = 3000;  // 混合字体逐字记录（撤销用）的上限
+  const FMT_MAX_PARAS = 12;          // 每个形状逐段读格式的段数上限
+  const FMT_MAX_PARA_LOADS = 150;    // 整页逐段读格式的总次数上限
   const FMT_MAX_TABLE_RESTORE = 400; // 改表格边框时整张表记录直接格式（撤销用）的单元格上限
   const THEME_KEYS = ['Dark1', 'Light1', 'Dark2', 'Light2', 'Accent1', 'Accent2', 'Accent3', 'Accent4', 'Accent5', 'Accent6'];
   const FONT_PROPS = 'name,size,color,bold,italic,underline';
@@ -1093,7 +1102,8 @@
     return out;
   }
 
-  async function readFormatSnapshot() {
+  // opts.ids：指定修改范围（自查那一轮用：原来的范围加上新建的形状）；不给就按当前选区
+  async function readFormatSnapshot(opts = {}) {
     return await pptRun(async (ctx) => {
       const pres = ctx.presentation;
       const all = pres.slides;
@@ -1105,7 +1115,7 @@
       let page = null;
       if (state.api.v110) { page = pres.pageSetup; page.load('slideWidth,slideHeight'); }
       await ctx.sync();
-      const slideId = selSlides.items[0]?.id || all.items[0]?.id;
+      const slideId = opts.slideId || selSlides.items[0]?.id || all.items[0]?.id;
       if (!slideId) return { ok: false, error: tr('演示文稿里还没有幻灯片') };
       const slide = all.getItem(slideId);
       const slideNo = all.items.findIndex((s) => s.id === slideId) + 1;
@@ -1141,7 +1151,7 @@
       const texty = list.filter((e) => !['Group', 'Table', 'Image', 'Line'].includes(e.sh.type));
       const frames = await loadEach(ctx, texty, (e) => {
         const tf = state.api.v110 ? e.sh.getTextFrameOrNullObject() : e.sh.textFrame;
-        tf.load('hasText,verticalAlignment');
+        tf.load('hasText,verticalAlignment,autoSizeSetting,wordWrap,leftMargin,rightMargin,topMargin,bottomMargin');
         return tf;
       });
       const withText = [];
@@ -1160,7 +1170,35 @@
         e.text = {
           preview: text.length > 80 ? text.slice(0, 80) + '…' : text, length: text.length,
           font: pickFont(r.font), align: F.alignName(r.paragraphFormat.horizontalAlignment), valign: F.valignName(e.tf.verticalAlignment),
+          autoSize: e.tf.autoSizeSetting || null, wrap: e.tf.wordWrap ?? null,
+          margin: e.tf.leftMargin == null ? null : { left: e.tf.leftMargin, right: e.tf.rightMargin, top: e.tf.topMargin, bottom: e.tf.bottomMargin },
+          raw: r.text || '',
         };
+      });
+      // 逐段：字数、字号、加粗、层级（整页重排时按段搬进卡片或单独设格式）
+      const paraJobs = [];
+      for (const e of withText) {
+        if (!e.text) continue;
+        const raw = e.text.raw;
+        const paras = [];
+        let pos = 0;
+        for (const part of raw.split('\r')) { paras.push({ start: pos, length: part.length, preview: normNL(part).slice(0, 30) + (part.length > 30 ? '…' : '') }); pos += part.length + 1; }
+        e.text.paras = paras;
+        if (paras.length < 2) continue;
+        for (const p of paras.slice(0, FMT_MAX_PARAS)) if (p.length) paraJobs.push({ e, p });
+      }
+      const paraFonts = await loadEach(ctx, paraJobs.slice(0, FMT_MAX_PARA_LOADS), ({ e, p }) => {
+        const r = e.tf.textRange.getSubstring(p.start, p.length);
+        r.font.load('name,size,bold,color');
+        r.paragraphFormat.load('horizontalAlignment' + (state.api.v110 ? ',indentLevel' : ''));
+        r.paragraphFormat.bulletFormat.load('visible');
+        return r;
+      });
+      paraJobs.slice(0, FMT_MAX_PARA_LOADS).forEach(({ p }, i) => {
+        const r = paraFonts[i];
+        if (!r) return;
+        Object.assign(p, { size: r.font.size ?? null, bold: r.font.bold ?? null, name: r.font.name ?? null, color: r.font.color == null ? null : F.normColor(r.font.color),
+          align: F.alignName(r.paragraphFormat.horizontalAlignment), level: state.api.v110 ? r.paragraphFormat.indentLevel || 0 : 0, bullet: r.paragraphFormat.bulletFormat.visible ?? null });
       });
       // 表格：行列数 + 表头 / 正文 / 边框摘要（PowerPointApi 1.9 才能读单元格格式）
       if (state.api.v18) {
@@ -1229,7 +1267,7 @@
           THEME_KEYS.forEach((k, i) => { const c = F.normColor(vals[i].value); if (c) theme[k] = c; });
         } catch { theme = null; }
       }
-      const selected = new Set(selShapes.items.map((s) => s.id));
+      const selected = new Set(opts.ids ? opts.ids.map(String) : selShapes.items.map((s) => s.id));
       const listed = new Set(list.map((e) => e.sh.id));
       const scoped = [...selected].filter((id) => listed.has(id));
       const shapes = list.map((e) => ({
@@ -1238,35 +1276,94 @@
         x: e.sh.left, y: e.sh.top, w: e.sh.width, h: e.sh.height,
         rotation: state.api.v110 ? e.sh.rotation || 0 : null, z: state.api.v18 ? e.sh.zOrderPosition : null,
         fill: e.fill || null, line: e.line || null, text: e.text || null, table: e.table || null,
+        ratio: e.sh.type === 'Image' && e.sh.height ? e.sh.width / e.sh.height : null,
         inScope: scoped.length ? selected.has(e.sh.id) : true,
       }));
+      // 正文最常用的字体：新建的文字沿用它（PowerPoint 给新文本框的中文默认是宋体）
+      const fontNames = [];
+      for (const e of withText) for (const p of e.text?.paras || []) if (p.name) fontNames.push(p.name);
+      for (const e of withText) if (e.text?.font?.name) fontNames.push(e.text.font.name);
+      const mainFont = F.mostCommon(fontNames);
+      const cjkFont = F.mostCommon(fontNames.filter((n) => F.cjkCapable(n))); // 页面上在用的中文字体（没有就用默认的）
       return {
         ok: true,
         snap: {
           slideId, slideNo, slideCount: all.items.length,
           size: page ? { w: page.slideWidth, h: page.slideHeight } : null,
-          theme, background, shapes,
+          theme, background, shapes, mainFont, cjkFont,
           scopeKind: scoped.length ? 'selection' : 'slide',
           truncated: entries.length > list.length,
           canBackground: state.api.v110, canRotate: state.api.v110, canZOrder: state.api.v18, canTableFormat: state.api.v19,
+          canStructure: state.api.v18, // 整页备份（exportAsBase64）才能撤销新增 / 删除形状
         },
       };
     });
   }
 
+  // 需要整页备份才能撤销的方案：新增 / 删除形状、按段落设格式、文本框设置、换表格样式
+  const isStructural = (changes) => changes.some((c) => ['add', 'delete', 'paras'].includes(c.kind) ||
+    (c.kind === 'shape' && (c.set.tableStyle || c.set.autoSize || c.set.margin || c.set.wrap != null)));
+  // 大改（新增 / 删除形状，或移动、缩放三个以上形状）：应用后自动截图让模型自查一轮
+  const isBigLayout = (changes) => changes.some((c) => c.kind === 'add' || c.kind === 'delete') ||
+    changes.filter((c) => c.kind === 'shape' && ['x', 'y', 'w', 'h'].some((k) => c.set[k] != null)).length >= 3;
+  // 整页撤销会换掉这一页（页 ID 会变）：旧 ID → 新 ID，其他卡片和改写目标都按这个找到新页
+  const resolveSlide = (id) => { let x = id; for (let i = 0; i < 50 && state.slideRedirect.has(x); i++) x = state.slideRedirect.get(x); return x; };
+  // 搬文字时把原文逐字的格式一起带过去
+  const RUN_PROPS = ['name', 'size', 'color', 'bold', 'italic', 'underline'];
+  const FMT_MAX_MOVE_CHARS = 4000;
+  // 设字体名：西文字体只给西文字符（不然中文会变成宋体）；cjkFont 给了就同时把中文字符设成它
+  function setFontName(range, text, name, cjkFont) {
+    if (!name) return;
+    if (F.cjkCapable(name) || !F.scriptRuns(text).some(([, , c]) => c)) { range.font.name = name; return; }
+    for (const [start, len, cjk] of F.scriptRuns(text)) {
+      if (!cjk) range.getSubstring(start, len).font.name = name;
+      else if (cjkFont) range.getSubstring(start, len).font.name = cjkFont;
+    }
+  }
+  const paraOffsets = (raw) => { const out = []; let pos = 0; for (const part of String(raw || '').split('\r')) { out.push({ start: pos, length: part.length }); pos += part.length + 1; } return out; };
+
   // 按方案写入。先读出要改的每个属性的现值（撤销用，也用来发现发送后被手动改过），再写，最后回读核对。
-  // 返回 { ok, undo, written, needConfirm? }；undo 记录可以交给 undoFormat 原样恢复。
-  async function applyFormat(snap, changes, force) {
+  // 结构性的方案先把整页导出备份（undo.snapshot），撤销时整页换回。
+  // opts.snapshot：强制整页备份（要自查的大改）；opts.noSnapshot：不备份（自查那一轮，撤销靠第一轮的备份）。
+  // 返回 { ok, undo, written, added, needConfirm? }；undo 记录可以交给 undoFormat 原样恢复。
+  async function applyFormat(snap, changes, force, opts = {}) {
     return await pptRun(async (ctx) => {
-      const slide = ctx.presentation.slides.getItemOrNullObject(snap.slideId);
+      const slide = ctx.presentation.slides.getItemOrNullObject(resolveSlide(snap.slideId));
       slide.load('id');
       await ctx.sync();
       if (slide.isNullObject) return { ok: false, error: tr('这一页已经不在了（可能被删除），无法应用') };
       const byId = new Map(snap.shapes.map((s) => [String(s.id), s]));
       const jobs = [];
       const tableRecs = new Map(); // 表格 id → 整张表的直接格式记录（改边框时才需要，见 undoFormat）
+      const srcs = new Map(); // 搬文字的源形状 → 它的文字范围
+      const srcRange = (id) => {
+        if (!srcs.has(id)) {
+          const sh = slide.shapes.getItemOrNullObject(id);
+          const tf = state.api.v110 ? sh.getTextFrameOrNullObject() : sh.textFrame;
+          const range = tf.textRange;
+          range.load('text');
+          srcs.set(id, range);
+        }
+        return srcs.get(id);
+      };
       for (const ch of changes) {
         const job = { ch };
+        if (ch.kind === 'add') {
+          if (ch.from) job.src = srcRange(ch.from.id);
+          jobs.push(job);
+          continue;
+        }
+        if (ch.kind === 'delete' || ch.kind === 'paras') {
+          job.sh = slide.shapes.getItemOrNullObject(ch.id);
+          job.sh.load('id');
+          if (ch.kind === 'paras') {
+            job.tf = state.api.v110 ? job.sh.getTextFrameOrNullObject() : job.sh.textFrame;
+            job.range = job.tf.textRange;
+            job.range.load('text');
+          }
+          jobs.push(job);
+          continue;
+        }
         if (ch.kind === 'background') {
           job.bg = slide.background;
           job.bg.load('isMasterBackgroundFollowed');
@@ -1279,9 +1376,10 @@
           if (ch.kind === 'shape') {
             if (ch.set.fill) { job.fill = job.sh.fill; job.fill.load('type,foregroundColor,transparency'); }
             if (ch.set.line) { job.line = job.sh.lineFormat; job.line.load('visible,color,weight,dashStyle,transparency'); }
-            if (ch.set.font || ch.set.align || ch.set.valign) {
+            if (ch.set.tableStyle) { job.style = job.sh.getTable().styleSettings; job.style.load('style'); }
+            if (ch.set.font || ch.set.align || ch.set.valign || ch.set.autoSize || ch.set.margin || ch.set.wrap != null) {
               job.tf = state.api.v110 ? job.sh.getTextFrameOrNullObject() : job.sh.textFrame;
-              job.tf.load('verticalAlignment');
+              job.tf.load('verticalAlignment,autoSizeSetting,wordWrap,leftMargin,rightMargin,topMargin,bottomMargin');
               job.range = job.tf.textRange;
               job.range.load('text');
               job.range.font.load(FONT_PROPS);
@@ -1328,8 +1426,9 @@
       // 形状还在吗？发送后被手动改过吗？
       const changed = [];
       for (const job of jobs) {
-        if (job.ch.kind === 'background') continue;
+        if (job.ch.kind === 'background' || job.ch.kind === 'add') continue;
         if (job.sh.isNullObject) return { ok: false, error: tr`找不到形状 ${job.ch.id}（可能已被删除），没有写入任何内容` };
+        if (job.ch.kind !== 'shape' && job.ch.kind !== 'cells') continue;
         const s = byId.get(job.ch.id);
         const set = job.ch.set;
         const moved = ['x', 'y', 'w', 'h'].some((k) => set[k] != null && Math.abs({ x: job.sh.left, y: job.sh.top, w: job.sh.width, h: job.sh.height }[k] - s[k]) > 0.5);
@@ -1341,7 +1440,7 @@
       if (changed.length && !force) return { ok: false, needConfirm: true, changed };
       // 混合字体：撤销时要逐段恢复，先逐字记下要改的那几个属性
       for (const job of jobs) {
-        if (!job.range || !job.ch.set.font) continue;
+        if (job.ch.kind !== 'shape' || !job.range || !job.ch.set.font) continue;
         const mixed = Object.keys(job.ch.set.font).filter((k) => job.range.font[k] == null);
         const len = (job.range.text || '').length;
         if (!mixed.length || !len || len > FMT_MAX_RUN_CHARS) { job.mixed = []; continue; }
@@ -1349,12 +1448,92 @@
         job.charFonts = [];
         for (let i = 0; i < len; i++) { const f = job.range.getSubstring(i, 1).font; f.load(mixed.join(',')); job.charFonts.push(f); }
       }
-      if (jobs.some((j) => j.charFonts)) await ctx.sync();
+      // 要搬的段落：定位原文，逐字读格式
+      for (const job of jobs) {
+        if (job.ch.kind !== 'add' || !job.ch.from) continue;
+        const offs = paraOffsets(job.src.text);
+        const a = offs[job.ch.from.p1], b = offs[job.ch.from.p2];
+        if (!a || !b) return { ok: false, error: tr`形状 ${job.ch.from.id} 的段落已经变了，没有写入任何内容` };
+        job.srcText = job.src.text.slice(a.start, b.start + b.length);
+        job.srcFirst = job.src.getSubstring(a.start, Math.max(1, a.length)).paragraphFormat;
+        job.srcFirst.load('horizontalAlignment');
+        if (job.srcText.length <= FMT_MAX_MOVE_CHARS) {
+          job.srcFonts = [];
+          for (let i = 0; i < job.srcText.length; i++) { const f = job.src.getSubstring(a.start + i, 1).font; f.load(FONT_PROPS); job.srcFonts.push(f); }
+        }
+      }
+      if (jobs.some((j) => j.charFonts || j.srcFonts || j.srcFirst)) await ctx.sync();
+      // 整页备份：结构性的改动（或要自查的大改）撤销时整页换回
+      const undo = { slideId: slide.id, items: [] };
+      if (snap.canStructure && !opts.noSnapshot && (opts.snapshot || isStructural(changes))) {
+        const ex = slide.exportAsBase64();
+        await ctx.sync();
+        undo.snapshot = ex.value;
+      }
       // 写入，同时记录撤销所需的旧值
-      const undo = { slideId: snap.slideId, items: [] };
       let written = 0;
+      const added = []; // [planId, 新形状]
+      const deletes = [];
       for (const job of jobs) {
         const ch = job.ch, set = ch.set;
+        if (ch.kind === 'delete') { deletes.push(job.sh); written++; continue; }
+        if (ch.kind === 'paras') {
+          const offs = paraOffsets(job.range.text);
+          for (let i = ch.range.p1; i <= ch.range.p2; i++) {
+            const o = offs[i];
+            if (!o || !o.length) continue;
+            const r = job.range.getSubstring(o.start, o.length);
+            for (const [k, v] of Object.entries(set.font || {})) { if (k === 'name') setFontName(r, job.range.text.substr(o.start, o.length), v, null); else r.font[k] = v; }
+            if (set.align) r.paragraphFormat.horizontalAlignment = set.align;
+            if (set.bullet != null) r.paragraphFormat.bulletFormat.visible = set.bullet;
+          }
+          written++;
+          continue;
+        }
+        if (ch.kind === 'add') {
+          const box = { left: set.x, top: set.y, width: set.w, height: set.h };
+          const text = ch.from ? job.srcText : ch.text;
+          let sh;
+          if (ch.type === 'Line') {
+            sh = slide.shapes.addLine('Straight', box);
+            sh.width = set.w; sh.height = set.h; // 实测：创建时给的 0 高度会变成 72，要再设一次
+          } else if (ch.type === 'TextBox') sh = slide.shapes.addTextBox(text, box);
+          else { sh = slide.shapes.addGeometricShape(ch.type, box); if (text != null) sh.textFrame.textRange.text = text; }
+          if (text != null) {
+            const tf = sh.textFrame, range = tf.textRange;
+            const cjkFont = snap.cjkFont || F.DEFAULT_CJK_FONT;
+            const chars = [...text];
+            if (job.srcFonts) {
+              for (const k of RUN_PROPS) {
+                const vals = job.srcFonts.map((f, i) => {
+                  if (k === 'name') return F.isCJK(chars[i]) && !F.cjkCapable(f.name) ? cjkFont : f.name; // 中文不能落到宋体
+                  return k === 'color' && f[k] != null ? F.normColor(f[k]) : f[k];
+                });
+                for (const [start, len, v] of F.compressRuns(vals)) if (v != null && len) range.getSubstring(start, len).font[k] = v;
+              }
+            } else setFontName(range, text, (set.font && set.font.name) || snap.mainFont || cjkFont, cjkFont);
+            for (const [k, v] of Object.entries(set.font || {})) { if (k === 'name') setFontName(range, text, v, cjkFont); else range.font[k] = v; }
+            const align = set.align || (job.srcFirst ? F.alignName(job.srcFirst.horizontalAlignment) : null);
+            if (align) range.paragraphFormat.horizontalAlignment = align;
+            if (set.valign) tf.verticalAlignment = set.valign;
+            if (set.margin) for (const [k, v] of Object.entries(set.margin)) tf[k + 'Margin'] = v;
+            if (set.autoSize) tf.autoSizeSetting = set.autoSize;
+            if (set.wrap != null) tf.wordWrap = set.wrap;
+          }
+          if (set.fill) { if (set.fill.none) sh.fill.clear(); else { if (set.fill.color) sh.fill.setSolidColor(set.fill.color); if (set.fill.transparency != null) sh.fill.transparency = set.fill.transparency; } }
+          if (set.line) {
+            const lf = sh.lineFormat;
+            if (set.line.visible === false) lf.visible = false;
+            else { lf.visible = true; if (set.line.color) lf.color = set.line.color; if (set.line.weight != null) lf.weight = set.line.weight; if (set.line.dash) lf.dashStyle = set.line.dash; if (set.line.transparency != null) lf.transparency = set.line.transparency; }
+          }
+          if (set.corner != null && state.api.v110) sh.adjustments.set(0, set.corner);
+          if (set.rotation != null) sh.rotation = set.rotation;
+          if (set.zOrder) sh.setZOrder(set.zOrder);
+          sh.load('id');
+          added.push([ch.id, sh]);
+          written++;
+          continue;
+        }
         if (ch.kind === 'background') {
           undo.items.push({ kind: 'background', followsMaster: job.bg.isMasterBackgroundFollowed, type: job.bg.fill.type,
             color: job.solid.isNullObject ? null : job.solid.color, transparency: job.solid.isNullObject ? 0 : job.solid.transparency || 0, applied: set.fill.color });
@@ -1393,10 +1572,14 @@
           if (set.font) {
             u.font = pickFont(job.range.font);
             if (job.charFonts) u.runs = Object.fromEntries(job.mixed.map((k) => [k, F.compressRuns(job.charFonts.map((f) => (k === 'color' ? F.normColor(f[k]) : f[k])))]));
-            for (const [k, v] of Object.entries(set.font)) job.range.font[k] = v;
+            for (const [k, v] of Object.entries(set.font)) { if (k === 'name') setFontName(job.range, job.range.text || '', v, null); else job.range.font[k] = v; }
           }
           if (set.align) { u.align = F.alignName(job.range.paragraphFormat.horizontalAlignment); job.range.paragraphFormat.horizontalAlignment = set.align; }
           if (set.valign) { u.valign = F.valignName(job.tf.verticalAlignment); job.tf.verticalAlignment = set.valign; }
+          if (set.autoSize) job.tf.autoSizeSetting = set.autoSize;
+          if (set.margin) for (const [k, v] of Object.entries(set.margin)) job.tf[k + 'Margin'] = v;
+          if (set.wrap != null) job.tf.wordWrap = set.wrap;
+          if (set.tableStyle) job.style.style = set.tableStyle;
           if (set.zOrder) job.sh.setZOrder(set.zOrder);
           undo.items.push(u);
           written++;
@@ -1442,15 +1625,59 @@
         }
         undo.items.push(u);
       }
+      for (const sh of deletes) sh.delete(); // 文字已经搬走（normalizeChanges 保证），最后再删
       await ctx.sync();
-      return { ok: true, undo, written };
+      undo.added = Object.fromEntries(added.map(([pid, sh]) => [pid, sh.id]));
+      // 应用后的样子：撤销前用它判断这一页有没有再被手动改过
+      if (undo.snapshot && state.api.v18) {
+        try { const img = slide.getImageAsBase64({ width: SNAPSHOT_WIDTH }); await ctx.sync(); undo.afterLook = img.value; } catch {}
+      }
+      return { ok: true, undo, written, added: undo.added };
     });
   }
 
+  // 整页撤销：把备份的这一页插回原处，再删掉改过的那一页。页 ID 会变，记进 state.slideRedirect。
+  async function restoreSlide(undo, force) {
+    const r = await pptRun(async (ctx) => {
+      const id = resolveSlide(undo.slideId);
+      const slide = ctx.presentation.slides.getItemOrNullObject(id);
+      slide.load('id');
+      await ctx.sync();
+      if (slide.isNullObject) return { ok: false, error: tr('这一页已经不在了，无法撤销') };
+      if (!force && undo.afterLook) {
+        const img = slide.getImageAsBase64({ width: SNAPSHOT_WIDTH });
+        await ctx.sync();
+        if (img.value !== undo.afterLook) return { ok: false, needConfirm: true };
+      }
+      const all = ctx.presentation.slides;
+      all.load('items/id');
+      await ctx.sync();
+      const idx = all.items.findIndex((x) => x.id === id);
+      ctx.presentation.insertSlidesFromBase64(undo.snapshot, { targetSlideId: id, formatting: 'UseDestinationTheme' });
+      await ctx.sync();
+      all.load('items/id');
+      await ctx.sync();
+      const fresh = all.items[idx + 1];
+      if (!fresh || fresh.id === id || all.items.length < 2) return { ok: false, error: tr('没能恢复这一页，原页保持不变') };
+      slide.delete();
+      await ctx.sync();
+      try { ctx.presentation.setSelectedSlides([fresh.id]); await ctx.sync(); } catch {}
+      return { ok: true, oldId: id, newId: fresh.id };
+    });
+    if (r.ok) {
+      state.slideRedirect.set(r.oldId, r.newId);
+      let moved = 0;
+      for (const t of state.targets) if (t.slideId === r.oldId) { t.slideId = r.newId; moved++; }
+      if (moved) { saveTargets(); renderTargetBar(); }
+    }
+    return r;
+  }
+
   // 撤销：把记录下来的旧值写回。层次（zOrder）没有绝对设置的接口，就一步一步挪回原来的位置。
-  async function undoFormat(undo) {
+  async function undoFormat(undo, force) {
+    if (undo.snapshot) return await restoreSlide(undo, force);
     return await pptRun(async (ctx) => {
-      const slide = ctx.presentation.slides.getItemOrNullObject(undo.slideId);
+      const slide = ctx.presentation.slides.getItemOrNullObject(resolveSlide(undo.slideId));
       slide.load('id');
       await ctx.sync();
       if (slide.isNullObject) return { ok: false, error: tr('这一页已经不在了，无法撤销') };
@@ -1562,8 +1789,10 @@
   function swatch(color) {
     return color ? `<span class="sw" style="background:${escapeHtml(color)}"></span>` : '';
   }
+  const fromText = (f) => (f.p1 === f.p2 ? tr`形状 ${f.id} 的第 ${f.p1 + 1} 段（原样搬入）` : tr`形状 ${f.id} 的第 ${f.p1 + 1}–${f.p2 + 1} 段（原样搬入）`);
   function fmtGroupTitle(g, snap) {
     if (g.label === 'background') return tr('幻灯片背景');
+    if (g.kind === 'add') return tr`新增${tr(FMT_VALUES[g.addType] || '形状')}`;
     const s = snap.shapes.find((x) => String(x.id) === String(g.id));
     const kind = tr(FMT_KIND[g.label] || '形状');
     const name = s && s.text && s.text.preview ? `「${s.text.preview.length > 18 ? s.text.preview.slice(0, 18) + '…' : s.text.preview}」` : s && s.name ? `「${s.name}」` : '';
@@ -1573,6 +1802,7 @@
       range = ' · ' + (FMT_REGION[r] ? tr(FMT_REGION[r]) : tr`单元格 ${r.toUpperCase()}`);
       if (g.sides) range += ` · ${tr(FMT_SIDES[g.sides] || '全部边框')}`;
     }
+    if (g.kind === 'paras') range = ' · ' + (g.paras.p1 === g.paras.p2 ? tr`第 ${g.paras.p1 + 1} 段` : tr`第 ${g.paras.p1 + 1}–${g.paras.p2 + 1} 段`);
     return `${kind}${name}${range}`;
   }
   // 撤销后无法完全还原的修改（渐变 / 图片填充、非纯色背景），在预览里提前说明
@@ -1602,11 +1832,16 @@
     return [...new Set(notes)];
   }
 
-  function attachFormatCard(bubble, snap, changes, problems, via) {
+  // extra: { beforeImage（发送时的截图）, instruction（用户的要求，自查那一轮要用） }
+  function attachFormatCard(bubble, snap, changes, problems, via, extra = {}) {
     const card = document.createElement('div');
     card.className = 'card fmt-card';
     const groups = F.planRows(changes, snap);
     const nRows = groups.reduce((n, g) => n + g.rows.length, 0);
+    const lossy = lossyNotes(changes, snap);
+    // 整页备份撤销：结构性的改动、要自查的大改、以及属性撤销还原不全的情况（表格样式的文字、渐变填充）
+    const useSnapshot = !!snap.canStructure && (isStructural(changes) || isBigLayout(changes) || lossy.length > 0);
+    const check = !!snap.canStructure && isBigLayout(changes);
     card.innerHTML =
       `<div class="card-head"><span class="card-title">${tr('格式预览')}<span class="card-where">${escapeHtml(tr`第 ${snap.slideNo} 页 · ${groups.length} 处`)}</span></span></div>` +
       `<div class="card-body fmt-body"></div>` +
@@ -1626,10 +1861,18 @@
         `<table class="fmt-rows">` + g.rows.map((r) =>
           `<tr><th>${escapeHtml(tr(FMT_LABELS[r.key] || r.key))}</th>` +
           `<td class="fmt-old">${swatch(r.oldColor)}${escapeHtml(fmtValue(r.old))}</td><td class="fmt-arrow">→</td>` +
-          `<td class="fmt-new">${swatch(r.newColor)}${escapeHtml(fmtValue(r.value))}</td></tr>`).join('') + `</table>`;
+          `<td class="fmt-new">${swatch(r.newColor)}${escapeHtml(r.from ? fromText(r.from) : fmtValue(r.value))}</td></tr>`).join('') + `</table>`;
       body.appendChild(box);
     }
-    const notes = [...problems.map((p) => (p.id && p.id !== '?' ? `${p.id}：` : '') + uiText(p.text)), ...lossyNotes(changes, snap)];
+    // 修改很多时先收起，看改前 / 改后的对比图更直观
+    if (nRows > 12) {
+      const det = document.createElement('details');
+      det.className = 'fmt-all';
+      det.innerHTML = `<summary>${escapeHtml(tr`查看全部 ${nRows} 项修改`)}</summary>`;
+      while (body.firstChild) det.appendChild(body.firstChild);
+      body.appendChild(det);
+    }
+    const notes = [...problems.map((p) => (p.id && p.id !== '?' ? `${p.id}：` : '') + uiText(p.text)), ...(useSnapshot ? [] : lossy)];
     if (notes.length) {
       const w = document.createElement('div');
       w.className = 'warnbox';
@@ -1640,37 +1883,81 @@
     const undoBtn = card.querySelector('.undo');
     const statusEl = card.querySelector('.card-status');
     if (!nRows) { applyBtn.disabled = true; statusEl.textContent = tr('方案里没有可以应用的修改'); }
-    let done = false, undoRec = null, forceNext = false;
+    let done = false, undoRec = null, forceNext = false, forceUndo = false, busy = false;
+    const undoHint = () => (undoRec && undoRec.snapshot ? tr('不满意可点「↩ 撤销」，整页恢复到应用前。') : tr('不满意可点「↩ 撤销」。'));
+    const showShots = (after) => {
+      card.querySelector('.fmt-shots')?.remove();
+      if (!extra.beforeImage || !after) return;
+      const shots = document.createElement('div');
+      shots.className = 'fmt-shots';
+      shots.innerHTML = `<figure><img alt="" src="data:image/png;base64,${extra.beforeImage}"><figcaption>${escapeHtml(tr('改前'))}</figcaption></figure>` +
+        `<figure><img alt="" src="data:image/png;base64,${after}"><figcaption>${escapeHtml(tr('改后'))}</figcaption></figure>`;
+      card.querySelector('.card-actions').before(shots);
+    };
     applyBtn.addEventListener('click', async () => {
-      if (state.streaming || done || !nRows) return;
+      if (state.streaming || busy || done || !nRows) return;
+      busy = true;
       applyBtn.disabled = true;
       statusEl.textContent = tr('应用中…');
-      const r = await applyFormat(snap, changes, forceNext);
-      if (r.needConfirm) {
-        forceNext = true;
-        applyBtn.disabled = false;
-        statusEl.textContent = tr('⚠️ 这些形状在发送后被手动改过。确认按方案覆盖请再点一次「✅ 应用」');
-        return;
-      }
-      forceNext = false;
-      if (!r.ok) { statusEl.textContent = '⚠️ ' + (uiText(r.error) || tr('应用失败')); applyBtn.disabled = false; return; }
-      done = true;
-      undoRec = r.undo;
-      undoBtn.classList.remove('hidden');
-      statusEl.textContent = tr`✅ 已应用 ${nRows} 项格式修改；不满意可点「↩ 撤销」。`;
+      try {
+        const r = await applyFormat(snap, changes, forceNext, { snapshot: useSnapshot });
+        if (r.needConfirm) {
+          forceNext = true;
+          applyBtn.disabled = false;
+          statusEl.textContent = tr('⚠️ 这些形状在发送后被手动改过。确认按方案覆盖请再点一次「✅ 应用」');
+          return;
+        }
+        forceNext = false;
+        if (!r.ok) { statusEl.textContent = '⚠️ ' + (uiText(r.error) || tr('应用失败')); applyBtn.disabled = false; return; }
+        done = true;
+        undoRec = r.undo;
+        undoBtn.classList.remove('hidden');
+        statusEl.textContent = tr`✅ 已应用 ${nRows} 项格式修改；` + undoHint();
+        if (!check) { if (useSnapshot) showShots(undoRec.afterLook); return; }
+        // 大改：截图自查一轮，有问题就直接修（撤销仍是整页换回应用前）
+        statusEl.textContent = tr`✅ 已应用 ${nRows} 项格式修改 · 正在检查排版效果…`;
+        undoBtn.disabled = true;
+        const c = await selfCheckFormat(snap, changes, r.added, extra.instruction || '');
+        undoBtn.disabled = false;
+        const after = await captureSlide(snap.slideId);
+        if (after) undoRec.afterLook = after;
+        showShots(after);
+        if (c.note) {
+          const n = document.createElement('div');
+          n.className = 'fmt-check';
+          n.innerHTML = `🔍 ${escapeHtml(tr('自查'))}：${escapeHtml(c.note.length > 400 ? c.note.slice(0, 400) + '…' : c.note)}`;
+          card.querySelector('.card-actions').before(n);
+        }
+        statusEl.textContent = !c.ok ? tr`✅ 已应用 ${nRows} 项格式修改（自查没能完成：${uiText(c.error) || tr('请求失败')}）；` + undoHint()
+          : c.fixed ? tr`✅ 已应用 ${nRows} 项格式修改，自查后又修正了 ${c.fixed} 处；` + undoHint()
+          : c.unapplied ? tr`✅ 已应用 ${nRows} 项格式修改；自查发现了问题，但修正方案没能应用（见下方说明）。` + undoHint()
+          : c.passed ? tr`✅ 已应用 ${nRows} 项格式修改，自查没有发现问题；` + undoHint()
+          : tr`✅ 已应用 ${nRows} 项格式修改；自查给了建议（见下方说明）。` + undoHint();
+      } finally { busy = false; }
     });
     undoBtn.addEventListener('click', async () => {
-      if (!undoRec || state.streaming) return;
+      if (!undoRec || state.streaming || busy) return;
+      busy = true;
       undoBtn.disabled = true;
       statusEl.textContent = tr('撤销中…');
-      const r = await undoFormat(undoRec);
-      if (!r.ok) { statusEl.textContent = '⚠️ ' + (uiText(r.error) || tr('撤销失败')); undoBtn.disabled = false; return; }
-      undoRec = null;
-      done = false;
-      undoBtn.classList.add('hidden');
-      undoBtn.disabled = false;
-      applyBtn.disabled = false;
-      statusEl.textContent = tr('↩ 已撤销，这些形状恢复为应用前的格式。');
+      try {
+        const r = await undoFormat(undoRec, forceUndo);
+        if (r.needConfirm) {
+          forceUndo = true;
+          undoBtn.disabled = false;
+          statusEl.textContent = tr('⚠️ 这一页在应用后又改过；撤销会把整页恢复到应用前，这些改动也会一起撤掉。确认请再点一次「↩ 撤销」');
+          return;
+        }
+        forceUndo = false;
+        if (!r.ok) { statusEl.textContent = '⚠️ ' + (uiText(r.error) || tr('撤销失败')); undoBtn.disabled = false; return; }
+        undoRec = null;
+        done = false;
+        undoBtn.classList.add('hidden');
+        undoBtn.disabled = false;
+        applyBtn.disabled = false;
+        card.querySelector('.fmt-shots')?.remove();
+        statusEl.textContent = r.newId ? tr('↩ 已撤销，这一页恢复到应用前的样子。') : tr('↩ 已撤销，这些形状恢复为应用前的格式。');
+      } finally { busy = false; }
     });
     card.querySelector('.copy').addEventListener('click', (e) => copyText(JSON.stringify({ changes: changes.map(({ id, kind, range, set }) => ({ id, kind, range, set })) }, null, 2), e.target));
     card.querySelector('.retry').addEventListener('click', () => {
@@ -1685,11 +1972,90 @@
     }
   }
 
+  // 自查：大改应用之后截图，连同新的格式清单和几何检查结果交给模型；有问题就给修正方案并直接应用
+  // （撤销靠第一轮的整页备份）。返回 { ok, fixed, note, error }
+  async function selfCheckFormat(snap, changes, added, instruction) {
+    const ids = new Set(snap.shapes.filter((x) => x.inScope).map((x) => String(x.id)));
+    for (const ch of changes) if (ch.kind === 'delete') ids.delete(String(ch.id));
+    for (const v of Object.values(added || {})) ids.add(String(v));
+    const fr = await readFormatSnapshot({ slideId: resolveSlide(snap.slideId), ids: [...ids] });
+    if (!fr.ok) return { ok: false, error: fr.error };
+    const image = await captureSlide(fr.snap.slideId);
+    const cfg = state.cfg;
+    const payload = {
+      backend: cfg.backend, model: cfg.backend === 'codex' ? cfg.model_codex : cfg.model_claude, effort: cfg.effort,
+      mode: 'format', uiLanguage: I18N.language,
+      doc: { docTitle: docTitle(), slideCount: fr.snap.slideCount, slideNo: fr.snap.slideNo, phase: 'check', format: F.describeSnapshot(fr.snap), issues: F.layoutIssues(fr.snap) },
+      attachments: image ? [{ name: `slide-${fr.snap.slideNo}-after.png`, mime: 'image/png', b64: image }] : [],
+      cliSession: {}, newAttIdx: image ? [0] : [],
+      messages: [{ role: 'user', content: instruction }],
+    };
+    const r = await quietChat(payload);
+    if (!r.ok) return { ok: false, error: r.error };
+    const fmt = F.parseFormatReply(r.text);
+    const note = F.stripFormatFence(r.text, fmt).trim();
+    // 没给方案：说"通过"就是没问题，否则当作建议（如实显示，不说"没有发现问题"）
+    if (!fmt.ok) return { ok: true, fixed: 0, note, passed: /通过|没有(发现)?(明显的)?问题|\bpass(ed)?\b|no (issues|problems)|looks good/i.test(note) || !note };
+    const { changes: fixes } = F.normalizeChanges(fmt.changes, fr.snap);
+    if (!fixes.length) return { ok: true, fixed: 0, note, unapplied: true };
+    const a = await applyFormat(fr.snap, fixes, true, { noSnapshot: true });
+    if (!a.ok) return { ok: true, fixed: 0, note, unapplied: true };
+    return { ok: true, fixed: fixes.length, note };
+  }
+
+  // 不进对话的请求（自查用）：同样走 /api/chat，只收文字；顶部的「停止」照样能停
+  async function quietChat(payload) {
+    const ac = new AbortController();
+    const myReq = ++reqCounter;
+    state.curReq = myReq;
+    state.aborter = ac;
+    state.stopRequested = false;
+    setStreaming(true);
+    $('#request-status').textContent = tr('正在检查排版效果…');
+    let text = '', failed = null, sawDone = false;
+    const handle = (evt) => {
+      if (evt.type === 'delta') text += evt.text;
+      else if (evt.type === 'done') { sawDone = true; if (evt.ok === false) failed = failed || tr('请求失败'); }
+      else if (evt.type === 'error') failed = uiText(evt.error) || tr('请求失败');
+    };
+    const timeout = (ms, tag) => new Promise((_, rej) => setTimeout(() => rej(new Error(tag)), ms));
+    try {
+      const resp = await Promise.race([
+        fetch(API + '/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: ac.signal }),
+        timeout(20000, tr('连不上本机服务')),
+      ]);
+      if (!resp.ok) throw new Error(tr`服务返回 HTTP ${resp.status}`);
+      if (resp.body && resp.body.getReader) {
+        const reader = resp.body.getReader();
+        state.reader = reader;
+        const dec = new TextDecoder();
+        let buf = '';
+        for (;;) {
+          const step = await Promise.race([reader.read(), timeout(45000, tr('连接停滞'))]);
+          if (step.done) { buf += dec.decode(); break; }
+          buf += dec.decode(step.value, { stream: true });
+          let i;
+          while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i); buf = buf.slice(i + 1); if (line.trim()) handle(JSON.parse(line)); }
+        }
+        if (buf.trim()) handle(JSON.parse(buf));
+      } else {
+        for (const line of (await resp.text()).split('\n')) if (line.trim()) { try { handle(JSON.parse(line)); } catch {} }
+      }
+      if (!sawDone && !failed) failed = tr('连接在完成前中断');
+    } catch (e) {
+      failed = state.stopRequested || (e && e.name === 'AbortError') ? tr('已停止') : String((e && e.message) || e);
+    } finally {
+      if (state.curReq === myReq) { state.aborter = null; state.reader = null; setStreaming(false); }
+    }
+    if (state.stopRequested) failed = tr('已停止');
+    return failed ? { ok: false, error: failed } : { ok: true, text };
+  }
+
   // 截取一页的渲染图（版式模式自动附上，让模型看到实际效果）
   async function captureSlide(slideId) {
     if (!state.api.v18) return null;
     const r = await pptRun(async (ctx) => {
-      const img = ctx.presentation.slides.getItem(slideId).getImageAsBase64({ width: SNAPSHOT_WIDTH });
+      const img = ctx.presentation.slides.getItem(resolveSlide(slideId)).getImageAsBase64({ width: SNAPSHOT_WIDTH });
       await ctx.sync();
       return { ok: true, b64: img.value };
     });
@@ -2461,7 +2827,7 @@
         const note = F.stripFormatFence(raw, fmt);
         if (note) html += renderMarkdown(note);
         aBubble.innerHTML = html;
-        attachFormatCard(aBubble, fmtSnap, changes, problems, via);
+        attachFormatCard(aBubble, fmtSnap, changes, problems, via, { beforeImage: fmtImage, instruction: text });
       } else if (reps && reps.length) {
         const note = stripFences(raw, reps);
         if (note) html += renderMarkdown(note);
@@ -2553,7 +2919,7 @@
     state.streaming = v;
     els.send.classList.toggle('hidden', v);
     els.stop.classList.toggle('hidden', !v);
-    for (const id of ['sel-language', 'sel-backend', 'sel-model', 'sel-effort', 'btn-reload', 'mode-edit', 'mode-ask', 'btn-capture', 'btn-clear', 'btn-new', 'btn-hist', 'att-local', 'att-slide', 'btn-models']) {
+    for (const id of ['sel-language', 'sel-backend', 'sel-model', 'sel-effort', 'btn-reload', 'mode-edit', 'mode-format', 'mode-ask', 'btn-capture', 'btn-clear', 'btn-new', 'btn-hist', 'att-local', 'att-slide', 'btn-models']) {
       const el = $('#' + id); if (el) el.disabled = v || (id === 'att-slide' && !state.api.v18 && state.pptReady);
     }
     els.messages.setAttribute('aria-busy', String(v));

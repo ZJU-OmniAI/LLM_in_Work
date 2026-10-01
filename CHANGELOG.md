@@ -1,5 +1,11 @@
 # 更新记录 / Changelog
 
+## 2026-10-02 — LLM_in_PowerPoint 0.3.0
+
+- **PowerPoint: whole-slide redesign.** “Polish this slide” and “lay it out again” now re-lay out the slide instead of touching up a few properties: the model can add cards, accent bars and lines, move bullets unchanged into cards, delete stray lines and emptied text boxes, format single paragraphs, set autofit and margins, and change table styles. Big changes are checked once from a new image of the slide and fixed; the card shows before and after. Undo puts back a backup of the whole slide, speaker notes included. Chinese text in new shapes no longer falls back to SimSun.
+
+中文：PowerPoint 的「调整版式」可以整页重排了：能加卡片、色条和线条，把要点原样搬进卡片（不改一个字），删掉多余的线，按段落设格式，调自动调整和边距，换表格样式。大改应用后自动截图自查一轮并修正，卡片上显示改前和改后；撤销时整页原样换回（备注也在）。新建文字的中文不再变成宋体。
+
 ## 2026-10-01 — LLM_in_PowerPoint 0.2.0
 
 - **New in PowerPoint: Format mode.** Change how a slide looks, not only its words. Select shapes (or nothing for the whole slide) and ask, for example, “make this black border lighter and thinner”. The model sees an image of the slide and a formatting list of its shapes and returns a plan: position and size, rotation, fill, border, font, alignment, stacking order, table shading/borders/header, and the background colour. The plan is previewed as old → new with colour swatches; out-of-range values and shapes outside the selection are rejected. **↩ Undo** puts the old formatting back, including mixed font sizes and colours character by character; text colour drawn by a table style cannot be read and is the one exception (the card warns before applying).

@@ -17,6 +17,13 @@
 // black, non-bold font. A border that was set reads transparency 1 and dashStyle null unless a dash was written.
 // fill.clear() on a cell returns it to the style; re-applying styleSettings.style drops every cell's direct fill and
 // borders but keeps fonts; a font property cannot be unset (null throws InvalidArgument).
+// Whole-slide redesign: shapes.addGeometricShape / addLine / addTextBox create shapes the way 16.109 does (a new text
+// box's Chinese text defaults to 宋体; a geometric shape's text is white and centred; a line created with height 0
+// comes out 72 pt high until its height is set again), shape.delete(), RoundRectangle adjustments, text-frame
+// autosize / margins / word wrap. slide.exportAsBase64() and presentation.insertSlidesFromBase64() copy a slide
+// exactly (shape IDs kept, new slide ID), and getImageAsBase64() is a hash of everything visible, so "looks the
+// same" checks work.
+import { createHash } from 'node:crypto';
 
 const nullObject = () => ({ isNullObject: true, load() { return this; } });
 
@@ -69,6 +76,9 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
         id: sh.id, name: sh.name || `Shape ${sh.id}`, type: sh.type || 'TextBox', left: sh.left ?? 0, top: sh.top ?? 0,
         width: sh.width ?? 300, height: sh.height ?? 60, rotation: sh.rotation ?? 0,
         fill: FILL(sh.fill), line: LINE(sh.line), valign: sh.valign || 'Top',
+        tf: { autoSizeSetting: sh.autoSize || (sh.type === 'Placeholder' ? 'AutoSizeTextToFitShape' : sh.type === 'TextBox' || !sh.type ? 'AutoSizeShapeToFitText' : 'AutoSizeNone'),
+          wordWrap: true, leftMargin: 7.2, rightMargin: 7.2, topMargin: 3.6, bottomMargin: 3.6 },
+        geom: sh.geom || null, adj: sh.geom === 'RoundRectangle' ? [0.16667] : [],
         cellFmt: null,
         ph: sh.ph || null,
         chars: ['Table', 'Group', 'Image'].includes(sh.type) ? null : makeChars(sh),
@@ -96,6 +106,7 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
     return walk(slide.shapes);
   };
   const slideOf = (shape) => deck.slides.find((sl) => findShape(sl, shape.id) === shape);
+  let slideSeq = 0;
 
   // A range's font: reads a value only when every character agrees (otherwise null), writes to every character.
   function fontOf(chars, shape) {
@@ -146,7 +157,7 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
         const s = String(value);
         const len = length == null ? shape.chars.length - start : length;
         const src = len > 0 ? shape.chars[start] : (shape.chars[start - 1] && shape.chars[start - 1].ch !== '\r' ? shape.chars[start - 1] : shape.chars[start] || shape.chars[start - 1]);
-        const base = src || { ...FONT_DEFAULT, level: 0, align: 'Left' };
+        const base = src || shape.textDefault || { ...FONT_DEFAULT, level: 0, align: 'Left' };
         const fresh = [...s].map((ch) => ({ ...base, ch }));
         shape.chars.splice(start, len, ...fresh);
         log.push({ op: 'text', shape: shape.id, start, del: len, ins: s });
@@ -164,7 +175,14 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
         return {
           get horizontalAlignment() { const cs = paras(); return cs.length && cs.every((c) => c.align === cs[0].align) ? alignOut(cs[0].align) : null; },
           set horizontalAlignment(v) { for (const c of paras()) c.align = alignIn(v); log.push({ op: 'align', shape: shape.id, v }); },
-          bulletFormat: { visible: true, load() { return this; } },
+          get bulletFormat() {
+            return {
+              get visible() { const cs = paras(); return cs.length ? cs[0].bullet !== false : null; },
+              set visible(v) { for (const c of paras()) c.bullet = !!v; log.push({ op: 'bullet', shape: shape.id, v }); },
+              load() { return this; },
+            };
+          },
+          get indentLevel() { const cs = paras(); return cs.length ? cs[0].level || 0 : 0; },
           load() { return this; },
         };
       },
@@ -179,7 +197,7 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
     };
   }
   function textFrame(shape) {
-    return {
+    const o = {
       isNullObject: false,
       get hasText() { return textOf(shape).length > 0; },
       get textRange() { return textRange(shape, 0, null); },
@@ -188,6 +206,10 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
       load() { return this; },
       getParentShape() { return shapeApi(shape); },
     };
+    for (const k of ['autoSizeSetting', 'wordWrap', 'leftMargin', 'rightMargin', 'topMargin', 'bottomMargin']) {
+      Object.defineProperty(o, k, { get: () => shape.tf[k], set: (v) => { shape.tf[k] = v; log.push({ op: 'textFrame', shape: shape.id, k, v }); }, enumerable: true });
+    }
+    return o;
   }
   function table(shape) {
     const fmtAll = () => { if (!shape.cellFmt) shape.cellFmt = cellFormats(shape); return shape.cellFmt; };
@@ -264,7 +286,17 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
   function shapeApi(shape) {
     return {
       isNullObject: false,
-      get id() { return shape.id; }, get name() { return shape.name; }, get type() { return shape.type; },
+      get id() { return shape.id; }, get name() { return shape.name; }, set name(v) { shape.name = v; }, get type() { return shape.type; },
+      delete() { const list = siblings(shape); const i = list.indexOf(shape); if (i >= 0) list.splice(i, 1); log.push({ op: 'deleteShape', shape: shape.id }); },
+      get adjustments() {
+        needs(10, 'adjustments');
+        return {
+          get count() { return shape.adj.length; },
+          get(i) { if (i >= shape.adj.length) throw invalid(); return { value: shape.adj[i] }; },
+          set(i, v) { if (i >= shape.adj.length) throw invalid(); shape.adj[i] = v; log.push({ op: 'adjust', shape: shape.id, i, v }); },
+          load() { return this; },
+        };
+      },
       get left() { return shape.left; }, get top() { return shape.top; },
       set left(v) { shape.left = v; log.push({ op: 'left', shape: shape.id, v }); }, set top(v) { shape.top = v; log.push({ op: 'top', shape: shape.id, v }); },
       get width() { return shape.width; }, set width(v) { shape.width = v; log.push({ op: 'width', shape: shape.id, v }); },
@@ -301,9 +333,37 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
     };
   }
   function collection(list, slide) {
+    const nextId = () => {
+      let max = 0;
+      const walk = (l) => { for (const x of l) { max = Math.max(max, Number(x.id) || 0); if (x.children) walk(x.children); } };
+      walk(slide.shapes);
+      return String(max + 1);
+    };
+    const base = (type, o, extra) => ({
+      id: nextId(), name: `${extra.label} ${nextId() - 1}`, type, left: o.left ?? 0, top: o.top ?? 0, width: o.width ?? 100, height: o.height ?? 100, rotation: 0,
+      fill: FILL(null), line: LINE(null), valign: 'Top', cellFmt: null, ph: null, chars: [], values: null, tableStyle: null, merged: false, children: null, geom: null, adj: [],
+      tf: { autoSizeSetting: 'AutoSizeNone', wordWrap: true, leftMargin: 7.2, rightMargin: 7.2, topMargin: 3.6, bottomMargin: 3.6 },
+      ...extra.props,
+    });
+    const push = (sh) => { slide.shapes.push(sh); log.push({ op: 'addShape', shape: sh.id, type: sh.type, geom: sh.geom }); return shapeApi(sh); };
     return {
       get items() { return list.map(shapeApi); },
       load() { return this; },
+      addGeometricShape(geom, o = {}) {
+        return push(base('GeometricShape', o, { label: geom, props: {
+          geom, adj: geom === 'RoundRectangle' ? [0.16667] : [], fill: FILL('#4472C4'), line: LINE({ color: '#2F528F', weight: 1 }), valign: 'Middle',
+          textDefault: { ...FONT_DEFAULT, color: '#FFFFFF', level: 0, align: 'Center' } } }));
+      },
+      addLine(kind, o = {}) {
+        // 16.109: a 0 width or height given at creation comes out as 72 pt until set again
+        return push(base('Line', { ...o, width: o.width === 0 ? 72 : o.width, height: o.height === 0 ? 72 : o.height }, { label: 'Straight Connector', props: { chars: null, line: LINE({ color: '#4472C4', weight: 0.75 }) } }));
+      },
+      addTextBox(text, o = {}) {
+        const def = { ...FONT_DEFAULT, name: '宋体', level: 0, align: 'Left' };
+        return push(base('TextBox', o, { label: 'TextBox', props: {
+          textDefault: def, chars: [...String(text)].map((ch) => ({ ...def, ch })),
+          tf: { autoSizeSetting: 'AutoSizeShapeToFitText', wordWrap: true, leftMargin: 7.2, rightMargin: 7.2, topMargin: 3.6, bottomMargin: 3.6 } } }));
+      },
       getItem(id) { const s = slide ? findShape(slide, id) : list.find((x) => x.id === id); if (!s) throw Object.assign(new Error('ItemNotFound'), { code: 'ItemNotFound' }); return shapeApi(s); },
       getItemOrNullObject(id) { const s = slide ? findShape(slide, id) : list.find((x) => x.id === id); return s ? shapeApi(s) : nullObject(); },
     };
@@ -315,7 +375,10 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
       load() { return this; },
       get shapes() { return collection(slide.shapes, slide); },
       setSelectedShapes(ids) { deck.selection = { slides: [slide.id], shapes: [...ids], text: null }; },
-      getImageAsBase64() { return { value: Buffer.from(`PNG:${slide.id}`).toString('base64') }; },
+      // a hash of everything on the slide (not its ID): equal values = the slide looks the same
+      getImageAsBase64() { const { id, ...look } = slide; return { value: createHash('sha1').update(JSON.stringify(look)).digest('base64') }; },
+      exportAsBase64() { needs(8, 'exportAsBase64'); return { value: Buffer.from(JSON.stringify(slide)).toString('base64') }; },
+      delete() { const i = deck.slides.indexOf(slide); if (i >= 0) deck.slides.splice(i, 1); log.push({ op: 'deleteSlide', slide: slide.id }); },
       get background() {
         needs(10, 'background');
         const bg = slide.background;
@@ -361,6 +424,13 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
       return nullObject();
     },
     setSelectedSlides(ids) { deck.selection = { slides: [...ids], shapes: [], text: null }; },
+    insertSlidesFromBase64(b64, opts = {}) {
+      const copy = JSON.parse(Buffer.from(b64, 'base64').toString());
+      copy.id = `${300 + (++slideSeq)}#${1000 + slideSeq}`;
+      const at = opts.targetSlideId ? deck.slides.findIndex((s) => s.id === opts.targetSlideId) + 1 : deck.slides.length;
+      deck.slides.splice(at, 0, copy);
+      log.push({ op: 'insertSlide', slide: copy.id, after: opts.targetSlideId });
+    },
   };
   const api = {
     run: async (fn) => fn({ presentation, sync: async () => {} }),
@@ -373,6 +443,7 @@ export function createFakePowerPoint(deckSpec, { apiVersion = '1.10' } = {}) {
       deck.selection = { slides: [slide], shapes, text: text ? { shape: findShape(sl, text.shape), start: text.start, length: text.length } : null };
     },
     selectSlides(ids) { deck.selection = { slides: ids, shapes: [], text: null }; },
+    look(index) { return slideApi(deck.slides[index]).getImageAsBase64().value; },
   };
   return api;
 }

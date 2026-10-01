@@ -11,4 +11,5 @@ Files without a suffix show the English interface; `.zh-CN` files show the Chine
 | `ppt-diff` | A slide's title and bullets added as two targets, each with a diff / 一页的标题和要点作为两个目标，各有一张差异卡片 |
 | `ppt-applied` | After **Apply all**: bold figure, second-level bullet and red bullet keep their formatting; cards offer **Undo** / 「应用全部」之后：加粗数字、二级要点和红色要点都保留格式，卡片上有「撤销」 |
 | `ppt-table` | Table preview and result: one changed cell and a new Total row / 表格预览与结果：改一个单元格、新增合计行 |
+| `ppt-redesign` | Format mode, whole-slide redesign: the slide before and after (rendered by PowerPoint 16.109 through `getImageAsBase64`; plan by Claude Code, Sonnet 5.5, medium effort, on 2026-10-02) / 调整版式整页重排的改前与改后（PowerPoint 16.109 渲染，方案由 Claude Code Sonnet 5.5、medium 于 2026-10-02 生成） |
 | `ppt-ask` | Presentation Q&A writing speaker notes, with the slide image attached / 演示文稿问答：附上当前页截图后写讲稿 |

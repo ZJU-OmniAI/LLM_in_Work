@@ -275,20 +275,24 @@ test('a hidden line reads as none; undoing a new border hides it again', async (
 });
 
 // A table drawn by its table style (the usual case): its colours cannot be read, borders cannot be "unset", and
-// re-applying the style is the only way back. Undo must leave no direct borders or fills behind.
-test('a table with a table style: style-drawn values are marked, borders are undone by re-applying the style', async (t) => {
+// re-applying the style is the only way back. Border-only plans use that; plans that also change style-drawn text
+// colour are undone by restoring the whole slide.
+const styledDeck = () => {
   const deck = formatDeck();
   Object.assign(deck.slides[1].shapes[3], { tableStyle: 'MediumStyle2Accent1', border: undefined });
+  return deck;
+};
+test('a table with a table style: style-drawn values are marked, borders are undone by re-applying the style', async (t) => {
   const reply = plan([
     { id: '7', cells: 'all', border: { sides: 'all', color: '#BFBFBF', weight: 0.5 } },
-    { id: '7', cells: 'header', fill: '#F2F2F2', font: { color: '#262626' } },
+    { id: '7', cells: 'header', fill: '#F2F2F2' },
   ], 'Cleaner table.');
-  const p = await open(t, { deck, events: answer(reply) });
+  const p = await open(t, { deck: styledDeck(), events: answer(reply) });
   const tbl = p.pp.shape('257#0', '7');
   tbl.cellFmt[2][1].fill = { type: 'Solid', color: '#FFF2CC', transparency: 0 }; // one cell the user had highlighted
   p.pp.select({ slide: '257#0', shapes: ['7'] });
   p.lp.setMode('format');
-  await p.lp.sendInstruction('表格清爽一点，表头浅灰底深色字');
+  await p.lp.sendInstruction('表格清爽一点，表头浅灰底');
   await tick(20);
   const fmt = p.calls[0].doc.format;
   assert.match(fmt, /"tableStyle":"MediumStyle2Accent1"/);
@@ -296,18 +300,235 @@ test('a table with a table style: style-drawn values are marked, borders are und
   assert.match(fmt, /"borders":\{"outer":"table-style","inner":"table-style"\}/);
   assert.match(fmt, /说明：tableStyle 是表格套用的样式/);
   const card = p.d.querySelector('.fmt-card');
-  const rows = [...card.querySelectorAll('.fmt-rows tr')].map(rowText);
-  assert.deepEqual(rows, ['边框颜色 表格样式 → #BFBFBF', '边框粗细 — → 0.5 pt', '单元格底色 表格样式 → #F2F2F2', '文字颜色 表格样式 → #262626']);
-  assert.match(card.querySelector('.warnbox').textContent, /文字颜色和加粗来自表格样式/);
+  assert.deepEqual([...card.querySelectorAll('.fmt-rows tr')].map(rowText), ['边框颜色 表格样式 → #BFBFBF', '边框粗细 — → 0.5 pt', '单元格底色 表格样式 → #F2F2F2']);
   card.querySelector('.apply').click();
   await tick(10);
   assert.ok(tbl.cellFmt.flat().every((c) => c.borders.left.color === '#BFBFBF' && c.borders.left.weight === 0.5));
-  assert.equal(tbl.cellFmt[0][0].fill.color, '#F2F2F2');
   card.querySelector('.undo').click();
   await tick(20);
+  assert.equal(p.pp.deck.slides[1].id, '257#0', 'property undo keeps the slide');
   assert.ok(p.pp.log.some((e) => e.op === 'tableStyle' && e.v === 'MediumStyle2Accent1'), 'the table style is applied again');
   assert.ok(tbl.cellFmt.flat().every((c) => Object.values(c.borders).every((b) => b.weight == null)), 'no direct borders are left');
   assert.deepEqual(tbl.cellFmt[0].map((c) => c.fill.type), ['NoFill', 'NoFill'], 'the header is drawn by the style again');
   assert.deepEqual(plain(tbl.cellFmt[2][1].fill), { type: 'Solid', color: '#FFF2CC', transparency: 0 }, 'a fill set before is written back');
-  assert.equal(tbl.cellFmt[0][0].font.color, '#000000', 'text colour can only go back to what was read (the card warned)');
+});
+
+test('changing style-drawn table text is undone by restoring the whole slide', async (t) => {
+  const reply = plan([{ id: '7', cells: 'header', fill: '#F2F2F2', font: { color: '#262626', bold: true } }]);
+  const p = await open(t, { deck: styledDeck(), events: answer(reply) });
+  p.pp.select({ slide: '257#0', shapes: ['7'] });
+  p.lp.setMode('format');
+  const look = () => p.pp.look(1);
+  const before = look();
+  await p.lp.sendInstruction('表头浅灰底深色字');
+  await tick(20);
+  const card = p.d.querySelector('.fmt-card');
+  assert.equal(card.querySelector('.warnbox'), null, 'no warning: the whole slide can be put back');
+  card.querySelector('.apply').click();
+  await tick(10);
+  assert.equal(p.pp.shape('257#0', '7').cellFmt[0][0].font.color, '#262626');
+  assert.match(card.querySelector('.card-status').textContent, /整页恢复到应用前/);
+  card.querySelector('.undo').click();
+  await tick(20);
+  const slide = p.pp.deck.slides[1];
+  assert.notEqual(slide.id, '257#0', 'the slide was replaced by its backup');
+  assert.equal(look(), before, 'and looks exactly as before');
+  assert.equal(slide.shapes.find((x) => x.id === '7').cellFmt[0][0].font.color, '#000000');
+  assert.match(card.querySelector('.card-status').textContent, /这一页恢复到应用前的样子/);
+  card.querySelector('.apply').click(); // the card still finds its slide
+  await tick(10);
+  assert.equal(p.pp.deck.slides[1].shapes.find((x) => x.id === '7').cellFmt[0][0].font.color, '#262626');
+});
+
+// Whole-slide redesign: a text-heavy slide whose bullets become cards.
+const bulletDeck = () => ({
+  slides: [
+    { id: '256#0', shapes: [{ id: '2', type: 'Placeholder', ph: 'CenterTitle', text: 'Cover' }] },
+    { id: '257#0', shapes: [
+      { id: '2', name: 'Title 1', type: 'Placeholder', ph: 'Title', top: 20, left: 40, width: 880, height: 70, text: '研究内容', font: { size: 40 } },
+      { id: '3', name: 'Content Placeholder 2', type: 'Placeholder', ph: 'Body', top: 110, left: 40, width: 560, height: 400, font: { name: '微软雅黑', size: 24 }, paras: [
+        { runs: [['数据层：', { bold: true }], ['构建多模态数据集', {}]] },
+        { runs: [['模型层：', { bold: true }], ['训练统一模型', {}]] },
+        { runs: [['评测层：', { bold: true }], ['搭建评测基准', { color: '#C00000' }]] },
+      ] },
+      { id: '4', name: 'Picture 3', type: 'Image', top: 150, left: 620, width: 320, height: 200 },
+      { id: '5', name: 'Straight Connector 4', type: 'Line', top: 100, left: 40, width: 880, height: 0, line: { color: '#000000', weight: 2 } },
+    ] },
+  ],
+});
+const cardsPlan = (extra = []) => plan([
+  { id: '2', x: 48, y: 28, w: 864, h: 60, font: { size: 36, bold: true, color: '#1F3864' } },
+  ...[0, 1, 2].map((i) => ({ add: 'roundRect', id: `new${i + 1}`, x: 48 + i * 296, y: 120, w: 272, h: 160, fill: '#F2F5FA', line: 'none', corner: 0.06,
+    from: { id: '3', para: String(i + 1) }, font: { size: 16, color: '#262626' }, align: 'left', valign: 'top', margin: 14, autoSize: 'shrink' })),
+  { id: '3', delete: true },
+  { id: '5', delete: true },
+  { id: '4', x: 48, y: 300, w: 320 },
+  ...extra,
+], 'Three cards.');
+
+test('bullets become cards: text moves with its formatting, the old box goes, a check runs, undo restores the slide', async (t) => {
+  const p = await open(t, { deck: bulletDeck(), events: (payload, n) => answer(n === 1 ? cardsPlan() : '通过：卡片对齐，文字都放得下。') });
+  p.pp.selectSlides(['257#0']);
+  p.lp.setMode('format');
+  const look = () => p.pp.look(1);
+  const before = look();
+  await p.lp.sendInstruction('重新排版');
+  await tick(20);
+  const fmt = p.calls[0].doc.format;
+  assert.match(fmt, /"id":"3".*"paras":\[\{"n":1,"chars":12,"size":24,"bold":"mixed","text":"数据层：构建多模态数据集"\}/, 'paragraphs are listed');
+  assert.match(fmt, /"id":"4","kind":"picture".*"ratio":1\.6/);
+  assert.match(fmt, /正文主要字体：微软雅黑/);
+  const card = p.d.querySelector('.fmt-card');
+  const heads = [...card.querySelectorAll('.fmt-shape-head')].map((h) => h.textContent);
+  assert.ok(heads.includes('新增圆角矩形') && heads.some((h) => /^正文/.test(h)), heads.join(' | '));
+  assert.ok([...card.querySelectorAll('.fmt-rows tr')].map(rowText).includes('文字 — → 形状 3 的第 2 段（原样搬入）'));
+  assert.ok(card.querySelector('details.fmt-all'), 'a long plan is folded');
+  assert.ok(!card.querySelector('.warnbox') || /保持原来的长宽比/.test(card.querySelector('.warnbox').textContent));
+  card.querySelector('.apply').click();
+  await tick(40);
+  const shapes = p.pp.deck.slides[1].shapes;
+  assert.deepEqual(shapes.map((x) => x.id).sort(), ['2', '4', '6', '7', '8'], 'body and line deleted, three cards added');
+  const cards = shapes.filter((x) => x.geom === 'RoundRectangle');
+  assert.deepEqual(cards.map((c) => c.chars.map((x) => x.ch).join('')), ['数据层：构建多模态数据集', '模型层：训练统一模型', '评测层：搭建评测基准']);
+  assert.deepEqual([...new Set(cards[0].chars.map((x) => x.name))], ['微软雅黑'], 'the font comes along (not the 宋体 default)');
+  assert.deepEqual(cards[0].chars.slice(0, 4).map((x) => x.bold), [true, true, true, true], 'the bold lead-in stays bold');
+  assert.equal(cards[0].chars[5].bold, false);
+  assert.equal(cards[2].chars.at(-1).color, '#262626', 'the plan sets the colour of the whole card');
+  assert.ok(cards[0].chars.slice(0, 4).every((x) => x.bold), 'bold that the plan does not set stays');
+  assert.equal(cards[0].chars[0].size, 16);
+  assert.deepEqual(cards[0].adj, [0.06]);
+  assert.equal(cards[0].tf.leftMargin, 14);
+  assert.equal(cards[0].tf.autoSizeSetting, 'AutoSizeTextToFitShape');
+  assert.equal(shapes.find((x) => x.id === '4').height, 200, 'the picture keeps its 1.6 ratio');
+  // the check round sees the result
+  assert.equal(p.calls.length, 2);
+  assert.equal(p.calls[1].doc.phase, 'check');
+  assert.deepEqual(p.calls[1].attachments.map((a) => a.name), ['slide-2-after.png']);
+  assert.match(p.calls[1].doc.format, /"id":"6","kind":"shape"/, 'the new cards are in scope for fixes');
+  assert.ok(Array.isArray(p.calls[1].doc.issues));
+  assert.match(card.querySelector('.card-status').textContent, /自查没有发现问题/);
+  assert.equal(card.querySelectorAll('.fmt-shots img').length, 2, 'before and after images');
+  assert.match(card.querySelector('.fmt-check').textContent, /通过/);
+  card.querySelector('.undo').click();
+  await tick(20);
+  assert.equal(look(), before, 'undo restores the slide exactly');
+  assert.deepEqual(p.pp.deck.slides[1].shapes.map((x) => x.id), ['2', '3', '4', '5']);
+});
+
+test('the check round can fix the result; a later manual change makes undo ask first', async (t) => {
+  const fix = plan([{ id: '6', h: 190 }], '卡片 1 的文字放不下，加高。');
+  const p = await open(t, { deck: bulletDeck(), events: (payload, n) => answer(n === 1 ? cardsPlan() : fix) });
+  p.pp.selectSlides(['257#0']);
+  p.lp.setMode('format');
+  await p.lp.sendInstruction('整页美化');
+  await tick(20);
+  const card = p.d.querySelector('.fmt-card');
+  card.querySelector('.apply').click();
+  await tick(40);
+  assert.match(card.querySelector('.card-status').textContent, /自查后又修正了 1 处/);
+  assert.equal(p.pp.deck.slides[1].shapes.find((x) => x.id === '6').height, 190);
+  p.pp.deck.slides[1].shapes.find((x) => x.id === '2').left = 60; // the user nudges the title afterwards
+  card.querySelector('.undo').click();
+  await tick(20);
+  assert.match(card.querySelector('.card-status').textContent, /应用后又改过/);
+  assert.equal(p.pp.deck.slides[1].id, '257#0');
+  card.querySelector('.undo').click();
+  await tick(20);
+  assert.notEqual(p.pp.deck.slides[1].id, '257#0');
+  assert.deepEqual(p.pp.deck.slides[1].shapes.map((x) => x.id), ['2', '3', '4', '5']);
+});
+
+test('redesign plans are checked: text cannot be dropped or invented, pictures keep their ratio, shapes stay on the slide', () => {
+  const snap = {
+    size: { w: 960, h: 540 }, canStructure: true, canZOrder: true, canRotate: true, canTableFormat: true,
+    shapes: [
+      { id: '2', type: 'Placeholder', role: 'title', inScope: true, text: { preview: 'T', paras: [{}] } },
+      { id: '3', type: 'Placeholder', role: 'body', inScope: true, text: { preview: 'a b c', paras: [{}, {}, {}] } },
+      { id: '4', type: 'Image', inScope: true, x: 600, y: 100, w: 320, h: 200, ratio: 1.6 },
+      { id: '5', type: 'Line', inScope: true },
+      { id: '9', type: 'TextBox', inScope: false, text: { preview: 'x', paras: [{}] } },
+    ],
+  };
+  const { changes, problems } = F.normalizeChanges([
+    { add: 'card', id: 'new1', x: 40, y: 120, w: 280, h: 150, from: { id: '3', para: '1-2' } },
+    { id: '3', delete: true },                                   // paragraph 3 was not moved
+    { add: 'textbox', id: 'new2', x: 40, y: 300, w: 200, h: 40, text: '这是一段模型自己编写的很长的正文内容，用来测试新增形状里不能直接写正文，只能写很短的标签，所以这里应该被拒绝' },
+    { add: 'textbox', id: 'new3', x: 900, y: 500, w: 200, h: 40, text: '01' },
+    { add: 'roundRect', id: 'new4', x: 40, y: 400, w: 100, h: 40, from: { id: '9', para: 1 } },
+    { id: '4', w: 400, h: 400 },
+    { id: '2', delete: true },
+    { id: '4', delete: true },
+    { id: '5', delete: true },
+    { id: '3', para: '2', font: { bold: true }, bullet: false },
+    { id: '3', text: '改写' },
+    { add: 'line', id: 'new5', x: 40, y: 100, w: 300, h: 0, line: { color: '#4472C4', weight: 2 } },
+  ], snap);
+  const kinds = changes.map((c) => `${c.kind}:${c.id}`);
+  assert.deepEqual(kinds, ['add:new1', 'add:new3', 'shape:4', 'paras:3', 'add:new5', 'delete:5']);
+  assert.deepEqual(plain(changes[0].from), { id: '3', p1: 0, p2: 1 });
+  assert.equal(changes[0].type, 'RoundRectangle');
+  assert.deepEqual(plain(changes[1].set), { x: 760, y: 500, w: 200, h: 40 }, 'moved back onto the slide');
+  assert.deepEqual(plain(changes[2].set), { w: 400, h: 250, x: 560 }, 'the picture keeps its ratio and stays on the slide');
+  const texts = problems.map((x) => `${x.id}: ${x.text}`).join('\n');
+  assert.match(texts, /3: 删除会丢失第 3 段文字/);
+  assert.match(texts, /new2: 新形状里的文字只能是 40 字以内的短标签/);
+  assert.match(texts, /new4: 文字来源必须是范围内有文字的形状/);
+  assert.match(texts, /2: 标题占位符不能删除/);
+  assert.match(texts, /4: 删除图片、表格或分组会丢失内容/);
+  assert.match(texts, /3: 版式模式不改文字内容/);
+  const without = F.normalizeChanges([{ add: 'rect', id: 'new1', x: 0, y: 0, w: 10, h: 10 }, { id: '5', delete: true }], { ...snap, canStructure: false });
+  assert.equal(without.changes.length, 0, 'no whole-slide backup, no structural changes');
+});
+
+test('the self-check geometry lists overlaps, off-slide shapes and shapes touching the edge, but not text on its card', () => {
+  const s = (id, x, y, w, h, text = true) => ({ id, type: 'TextBox', x, y, w, h, text: text ? { preview: id } : null });
+  const issues = F.layoutIssues({ size: { w: 960, h: 540 }, shapes: [
+    s('2', 40, 20, 880, 60),
+    { id: '6', type: 'GeometricShape', x: 40, y: 120, w: 300, h: 200, text: null },
+    s('7', 50, 130, 280, 100),           // on its card
+    s('8', 300, 150, 200, 100),          // overlaps 7
+    s('9', 900, 300, 100, 50),           // off the slide
+    s('10', 4, 400, 200, 40),            // touches the left edge
+  ] });
+  assert.deepEqual(issues, ['形状 9 超出了页面', '形状 10 离页面边缘太近（不到 12 pt）', '形状 7 和形状 8 重叠（约 49 pt 见方）']);
+});
+
+test('Chinese text never falls back to SimSun: Latin fonts go to Latin characters only, new text gets a Chinese font', async (t) => {
+  const deck = bulletDeck();
+  const body = deck.slides[1].shapes[1];
+  body.font = { name: 'Calibri', size: 24 }; // a Latin font name; the Chinese is drawn by the theme
+  const reply = plan([
+    { add: 'roundRect', id: 'new1', x: 48, y: 120, w: 272, h: 160, from: { id: '3', para: '1' }, font: { size: 16 } },
+    { add: 'textbox', id: 'new2', x: 48, y: 300, w: 100, h: 30, text: '第 1 步' },
+    { id: '2', font: { name: 'Arial' } },
+  ]);
+  const p = await open(t, { deck, events: (payload, n) => answer(n === 1 ? reply : '通过') });
+  p.pp.selectSlides(['257#0']);
+  p.lp.setMode('format');
+  await p.lp.sendInstruction('整页美化');
+  await tick(20);
+  p.d.querySelector('.fmt-card .apply').click();
+  await tick(40);
+  const shapes = p.pp.deck.slides[1].shapes;
+  const card = shapes.find((x) => x.geom === 'RoundRectangle');
+  const names = (sh) => [...new Set(sh.chars.map((c) => `${c.ch.match(/[A-Za-z0-9 ]/) ? 'latin' : 'cjk'}:${c.name}`))].sort();
+  assert.deepEqual(names(card), ['cjk:微软雅黑'], 'Chinese in the card uses a Chinese font, not 宋体');
+  const label = shapes.find((x) => x.type === 'TextBox' && x.chars.map((c) => c.ch).join('') === '第 1 步');
+  assert.deepEqual(names(label), ['cjk:微软雅黑', 'latin:Calibri']);
+  const title = shapes.find((x) => x.id === '2');
+  assert.deepEqual([...new Set(title.chars.map((c) => c.name))], ['Calibri'], 'the Chinese title keeps its font when the plan names a Latin font');
+});
+
+test('a check that finds problems but gives no usable fix says so instead of "no problems"', async (t) => {
+  const bad = '第 1 张卡片最后一个字掉到了第二行。\n```format\n{"changes": [{"id": "6", "fontSize": 14}]}\n```';
+  const p = await open(t, { deck: bulletDeck(), events: (payload, n) => answer(n === 1 ? cardsPlan() : bad) });
+  p.pp.selectSlides(['257#0']);
+  p.lp.setMode('format');
+  await p.lp.sendInstruction('重新排版');
+  await tick(20);
+  const card = p.d.querySelector('.fmt-card');
+  card.querySelector('.apply').click();
+  await tick(40);
+  assert.match(card.querySelector('.card-status').textContent, /自查发现了问题，但修正方案没能应用/);
+  assert.match(card.querySelector('.fmt-check').textContent, /最后一个字掉到了第二行/);
 });
