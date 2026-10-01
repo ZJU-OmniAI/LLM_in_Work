@@ -25,7 +25,7 @@ Select text, a text box, a table or a whole slide, describe the change, review t
 | Undo with one click | Each applied card has **↩ Undo**, which restores the original text and puts the target back so you can try again. |
 | Edit tables | Change cells, add rows, or delete rows. Only cells that change are written, so the table style stays. |
 | Adjust formatting and layout | **Format** mode changes formatting, not words: borders (colour, weight, dashes, or none), fills, font, size and colour, alignment, position and size, rotation, stacking order, table borders/shading/header, and the slide background. Select the shapes to adjust, or nothing for the whole slide. |
-| See and undo format changes | The plan is listed as “old → new” with colour swatches. After applying, **↩ Undo** restores everything, down to per-character sizes and colours in mixed text. |
+| See and undo format changes | The plan is listed as “old → new” with colour swatches. After applying, **↩ Undo** puts the old formatting back, down to per-character sizes and colours in mixed text (text colour drawn by a table style is the one exception, and the card says so). |
 | Let the model see the slide | **Slide image** attaches a rendering of the current slide, so the model can judge layout and whether text fits. |
 | Ask about the deck | **Presentation Q&A** writes speaker notes, checks terms and numbers for consistency, finds typos, or summarizes, with slide numbers. |
 | Continue a conversation | Refine an answer, keep input drafts, revisit local history, or export a conversation as Markdown. |
@@ -140,7 +140,7 @@ Format mode changes formatting only, never the words.
 3. Describe the change, or pick a preset: **Lighter borders**, **Consistent fonts**, **Align layout**, **Harmonize colors**, **Stronger title**, **Cleaner table**.
 4. Click **Plan**. The pane attaches an image of the current slide and a formatting list of its shapes (position, size, fill, border, font, alignment, table borders and so on), and the model proposes a plan.
 5. The plan is shown per shape, one line per property as “old → new”, with colour swatches. Click **✅ Apply** to write it to the slide.
-6. Not happy? **↩ Undo** restores every changed property. **🔁 Retry** generates a new plan, or keep talking (“a bit lighter still”).
+6. Not happy? **↩ Undo** puts the changed properties back (exceptions below). **🔁 Retry** generates a new plan, or keep talking (“a bit lighter still”).
 
 What can be changed:
 
