@@ -14,7 +14,7 @@ labels: bug
 
 ### 环境
 
-- 子项目：LLM_in_Word / LLM_in_PowerPoint / LLM_in_Excel / LLM_in_Overleaf
+- 子项目：LLM_in_Word / LLM_in_PowerPoint / LLM_in_Excel / LLM_in_Overleaf / LLM_in_PDF
 - 操作系统版本：
 - Word / PowerPoint / Excel / 浏览器版本：
 - 子项目版本：

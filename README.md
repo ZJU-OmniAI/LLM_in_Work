@@ -2,9 +2,9 @@
 
 # LLM_in_Work
 
-**Your local Claude Code and Codex, inside Microsoft Word, PowerPoint, Excel and Overleaf.**
+**Your local Claude Code and Codex, inside Microsoft Word, PowerPoint, Excel, Overleaf and your PDFs.**
 
-Select text, describe the change, review the diff, apply. No copying between a chat window and your document, and no extra API key.
+Edit in place with a reviewed diff, or read a PDF and ask about a passage or figure. No copying between a chat window and your document, and no extra API key.
 
 [![CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ZJU-OmniAI/LLM_in_Work/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
@@ -12,15 +12,18 @@ Select text, describe the change, review the diff, apply. No copying between a c
 [![PowerPoint](https://img.shields.io/badge/PowerPoint-Windows%20%C2%B7%20macOS-b7472a)](LLM_in_PowerPoint/README.md)
 [![Excel](https://img.shields.io/badge/Excel-Windows%20%C2%B7%20macOS-217346)](LLM_in_Excel/README.md)
 [![Overleaf](https://img.shields.io/badge/Overleaf-Chrome%20%C2%B7%20Edge%20%C2%B7%20Brave-47a141)](LLM_in_Overleaf/README.md)
+[![PDF](https://img.shields.io/badge/PDF-Online%20%C2%B7%20Local-e76b4a)](LLM_in_PDF/README.md)
 [![Backends](https://img.shields.io/badge/backend-Claude%20Code%20%C2%B7%20Codex%20CLI-555)](#quick-start)
 
 **English** · [简体中文](README.zh-CN.md)
 
 </div>
 
-https://github.com/user-attachments/assets/51987efc-5e60-48ad-a36c-67aa7bd611b1
+[![Watch the five-assistant demo (English narration)](docs/video/poster-en.jpg)](https://github.com/ZJU-OmniAI/LLM_in_Work/releases/download/2026-10-07/LLM_in_Work_demo_en_720p.mp4)
 
-<p align="center"><sub>Real recordings, English narration, bilingual subtitles · <a href="README.zh-CN.md">中文配音版</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-01">Download 1080p + subtitles</a></sub></p>
+[▶ Watch the five-assistant demo (English narration)](https://github.com/ZJU-OmniAI/LLM_in_Work/releases/download/2026-10-07/LLM_in_Work_demo_en_720p.mp4)
+
+<p align="center"><sub>Real recordings, English narration, bilingual subtitles · <a href="README.zh-CN.md">中文配音版</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-07">Download 1080p + subtitles</a></sub></p>
 
 ## Why LLM_in_Work
 
@@ -29,23 +32,24 @@ https://github.com/user-attachments/assets/51987efc-5e60-48ad-a36c-67aa7bd611b1
 - **Native write-back.** Word receives real tracked changes that you accept or reject in the Review tab. PowerPoint rewrites only the changed words, so fonts, colours and bullet levels stay. Excel writes only the cells that change, as if typed, so number formats stay and IDs like `00123` stay text. Both have a one-click Undo. Overleaf applies a whole group of edits as one step that a single undo reverts.
 - **Several passages, one instruction.** Up to eight paragraphs or whole tables in Word; up to sixteen text boxes, tables or whole slides in PowerPoint; up to eight cell ranges in Excel, including empty columns to fill; several separate selections in one `.tex` file in Overleaf.
 - **Whole-document context.** The full document, the whole deck, the workbook's sheets or the `.tex` file goes along with your request, so terminology, citations and math stay consistent. Add `.bib` files, other chapters or PDFs when you need more.
-- **Careful by design.** The original text is checked again before writing, so an edit never lands in the wrong place. Table and spreadsheet edits touch only the rows and cells that changed. CLI calls run without your MCP servers and without extra tools.
+- **Careful by design.** The original text is checked again before writing, so an edit never lands in the wrong place. Table and spreadsheet edits touch only the rows and cells that changed. Claude calls disable your MCP servers and restrict tools; Codex uses a read-only sandbox. See the security notes for details.
 - **Formatting and slide redesign in PowerPoint.** Format mode changes how a slide looks, not its words: from “make this black border lighter” to “polish this whole slide”, which splits crowded bullets into cards, lines up fonts, sizes and colours, and separates text from pictures. Big changes are checked once from a new image of the slide, and Undo puts the whole slide back.
 - **Ask, not only edit.** Document Q&A in Word, Presentation Q&A in PowerPoint (speaker notes, consistency checks, with an image of the slide if you like), Workbook Q&A in Excel (summaries, outliers, formula explanations, with cell addresses) and Ask mode in Overleaf answer questions without changing your text.
-- **English and 中文.** Switch the interface at any time. Explanations follow the language of your instruction.
+- **Read PDFs with LLM_in_PDF.** Open online PDFs, local files or paper webpages; select text or crop a figure to ask about it. Markdown, formulas, per-document history and conversation export are built in. PDFs stay unchanged.
+- **English and 中文.** The four editing assistants have switchable interfaces. The PDF interface is currently Chinese and supports English/Chinese questions and answers.
 
-## Four assistants, one workflow
+## Five assistants for writing and reading
 
-| | [LLM_in_Word](LLM_in_Word/README.md) | [LLM_in_PowerPoint](LLM_in_PowerPoint/README.md) | [LLM_in_Excel](LLM_in_Excel/README.md) | [LLM_in_Overleaf](LLM_in_Overleaf/README.md) |
-| --- | --- | --- | --- | --- |
-| Works in | Microsoft Word desktop | Microsoft PowerPoint desktop | Microsoft Excel desktop | Overleaf's Code Editor (`overleaf.com`, `cn.overleaf.com`) |
-| Review | Text and table diffs, applied as Word tracked changes | A diff per target; only changed words are written, with one-click Undo | A cell preview per range; only changed cells are written, with one-click Undo | A LaTeX diff for every selection, applied as one undoable step |
-| Edit together | Up to 8 paragraphs or tables | Up to 16 text boxes, tables or whole slides, across slides | Up to 8 ranges (4,000 cells), including empty columns to fill | Several non-adjacent selections in one `.tex` file |
-| Formatting | — | Format mode: borders, fills, fonts, alignment, tables, background, and whole-slide redesign with cards; one-click Undo | — | — |
-| Ask questions | Document Q&A about the whole document | Presentation Q&A, optionally with an image of the slide | Workbook Q&A with cell addresses | Ask mode with the `.tex` file and attached project files |
-| Runs on | Windows and macOS | Windows and macOS | Windows and macOS | Chrome, Edge, Brave and other Chromium browsers on Windows, macOS and Linux |
-| Connection | Office add-in → local HTTPS service (`127.0.0.1:8377`) → CLI | Office add-in → local HTTPS service (`127.0.0.1:8387`) → CLI | Office add-in → local HTTPS service (`127.0.0.1:8397`) → CLI | Extension → Native Messaging (no port) → CLI |
-| Interface | English · 中文 | English · 中文 | English · 中文 | English · 中文 |
+| | [LLM_in_Word](LLM_in_Word/README.md) | [LLM_in_PowerPoint](LLM_in_PowerPoint/README.md) | [LLM_in_Excel](LLM_in_Excel/README.md) | [LLM_in_Overleaf](LLM_in_Overleaf/README.md) | [LLM_in_PDF](LLM_in_PDF/README.md) |
+| --- | --- | --- | --- | --- | --- |
+| Works in | Microsoft Word desktop | Microsoft PowerPoint desktop | Microsoft Excel desktop | Overleaf's Code Editor (`overleaf.com`, `cn.overleaf.com`) | Chromium PDF reader and paper webpages |
+| Review | Text and table diffs, applied as Word tracked changes | A diff per target; only changed words are written, with one-click Undo | A cell preview per range; only changed cells are written, with one-click Undo | A LaTeX diff for every selection, applied as one undoable step | Read-only Q&A; preserves the original PDF |
+| Edit together | Up to 8 paragraphs or tables | Up to 16 text boxes, tables or whole slides, across slides | Up to 8 ranges (4,000 cells), including empty columns to fill | Several non-adjacent selections in one `.tex` file | Select text or attach up to 4 recent figure crops |
+| Formatting | — | Format mode: borders, fills, fonts, alignment, tables, background, and whole-slide redesign with cards; one-click Undo | — | — | PDF.js layout, Markdown tables and KaTeX formulas |
+| Ask questions | Document Q&A about the whole document | Presentation Q&A, optionally with an image of the slide | Workbook Q&A with cell addresses | Ask mode with the `.tex` file and attached project files | Full text, selected passages and actual figure pixels |
+| Runs on | Windows and macOS | Windows and macOS | Windows and macOS | Chrome, Edge, Brave and other Chromium browsers on Windows, macOS and Linux | macOS/Linux native bridge; Windows HTTP fallback |
+| Connection | Office add-in → local HTTPS service (`127.0.0.1:8377`) → CLI | Office add-in → local HTTPS service (`127.0.0.1:8387`) → CLI | Office add-in → local HTTPS service (`127.0.0.1:8397`) → CLI | Extension → Native Messaging (no port) → CLI | Extension → Native Messaging; optional loopback HTTP (`8765`) |
+| Interface | English · 中文 | English · 中文 | English · 中文 | English · 中文 | 中文 UI; English/中文 Q&A |
 
 ## See it in action
 
@@ -82,9 +86,17 @@ https://github.com/user-attachments/assets/51987efc-5e60-48ad-a36c-67aa7bd611b1
     <td><b>Excel:</b> clean up names and regions; the preview strikes through each old value.</td>
     <td><b>Fill a column:</b> categories written from the feedback in each row, formatting untouched.</td>
   </tr>
+  <tr>
+    <td><img src="LLM_in_PDF/docs/images/pdf-reader.jpg" alt="PDF reader with a selected passage and a real model reply"></td>
+    <td><img src="LLM_in_PDF/docs/images/pdf-image-chat.jpg" alt="PDF chart crop and explanation"></td>
+  </tr>
+  <tr>
+    <td><b>PDF:</b> select a passage and ask with the full document as context.</td>
+    <td><b>Figures:</b> crop the chart and ask about the actual pixels.</td>
+  </tr>
 </table>
 
-Screenshots come from real apps on macOS: desktop Word, PowerPoint and Excel, and for Overleaf the real extension and CodeMirror editor on a local demo page (not the hosted Overleaf site). The Word, Excel and Overleaf images are frames from the demo recordings, with answers from Claude Code (Sonnet 5.5, low effort); the PowerPoint images were taken separately, with answers from Claude Code (Haiku 4.5, low effort). The demo video covers all four assistants.
+Screenshots come from real apps on macOS: desktop Word, PowerPoint and Excel, and for Overleaf the real extension and CodeMirror editor on a local demo page (not the hosted Overleaf site). The Word, Excel and Overleaf images are frames from the demo recordings, with answers from Claude Code (Sonnet 5.5, low effort); the PowerPoint images were taken separately, with answers from Claude Code (Haiku 4.5, low effort). The updated video covers all five assistants; its PDF section uses a synthetic document in the real extension with real CLI answers.
 
 ## How it works
 
@@ -95,33 +107,35 @@ flowchart LR
     PP["Microsoft PowerPoint<br/>LLM_in_PowerPoint pane"] -- "HTTPS · 127.0.0.1:8387" --> SP["Local service<br/>(Node.js)"]
     X["Microsoft Excel<br/>LLM_in_Excel pane"] -- "HTTPS · 127.0.0.1:8397" --> SX["Local service<br/>(Node.js)"]
     O["Overleaf tab<br/>LLM_in_Overleaf extension"] -- "Native Messaging · no port" --> H["Native host<br/>(Node.js)"]
+    D["PDF / paper webpage<br/>LLM_in_PDF extension"] -- "Native Messaging / HTTP fallback" --> HP["PDF bridge<br/>(Node.js)"]
     S --> C["Claude Code / Codex CLI<br/>your sign-in and subscription"]
     SP --> C
     SX --> C
     H --> C
+    HP --> C
   end
   C -- "inference" --> P[("Model provider")]
 ```
 
-All four bridges run locally and add no cloud service of their own. The model itself runs wherever your CLI sends it, usually the provider's service.
+All five bridges run locally and add no cloud service of their own. The model itself runs wherever your CLI sends it, usually the provider's service.
 
 ## Quick start
 
-**You need:** Node.js 22.12+ (22.x) or 24+, and at least one CLI installed and signed in: [Claude Code](https://code.claude.com/docs/en/setup) (`claude auth login`) or [Codex CLI](https://github.com/openai/codex) (`codex login`).
+**You need:** Node.js 22.13+ (22.x) or 24+, and at least one CLI installed and signed in: [Claude Code](https://code.claude.com/docs/en/setup) (`claude auth login`) or [Codex CLI](https://github.com/openai/codex) (`codex login`).
 
 ```bash
 git clone https://github.com/ZJU-OmniAI/LLM_in_Work.git
 cd LLM_in_Work
 ```
 
-| | LLM_in_Word | LLM_in_PowerPoint | LLM_in_Excel | LLM_in_Overleaf |
-| --- | --- | --- | --- | --- |
-| macOS | `cd LLM_in_Word && ./install.sh` | `cd LLM_in_PowerPoint && ./install.sh` | `cd LLM_in_Excel && ./install.sh` | `cd LLM_in_Overleaf && ./install.sh` |
-| Linux | Not available (no desktop Word) | Not available (no desktop PowerPoint) | Not available (no desktop Excel) | `cd LLM_in_Overleaf && ./install.sh` |
-| Windows | In `LLM_in_Word`: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1` | The same command in `LLM_in_PowerPoint` | The same command in `LLM_in_Excel` | The same command in `LLM_in_Overleaf` |
-| Then | Restart Word, then **Home → Add-ins → Developer Add-ins → LLM_in_Word** | Restart PowerPoint, then **Home → LLM_in_PowerPoint** (or **Developer Add-ins**) | Restart Excel, then **Home → LLM_in_Excel** (or **Developer Add-ins**) | Open `chrome://extensions`, turn on **Developer mode**, **Load unpacked** → `LLM_in_Overleaf/extension` |
+| | LLM_in_Word | LLM_in_PowerPoint | LLM_in_Excel | LLM_in_Overleaf | LLM_in_PDF |
+| --- | --- | --- | --- | --- | --- |
+| macOS | `cd LLM_in_Word && ./install.sh` | `cd LLM_in_PowerPoint && ./install.sh` | `cd LLM_in_Excel && ./install.sh` | `cd LLM_in_Overleaf && ./install.sh` | `cd LLM_in_PDF && ./install.sh` |
+| Linux | Not available (no desktop Word) | Not available (no desktop PowerPoint) | Not available (no desktop Excel) | `cd LLM_in_Overleaf && ./install.sh` | `cd LLM_in_PDF && ./install.sh` |
+| Windows | In `LLM_in_Word`: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1` | The same command in `LLM_in_PowerPoint` | The same command in `LLM_in_Excel` | The same command in `LLM_in_Overleaf` | In `LLM_in_PDF`: `npm start` (keep running) |
+| Then | Restart Word, then **Home → Add-ins → Developer Add-ins → LLM_in_Word** | Restart PowerPoint, then **Home → LLM_in_PowerPoint** (or **Developer Add-ins**) | Restart Excel, then **Home → LLM_in_Excel** (or **Developer Add-ins**) | Open `chrome://extensions`, turn on **Developer mode**, **Load unpacked** → `LLM_in_Overleaf/extension` | Load unpacked → `LLM_in_PDF/extension` |
 
-Install any of them. On macOS, LLM_in_PowerPoint and LLM_in_Excel reuse the trusted local certificate of an Office assistant installed before them (PowerPoint reuses Word's; Excel reuses Word's or PowerPoint's), so installing Word first means your password is asked only once. Step-by-step guides with screenshots: **[LLM_in_Word](LLM_in_Word/README.md)** · **[LLM_in_PowerPoint](LLM_in_PowerPoint/README.md)** · **[LLM_in_Excel](LLM_in_Excel/README.md)** · **[LLM_in_Overleaf](LLM_in_Overleaf/README.md)**.
+Install any of them. On macOS, LLM_in_PowerPoint and LLM_in_Excel reuse the trusted local certificate of an Office assistant installed before them (PowerPoint reuses Word's; Excel reuses Word's or PowerPoint's), so installing Word first means your password is asked only once. Step-by-step guides with screenshots: **[LLM_in_Word](LLM_in_Word/README.md)** · **[LLM_in_PowerPoint](LLM_in_PowerPoint/README.md)** · **[LLM_in_Excel](LLM_in_Excel/README.md)** · **[LLM_in_Overleaf](LLM_in_Overleaf/README.md)** · **[LLM_in_PDF](LLM_in_PDF/README.md)**.
 
 ## FAQ
 
@@ -129,16 +143,18 @@ Install any of them. On macOS, LLM_in_PowerPoint and LLM_in_Excel reuse the trus
 No. Requests go through your signed-in Claude Code or Codex CLI and count against that account's plan or usage.
 
 **What does the model receive?**
-Your instruction, the selected passages, the document (Word), the text of the whole deck (PowerPoint), the workbook's sheets (Excel) or the current `.tex` file (Overleaf) as context, and any files you attach. Selecting a passage limits where edits are written, not what is sent. Read [data and security](SECURITY.md) before using confidential documents.
+Your instruction, the selected passages, the document (Word), the text of the whole deck (PowerPoint), the workbook's sheets (Excel) or the current `.tex` file (Overleaf) as context, and any files you attach. PDF questions include extracted full text, conversation history, selected text and recent figure crops. Selecting a passage limits where edits are written, not what is sent. Read [data and security](SECURITY.md) before using confidential documents.
 
 **Can it change my document without asking?**
-No. Results are previews until you click Apply. In Word you can still reject each tracked change; in PowerPoint and Excel each applied card has an Undo button; in Overleaf one undo reverts the whole group.
+LLM_in_PDF is read-only. In the editing assistants, results are previews until you click Apply. In Word you can still reject each tracked change; in PowerPoint and Excel each applied card has an Undo button; in Overleaf one undo reverts the whole group.
 
 **Which editors are supported?**
 Microsoft 365 desktop Word, PowerPoint and Excel on Windows and macOS, and the Code Editor on `overleaf.com` and `cn.overleaf.com`. Office for the web, the Overleaf visual editor and self-hosted Overleaf are not supported out of the box.
 
 **Is this an official Microsoft, Overleaf, Anthropic or OpenAI product?**
 No. It is an independent open-source project by ZJU-OmniAI.
+
+LLM_in_PDF adds online/local PDFs and paper webpages in Chromium browsers. See its guide for native-bridge and HTTP platform support.
 
 ## Repository
 
@@ -148,11 +164,12 @@ LLM_in_Work/
 ├── LLM_in_PowerPoint/ PowerPoint add-in, local HTTPS service, installers
 ├── LLM_in_Excel/      Excel add-in, local HTTPS service, installers
 ├── LLM_in_Overleaf/   Browser extension, native messaging host, installers
+├── LLM_in_PDF/        PDF reader extension, native / HTTP bridge, tests
 ├── SECURITY.md        What is sent where, and how the CLIs are called
 └── CONTRIBUTING.md    Tests and CI for all projects
 ```
 
-All projects run without npm runtime dependencies. Offline tests use mock CLIs and synthetic documents, and [CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions) runs them on Linux, macOS and Windows. See [Contributing](CONTRIBUTING.md) and the [changelog](CHANGELOG.md).
+All bridges use Node built-ins. LLM_in_PDF bundles PDF.js, Markdown-it and KaTeX with their licenses. Offline tests use mock CLIs and synthetic documents, and [CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions) runs them on Linux, macOS and Windows. See [Contributing](CONTRIBUTING.md) and the [changelog](CHANGELOG.md).
 
 ## License
 

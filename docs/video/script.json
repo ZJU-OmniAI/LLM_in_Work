@@ -1,0 +1,122 @@
+{
+  "voices": {
+    "zh": "zh-CN-XiaoxiaoNeural",
+    "en": "en-US-AndrewMultilingualNeural"
+  },
+  "rates": {
+    "zh": "+4%",
+    "en": "+0%"
+  },
+  "scenes": [
+    {
+      "id": "title",
+      "sentences": [
+        {
+          "zh": [
+            "LLM_in_Work：把本机的 Claude Code 和 Codex，",
+            "带进 Word、PowerPoint、Excel、Overleaf 和 PDF 阅读器。"
+          ],
+          "en": [
+            "LLM_in_Work brings your local Claude Code and Codex",
+            "into Word, PowerPoint, Excel, Overleaf and a PDF reader."
+          ],
+          "zh_say": "LLM in Work，把本机的 Claude Code 和 Codex，带进 Word、PowerPoint、Excel、Overleaf 和 PDF 阅读器。",
+          "en_say": "LLM in Work brings your local Claude Code and Codex into Word, PowerPoint, Excel, Overleaf and a PDF reader."
+        }
+      ]
+    },
+    {
+      "id": "pdf_open",
+      "sentences": [
+        {
+          "zh": [
+            "第五个助手，LLM_in_PDF，支持在线 PDF、论文网页和本地文件。",
+            "这里导入一份合成示例，保留 PDF 原始排版。"
+          ],
+          "en": [
+            "The fifth assistant, LLM_in_PDF, reads online PDFs, paper webpages and local files.",
+            "Here we import a synthetic example, with its original layout preserved."
+          ],
+          "zh_say": "第五个助手，LLM in PDF，支持在线 PDF、论文网页和本地文件。这里导入一份合成示例，保留 PDF 原始排版。"
+        }
+      ]
+    },
+    {
+      "id": "pdf_text",
+      "sentences": [
+        {
+          "zh": [
+            "选中一段文字，点击问一下，就能带着全文上下文提问。",
+            "这里让模型区分十四个百分点和百分之十九点四的相对提升。"
+          ],
+          "en": [
+            "Select a passage and ask a question with the full document as context.",
+            "Here the model distinguishes fourteen percentage points from a relative gain of nineteen point four percent."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pdf_figure",
+      "sentences": [
+        {
+          "zh": [
+            "再框选图表，发送真实图像，让模型比较两根柱子并说明局限。",
+            "回答可以直接显示成表格，也支持公式和代码。"
+          ],
+          "en": [
+            "Crop a figure to send its actual pixels, then ask about the bars and the limitations.",
+            "Answers can include tables, formulas and code."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pdf_history",
+      "sentences": [
+        {
+          "zh": [
+            "刷新后，对话和图片仍然保留。",
+            "还可以把整段会话复制成 Markdown，PDF 原文始终不变。"
+          ],
+          "en": [
+            "Conversations and images remain after reloading.",
+            "Copy the complete chat as Markdown. The original PDF stays unchanged."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "arch",
+      "sentences": [
+        {
+          "zh": [
+            "五个助手都通过本机桥调用你已登录的命令行工具，不需要额外 API Key。",
+            "发送的问题、正文和图片会交给对应模型服务。"
+          ],
+          "en": [
+            "All five assistants use a local bridge and your signed-in CLI, with no extra API key.",
+            "Questions, document context and attached images go to the chosen model provider."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "outro",
+      "sentences": [
+        {
+          "zh": [
+            "写作时审阅差异，阅读时直接提问。",
+            "在 LLM_in_Work 仓库选择需要的助手，按 README 安装。"
+          ],
+          "en": [
+            "Review edits while writing. Ask questions while reading.",
+            "Choose your assistants in the LLM_in_Work repository and follow the README to install."
+          ],
+          "zh_say": "写作时审阅差异，阅读时直接提问。在 LLM in Work 仓库选择需要的助手，按 Readme 安装。",
+          "en_say": "Review edits while writing. Ask questions while reading. Choose your assistants in the LLM in Work repository and follow the Readme to install."
+        }
+      ]
+    }
+  ]
+}

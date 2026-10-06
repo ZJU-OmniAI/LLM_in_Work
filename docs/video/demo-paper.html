@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8">
+<style>
+@page { size: 720px 920px; margin: 48px; }
+body{font:17px/1.55 Georgia,serif;color:#193331;margin:0} .eyebrow{font:12px Arial;letter-spacing:2px;color:#50827b;text-transform:uppercase}h1{font-size:32px;line-height:1.15;margin:20px 0 12px}h2{font:700 19px Arial;margin:24px 0 10px}p{margin:12px 0}.note{font:12px Arial;color:#6b7774}svg{width:100%;height:250px}table{width:100%;border-collapse:collapse;font:15px Arial}td,th{text-align:left;padding:10px;border-bottom:1px solid #d6e3df}.abstract{padding:12px 18px;background:#f0f6f3;border-left:4px solid #398971}
+</style>
+<div class="eyebrow">LLM_in_Work · Synthetic demonstration document</div>
+<h1>Reading evaluation results<br>with document context</h1>
+<p class="note">Synthetic data for a software demonstration. These are not research findings.</p>
+<h2>1. Experiment</h2>
+<div class="abstract"><p>The baseline reaches 72% accuracy on the evaluation set.</p><p>Adding document context raises accuracy to 86%.</p><p>Both conditions use the same model and the same 200 questions.</p></div>
+<p>The absolute improvement is 14 percentage points. The relative improvement over the baseline is approximately 19.4%.</p>
+<h2>2. Results</h2>
+<svg viewBox="0 0 624 250" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="624" height="250" rx="12" fill="#f6f9f8"/>
+<g font-family="Arial" font-size="14" fill="#38534d"><text x="22" y="26">Accuracy (%)</text><text x="46" y="209">0</text><text x="38" y="131">50</text><text x="32" y="53">100</text></g>
+<g stroke="#d8e3df"><path d="M78 48H590M78 126H590M78 204H590"/></g>
+<rect x="151" y="91.68" width="130" height="112.32" rx="5" fill="#81a99c"/><rect x="361" y="69.84" width="130" height="134.16" rx="5" fill="#216d55"/>
+<g font-family="Arial" text-anchor="middle"><text x="216" y="80" fill="#38534d" font-size="22">72%</text><text x="426" y="58" fill="#216d55" font-size="22">86%</text><text x="216" y="232" fill="#38534d" font-size="14">Baseline</text><text x="426" y="232" fill="#38534d" font-size="14">With document context</text></g>
+</svg>
+<p class="note">Figure 1. Accuracy with and without document context. Synthetic values.</p>
+<div style="break-before:page"></div>
+<div class="eyebrow">LLM_in_Work · Methods and limitations</div><h1>What the comparison tells us</h1>
+<table><tr><th>Condition</th><th>Correct / total</th><th>Accuracy</th></tr><tr><td>Baseline</td><td>144 / 200</td><td>72%</td></tr><tr><td>With document context</td><td>172 / 200</td><td>86%</td></tr></table>
+<h2>3. Interpretation</h2><p>Document context provides relevant passages to the model. In this synthetic example it yields 28 additional correct answers, an increase of 14 percentage points.</p>
+<h2>4. Limitations</h2><p>No confidence intervals, repeated trials, or statistical significance tests are provided. This small synthetic comparison does not establish general performance on other tasks.</p>
+<p class="note">Prepared for LLM_in_PDF feature verification. No personal or confidential data.</p>

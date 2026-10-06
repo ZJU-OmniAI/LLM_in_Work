@@ -1,0 +1,74 @@
+{
+  "manifest_version": 3,
+  "name": "LLM_in_PDF · 论文与 PDF 对话",
+  "version": "0.9.0",
+  "description": "支持各网站论文、在线和本地 PDF。选字或框选图片提问，复制完整对话，渲染 Markdown 表格，接入本机 Claude Code / Codex。",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAybDcY6XC1rtPJJ2EQmYp/6lYxVQWK6xwOmdpqcKxLELicHjIvdAYe7ed/EssnoWrtTSDRcvEayU/wZIkTCi+KKq3ztDWviMbeQwv6xH3+EqZ/FIZbdPmfLpNE0opOb8g4uCvWXBddkY575Fj3fN2XYp1wAxoIZTNEN01iAzyhnnvU7WzU7Gm7bwuNAHx5hFy+yON9MjXZ9DVoC5rUaw2mP86f1vwC0emAyvJdfj8Q5ScPR9wzwkAByDTSr02gIIqELjySKcJX41MpT4pPuuMc/OlRGzQiVBv4zjeH5Chx99t7xm6Daej6/ZkKL2Sg8NrpNy0K/zMwoi3x7DZviAZTwIDAQAB",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "nativeMessaging",
+    "declarativeNetRequestWithHostAccess",
+    "clipboardWrite",
+    "activeTab",
+    "scripting",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*",
+    "file:///*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://arxiv.org/*",
+        "*://*.arxiv.org/*"
+      ],
+      "js": [
+        "vendor/katex/katex.min.js",
+        "vendor/markdown-it/markdown-it.min.js",
+        "content/markdown.js",
+        "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "vendor/katex/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    },
+    {
+      "resources": [
+        "reader/reader.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "LLM_in_PDF 设置"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}

@@ -1,3 +1,6 @@
 * text=auto eol=lf
 *.png binary
 *.jpg binary
+
+# Keep upstream library bytes intact and collapse generated code in reviews.
+LLM_in_PDF/extension/vendor/** linguist-vendored=true -whitespace

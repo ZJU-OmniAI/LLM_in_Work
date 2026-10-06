@@ -150,3 +150,37 @@ jobs:
         run: |
           npm run test:ui
           npm run test:ui:cn
+
+  pdf:
+    name: PDF (${{ matrix.os }}, Node 22)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: LLM_in_PDF
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: LLM_in_PDF/package-lock.json
+      - run: npm ci
+      - name: Validate scripts and extension
+        shell: bash
+        run: |
+          bash -n install.sh start.sh
+          for file in server/*.js extension/content/*.js extension/background/*.js extension/popup/*.js extension/shared/*.js extension/reader/*.js tools/*.js tools/*.mjs; do node --check "$file"; done
+          node -e "JSON.parse(require('fs').readFileSync('extension/manifest.json','utf8'))"
+      - name: Run offline and installer regression tests
+        run: npm test
+      - name: Install test browser
+        if: runner.os == 'Linux'
+        run: npx playwright-core install --with-deps chromium
+      - name: Test PDF selection, images, history and document sources
+        if: runner.os == 'Linux'
+        run: npm run test:ui

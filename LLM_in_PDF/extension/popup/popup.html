@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">📄 LLM_in_PDF</div>
+    <p class="sub">在线论文、本地 PDF，选字看图并对话</p>
+
+    <label class="field"><span><input id="pdfReaderEnabled" type="checkbox" checked> 自动用阅读器打开在线 / 本地 PDF</span></label>
+    <button id="openPdf" class="test-btn">打开当前 PDF / 论文的 PDF 链接</button>
+    <button id="readPage" class="test-btn secondary">读取当前论文网页</button>
+    <button id="openLocal" class="test-btn secondary">选择 / 拖入本地 PDF</button>
+    <label class="field"><span>PDF 链接</span><input id="pdfUrl" type="url" placeholder="https://… 或 file:///…" /></label>
+    <button id="openUrl" class="test-btn secondary">打开此链接</button>
+    <p class="tip">直接读取浏览器中的本地 PDF：在扩展「详情」开启「允许访问文件网址」。也可直接选择或拖入文件，无需开启该权限。</p>
+
+    <label class="field">
+      <span>后端地址</span>
+      <input id="backendUrl" type="text" placeholder="http://localhost:8765" />
+    </label>
+
+    <button id="test" class="test-btn">测试连接</button>
+    <div id="status" class="status"></div>
+
+    <div class="row">
+      <label class="field small">
+        <span>默认后端</span>
+        <select id="backend">
+          <option value="claude">Claude</option>
+          <option value="codex">Codex</option>
+        </select>
+      </label>
+      <label class="field small">
+        <span>默认 effort</span>
+        <select id="effort">
+          <option value="low">low</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+          <option value="xhigh">xhigh</option>
+          <option value="max">max</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="tip">
+      <b>推荐（零后端）：</b>在项目目录跑一次<br />
+      <code>./install.sh</code><br />
+      在线 PDF 可自动打开；其他论文网页点「读取当前论文网页」。Chrome 会自动拉起本机桥程序。<br />
+      <b>备用：</b>手动起 HTTP 后端 <code>node server/server.js</code>（上面的地址才会用到）。
+    </div>
+  </div>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 ## 解决的问题与修改后的行为
 
-<!-- 标明子项目（Word / PowerPoint / Excel / Overleaf / 公共部分），描述用户可见变化和必要实现细节。 -->
+<!-- 标明子项目（Word / PowerPoint / Excel / Overleaf / PDF / 公共部分），描述用户可见变化和必要实现细节。 -->
 
 ## 验证
 

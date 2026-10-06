@@ -2,7 +2,7 @@
 
 English · [中文](#中文)
 
-All four assistants call a model through the **Claude Code or Codex CLI on your own computer**. The bridge runs locally, but inference normally happens on the provider's service, so this is not an offline tool. Your CLI's account, proxy, usage limits and data-handling settings apply.
+All five assistants call a model through the **Claude Code or Codex CLI on your own computer**. The bridge runs locally, but inference normally happens on the provider's service, so this is not an offline tool. Your CLI's account, proxy, usage limits and data-handling settings apply.
 
 ## What is sent to the model
 
@@ -10,6 +10,8 @@ All four assistants call a model through the **Claude Code or Codex CLI on your 
 - Project files and local attachments you add are passed to the CLI. Images and PDFs are written to a temporary folder and deleted when the request ends.
 - Word, PowerPoint and Excel pane history is stored in the Office web view; Overleaf history is stored in the browser extension's storage. The CLI may also keep prompts, document text and replies in its own session files.
 - Every edit is shown as a preview first and is written only when you click Apply. Check facts, formulas, citations and formatting yourself.
+
+- **PDF reader:** LLM_in_PDF sends extracted document text (up to 600,000 characters), history, selections and up to four recent cropped images. Original imported PDFs, screenshots and histories are stored in the browser. The PDF is never edited. Scanned documents can be discussed using image crops; automatic full-text OCR is not provided.
 
 ## Local boundary
 
@@ -19,14 +21,17 @@ All four assistants call a model through the **Claude Code or Codex CLI on your 
 | LLM_in_PowerPoint | HTTPS on the loopback address only, `127.0.0.1:8387` | macOS: `~/.llm_in_powerpoint` (reuses LLM_in_Word's trusted localhost certificate when present); Windows: `%LOCALAPPDATA%\LLM_in_PowerPoint` |
 | LLM_in_Excel | HTTPS on the loopback address only, `127.0.0.1:8397` | macOS: `~/.llm_in_excel` (reuses the trusted localhost certificate of LLM_in_Word or LLM_in_PowerPoint when present); Windows: `%LOCALAPPDATA%\LLM_in_Excel` |
 | LLM_in_Overleaf | Browser native messaging; no listening port | macOS / Linux: `~/.llm_in_overleaf`; Windows: `%LOCALAPPDATA%\LLM_in_Overleaf`. Only the fixed extension ID may start the host. |
+| LLM_in_PDF | Native Messaging; optional HTTP at `127.0.0.1:8765` | macOS/Linux: `~/.llm_in_pdf`; browser storage for imported PDFs and chats. Legacy `com.paper_read.host` name and extension ID are preserved. Windows uses HTTP. |
 
-**Tools the model may use.** All projects start Claude Code with an empty MCP configuration (`--strict-mcp-config`), so your own MCP servers are not loaded. Text-only turns run with no tools; turns with attachments may use only `Read`, restricted to those files. Codex runs in a read-only sandbox with approvals disabled; it may still load tools from your Codex configuration.
+**Tools the model may use.** All projects start Claude Code with an empty MCP configuration (`--strict-mcp-config`), so your own MCP servers are not loaded. LLM_in_PDF disables all Claude tools even for images. In the editing assistants, text-only turns run with no tools; turns with attachments may use only `Read`, restricted to those files. Codex runs in a read-only sandbox with approvals disabled; it may still load tools from your Codex configuration.
 
-Do not forward or expose the Word, PowerPoint or Excel ports. None of the projects is an authentication gateway for shared or remote use.
+Do not forward or expose the Word, PowerPoint, Excel or PDF HTTP ports. None of the projects is an authentication gateway for shared or remote use.
+
+The PDF HTTP fallback accepts only the fixed extension origin (or originless local CLI clients), checks localhost/loopback Host headers and requires JSON POST requests. It is not an authenticated shared service.
 
 ## Repository contents
 
-The repository contains no private keys, certificates, credentials, real documents or CLI sessions. The `key` in the Overleaf manifest is the **public** key that keeps the extension ID stable; running the unpacked extension needs no private key. `.gitignore` excludes common secrets and local files, but it does not replace reviewing what you commit.
+The repository contains no private keys, certificates, credentials, real documents or CLI sessions. The `key` in the Overleaf and PDF manifests is the **public** key that keeps the extension ID stable; running the unpacked extension needs no private key. `.gitignore` excludes common secrets and local files, but it does not replace reviewing what you commit.
 
 ## Reporting a vulnerability
 
@@ -36,7 +41,7 @@ Do not paste keys, real documents or logs with credentials into a public issue. 
 
 ## 中文
 
-四个子项目都通过**你电脑上的 Claude Code / Codex CLI** 调用模型。桥接程序在本机运行，但推理通常发生在服务商那边，并非离线工具；账户、代理、额度和数据处理规则以对应 CLI 及服务商的设置为准。
+五个子项目都通过**你电脑上的 Claude Code / Codex CLI** 调用模型。桥接程序在本机运行，但推理通常发生在服务商那边，并非离线工具；账户、代理、额度和数据处理规则以对应 CLI 及服务商的设置为准。
 
 ### 哪些内容会交给模型
 
@@ -44,6 +49,8 @@ Do not paste keys, real documents or logs with credentials into a public issue. 
 - 你添加的项目文件和本地附件会交给 CLI。图片 / PDF 先写入临时目录，请求结束后删除。
 - Word、PowerPoint 和 Excel 侧栏历史保存在 Office 网页视图的本地存储，Overleaf 历史保存在浏览器扩展存储。CLI 自身也可能把提示、正文和回复保存在它的会话文件里。
 - 所有改动先显示预览，点「应用」后才写回。事实、公式、引用和格式仍需自行核对。
+
+- **PDF 阅读器：** LLM_in_PDF 发送提取的正文（最多 60 万字符）、历史、选段及最近最多 4 张截图。导入的原 PDF、截图与会话保存在浏览器本地，不改写 PDF；扫描件可框图提问，不自动做全文 OCR。
 
 ### 本机边界
 
@@ -53,14 +60,15 @@ Do not paste keys, real documents or logs with credentials into a public issue. 
 | LLM_in_PowerPoint | 仅回环地址的 HTTPS，`127.0.0.1:8387` | macOS：`~/.llm_in_powerpoint`（已装 LLM_in_Word 时沿用它已信任的本机证书）；Windows：`%LOCALAPPDATA%\LLM_in_PowerPoint` |
 | LLM_in_Excel | 仅回环地址的 HTTPS，`127.0.0.1:8397` | macOS：`~/.llm_in_excel`（已装 LLM_in_Word 或 LLM_in_PowerPoint 时沿用它们已信任的本机证书）；Windows：`%LOCALAPPDATA%\LLM_in_Excel` |
 | LLM_in_Overleaf | 浏览器原生消息（Native Messaging），不监听端口 | macOS / Linux：`~/.llm_in_overleaf`；Windows：`%LOCALAPPDATA%\LLM_in_Overleaf`。只允许固定 ID 的扩展启动本机桥。 |
+| LLM_in_PDF | 原生消息；可选 HTTP `127.0.0.1:8765` | macOS/Linux：`~/.llm_in_pdf`；文件和会话保存在浏览器。保留旧原生桥名称 `com.paper_read.host` 与扩展 ID。Windows 使用 HTTP。 |
 
-**模型能用哪些工具。** 各子项目启动 Claude Code 时都使用空的 MCP 配置（`--strict-mcp-config`），不会加载你自己配置的 MCP 服务器。纯文字轮不开放任何工具；带附件的轮次只允许 `Read`，且只针对本轮附件。Codex 在只读沙箱中运行、不请求审批，但仍可能加载你本机 Codex 配置里的工具。
+**模型能用哪些工具。** 各子项目启动 Claude Code 时都使用空的 MCP 配置（`--strict-mcp-config`），不会加载你自己配置的 MCP 服务器。LLM_in_PDF 包括图片轮也禁用 Claude 工具；其他助手纯文字轮不开放任何工具；带附件的轮次只允许 `Read`，且只针对本轮附件。Codex 在只读沙箱中运行、不请求审批，但仍可能加载你本机 Codex 配置里的工具。
 
-不要转发或暴露 Word、PowerPoint 和 Excel 的端口。这些项目都不是面向多人或远程使用的认证网关。
+不要转发或暴露 Word、PowerPoint、Excel 或 PDF HTTP 的端口。这些项目都不是面向多人或远程使用的认证网关。
 
 ### 仓库内容
 
-仓库不包含私钥、证书、凭证、真实文档或 CLI 会话。Overleaf manifest 里的 `key` 是用于固定扩展 ID 的**公钥**，运行解压扩展不需要私钥。`.gitignore` 会排除常见凭证和本机文件，但不能代替提交前的检查。
+仓库不包含私钥、证书、凭证、真实文档或 CLI 会话。Overleaf 和 PDF manifest 里的 `key` 是用于固定扩展 ID 的**公钥**，运行解压扩展不需要私钥。`.gitignore` 会排除常见凭证和本机文件，但不能代替提交前的检查。
 
 ### 报告安全问题
 

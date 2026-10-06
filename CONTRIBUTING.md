@@ -2,11 +2,11 @@
 
 English · [中文](#中文)
 
-LLM_in_Work contains four independent projects. In issues and pull requests, say whether a change concerns `LLM_in_Word`, `LLM_in_PowerPoint`, `LLM_in_Excel`, `LLM_in_Overleaf`, or the shared documentation / CI.
+LLM_in_Work contains five independent projects. In issues and pull requests, say whether a change concerns `LLM_in_Word`, `LLM_in_PowerPoint`, `LLM_in_Excel`, `LLM_in_Overleaf`, `LLM_in_PDF`, or the shared documentation / CI.
 
 ## Setup and tests
 
-Use Node.js 22.12+ (22.x) or 24+. From the repository root:
+Use Node.js 22.13+ (22.x) or 24+. From the repository root:
 
 ```bash
 npm --prefix LLM_in_Word ci
@@ -20,13 +20,18 @@ npm --prefix LLM_in_Overleaf test          # native host, CLI adapters, prompts,
 npm --prefix LLM_in_Overleaf run test:ui   # real CodeMirror, Chinese and English interfaces
 npm --prefix LLM_in_Overleaf run test:ui:cn
 npm --prefix LLM_in_Overleaf run test:install   # installer in a temporary home, then uninstall
+npm --prefix LLM_in_PDF ci
+npm --prefix LLM_in_PDF test                # protocols, images, Markdown, sources, installer
+cd LLM_in_PDF && npx playwright-core install chromium && npm run test:ui
 ```
 
 Browser tests use Google Chrome at its standard macOS path; set `CHROME_BIN` to use another browser, or run `npx playwright-core install chromium` in `LLM_in_Overleaf/`. They use synthetic pages and mock model replies and never touch a real Overleaf project.
 
 All `npm test` commands run offline with mock CLIs. Live model calls use `npm run test:live` or `npm run test:live:codex` in each project; they need a signed-in CLI, may consume quota, and are not part of CI.
 
-**CI** tests all projects on Linux, macOS and Windows. Windows also runs the Word, PowerPoint and Excel installer lifecycles and the Overleaf installer; Linux runs the Overleaf browser regressions. CI does not automate desktop Word, PowerPoint or Excel, or a real Chrome profile.
+**CI** tests all projects on Linux, macOS and Windows. Windows also runs the Word, PowerPoint and Excel installer lifecycles and the Overleaf installer; Linux runs the Overleaf and PDF browser regressions. PDF native installation supports macOS/Linux; Windows uses HTTP fallback. CI does not automate desktop Word, PowerPoint or Excel, or a real Chrome profile.
+
+The PDF interface currently uses Chinese text; its READMEs and demo narration are bilingual. Preserve its legacy extension ID, native host name and conversation keys when editing.
 
 ## Conventions
 
@@ -43,17 +48,17 @@ Reproduce problems with synthetic documents and redacted logs. Do not commit cre
 
 ## 中文
 
-LLM_in_Work 包含四个独立子项目。请在 Issue 和 Pull Request 中注明涉及 `LLM_in_Word`、`LLM_in_PowerPoint`、`LLM_in_Excel`、`LLM_in_Overleaf`，还是仓库公共文档 / CI。
+LLM_in_Work 包含五个独立子项目。请在 Issue 和 Pull Request 中注明涉及 `LLM_in_Word`、`LLM_in_PowerPoint`、`LLM_in_Excel`、`LLM_in_Overleaf`、`LLM_in_PDF`，还是仓库公共文档 / CI。
 
 ### 开发与测试
 
-使用 Node.js 22.12+（22.x）或 24+。上面的命令在仓库根目录运行：`test` 为离线回归，`test:ui` 用真实 CodeMirror 同时测中文和英文界面，`test:install` 在临时目录里完成「安装 → 本机桥应答 → 卸载」。
+使用 Node.js 22.13+（22.x）或 24+。上面的命令在仓库根目录运行：`test` 为离线回归，`test:ui` 用真实 CodeMirror 同时测中文和英文界面，`test:install` 在临时目录里完成「安装 → 本机桥应答 → 卸载」。
 
 浏览器测试默认使用 macOS 标准路径下的 Google Chrome，可用 `CHROME_BIN` 指定其他浏览器，或在 `LLM_in_Overleaf/` 中执行 `npx playwright-core install chromium`。测试使用合成页面和模拟回复，不会连接真实 Overleaf 项目。
 
 `npm test` 全部离线运行、使用模拟 CLI。真实模型调用使用各子项目的 `npm run test:live` 或 `npm run test:live:codex`，需要已登录的 CLI，可能消耗额度，不在 CI 中运行。
 
-**CI** 在 Linux、macOS、Windows 上测试所有子项目；Windows 另测 Word、PowerPoint、Excel 的安装生命周期和 Overleaf 安装器，Linux 另跑 Overleaf 浏览器回归。CI 不自动操作桌面 Word、PowerPoint 和 Excel，也不使用真实 Chrome 用户配置。
+**CI** 在 Linux、macOS、Windows 上测试所有子项目；Windows 另测 Word、PowerPoint、Excel 的安装生命周期和 Overleaf 安装器，Linux 另跑 Overleaf 和 PDF 浏览器回归。PDF 原生安装支持 macOS/Linux，Windows 使用 HTTP 后端。CI 不自动操作桌面 Word、PowerPoint 和 Excel，也不使用真实 Chrome 用户配置。
 
 ### 修改约定
 

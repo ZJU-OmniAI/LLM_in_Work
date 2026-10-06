@@ -1,0 +1,38 @@
+:root { color-scheme: light; font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #273045; background: #e8ebf0; }
+body { margin: 0; }
+#reader-toolbar { position: fixed; inset: 0 0 auto 0; height: 58px; padding: 0 18px; display: flex; gap: 14px; align-items: center; background: #fff; border-bottom: 1px solid #d7dde7; z-index: 10; }
+#reader-toolbar strong { white-space: nowrap; font-size: 16px; }
+#reader-toolbar small { font-size: 10px; color: #69798d; }
+.reader-controls { display: flex; align-items: center; gap: 6px; flex: 1; }
+button, input, select { font: inherit; border: 1px solid #d5dce6; border-radius: 6px; background: white; padding: 6px 8px; color: inherit; }
+button { cursor: pointer; }
+button:hover { background: #f1f5fb; }
+#page-number { width: 44px; }
+#find { width: 128px; min-width: 70px; }
+#select-image { white-space: nowrap; color: #4f46e5; border-color: #c7c9f5; }
+#select-image[aria-pressed="true"] { color: white; background: #4f46e5; }
+#select-image:disabled { opacity: .5; cursor: wait; }
+#viewer-container.selecting-image, #viewer-container.selecting-image * { cursor: crosshair !important; user-select: none !important; }
+#pdf-image-selection { position: fixed; pointer-events: none; z-index: 1000; border: 2px solid #4f46e5; background: #4f46e52b; box-sizing: border-box; }
+a { color: #3c61ac; text-decoration: none; white-space: nowrap; }
+a:hover { text-decoration: underline; }
+[hidden] { display: none !important; }
+#document-picker { position: relative; z-index: 2; max-width: 700px; margin: 112px auto 32px; padding: 28px; background: white; border: 1px solid #d7dde7; border-radius: 14px; line-height: 1.7; }
+#document-picker h1 { margin-top: 0; font-size: 24px; }
+#document-picker h2 { font-size: 16px; }
+.url-row { display: flex; gap: 8px; margin: 6px 0 22px; }
+#document-url { flex: 1; min-width: 0; }
+#file-drop { display: flex; gap: 8px; flex-direction: column; padding: 24px; border: 2px dashed #bdc3ea; border-radius: 10px; background: #f7f8ff; cursor: pointer; }
+#file-drop.dragover { background: #e7eaff; border-color: #4f46e5; }
+#file-drop span, .file-help { color: #6b7280; font-size: 12px; }
+#open-error { color: #b23131; }
+.local-document { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #edf0f5; }
+.local-document a { flex: 1; white-space: normal; overflow-wrap: anywhere; }
+.local-document button { font-size: 11px; }
+#reader-status { position: fixed; top: 59px; left: 0; right: 0; height: 28px; padding: 6px 18px 0; box-sizing: border-box; font-size: 12px; background: #f5f7fb; z-index: 10; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#reader-status.error { color: #b23131; }
+#viewer-container { position: absolute; inset: 88px 0 0; overflow: auto; outline: none; }
+.pdfViewer { padding: 18px 0; }
+.pdfViewer .page { box-shadow: 0 2px 12px #1e293b22; }
+html.paper-read-open #viewer-container, html.paper-read-open #reader-toolbar, html.paper-read-open #reader-status { right: var(--paper-read-width, 440px); }
+@media (max-width: 1050px) { #reader-toolbar { padding: 0 8px; gap: 7px; flex-wrap: wrap; height: 88px; align-content: center; } #reader-status { top: 89px; } #viewer-container { top: 118px; } .reader-controls { order: 2; flex-basis: 100%; } }

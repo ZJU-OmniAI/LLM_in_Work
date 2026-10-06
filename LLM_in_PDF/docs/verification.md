@@ -1,0 +1,9 @@
+# Integration verification · 2026-10-07
+
+- macOS: **19 PDF offline tests passed**, covering native framing/streaming, both mock CLIs, model discovery/defaults, effort settings, cancellation, temporary image cleanup, HTTP/SSE, origin/Host restrictions, invalid requests, document identity, Markdown/math and macOS/Linux installer lifecycles in temporary directories.
+- **Both Chromium browser suites passed**: real extension and PDF.js, synthetic PDF and mock replies. Covers PDF detection/redirects, text selection, full context, image pixels, zoom/pages, Markdown/formulas, long history, copy/export, archive copy, restored images, webpage reading, signed URLs, local import/drop, fingerprints, file permissions and `file://` documents.
+- **Real native bridge + Claude Sonnet + Codex passed**: public arXiv retrieval, correct answer (`28.4`) and clean shutdown. A default-Claude run initially produced irrelevant tool markup; the smoke test now checks answer correctness instead of accepting any nonempty output. A subsequent default-model check (Claude Opus 5.5) correctly returned `28.4`.
+- **Real extension + HTTP bridge + Claude Sonnet passed** with the synthetic demo PDF: selected passage, real chart pixels, tabular reply, restored conversation and copy. README screenshots and the PDF video chapter come from this run.
+- Existing projects: Word **48**, PowerPoint **104**, Excel **77**, Overleaf **38** offline tests passed. Total including PDF: **286**.
+
+Local complete runs used Node.js 25.8.0 and Playwright Chromium 153. CI uses Node.js 22 across Linux, macOS and Windows, with PDF browser tests on Linux. Native PDF installation is macOS/Linux only; Windows uses the HTTP fallback. Existing Office tests use their documented stand-ins; desktop Office workflows were not re-recorded for this integration.

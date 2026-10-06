@@ -1,5 +1,15 @@
 # 更新记录 / Changelog
 
+## 2026-10-07 — LLM_in_PDF joins LLM_in_Work
+
+- Import `paper_read` as **LLM_in_PDF 0.9.0**: online/local PDF and paper webpage reading, passage and figure questions, Markdown/math rendering, document history and export.
+- Keep extension identity, conversation storage and legacy `PAPER_READ_*` environment settings compatible; new settings use `LLM_IN_PDF_*`.
+- Add a quoted macOS/Linux native installer, bundled third-party licenses and PDF CI on Linux/macOS/Windows, including Linux browser regressions. Windows uses the HTTP fallback.
+- Restrict the PDF HTTP fallback to loopback hosts and the fixed extension origin, require JSON, and report malformed prompts without terminating the server.
+- Update English/Chinese guides, the repository overview and the narrated demo with the fifth assistant.
+
+中文：将 `paper_read` 以 `LLM_in_PDF` 纳入仓库；保留扩展 ID、会话与旧环境变量，新增安装及浏览器回归，更新中英文文档与五模块介绍视频。
+
 ## 2026-10-02 — LLM_in_PowerPoint 0.3.0
 
 - **PowerPoint: whole-slide redesign.** “Polish this slide” and “lay it out again” now re-lay out the slide instead of touching up a few properties: the model can add cards, accent bars and lines, move bullets unchanged into cards, delete stray lines and emptied text boxes, format single paragraphs, set autofit and margins, and change table styles. Big changes are checked once from a new image of the slide and fixed; the card shows before and after. Undo puts back a backup of the whole slide, speaker notes included. Chinese text in new shapes no longer falls back to SimSun.

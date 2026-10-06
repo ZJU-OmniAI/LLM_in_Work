@@ -49,3 +49,10 @@ pfx-password.txt
 
 # Excel local runtime
 .llm_in_excel/
+
+# PDF runtime and demo build outputs
+.llm_in_pdf/
+.paper_read/
+docs/video/build/
+__pycache__/
+*.pyc

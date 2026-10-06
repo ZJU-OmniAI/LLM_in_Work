@@ -1,0 +1,32 @@
+{
+  "name": "llm-in-pdf",
+  "version": "0.9.0",
+  "description": "LLM_in_PDF — read and discuss online/local PDFs and paper webpages with your local Claude Code or Codex CLI.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server/server.js",
+    "icons": "node tools/make-icons.js",
+    "test": "node --test tests/*.test.js",
+    "vendor": "node tools/vendor-pdfjs.js && node tools/vendor-markdown.js",
+    "test:ui": "node tests/browser.mjs && node tests/documents-browser.mjs",
+    "test:install": "node --test tests/install.test.js",
+    "test:live": "node tools/test-native-host.js",
+    "test:live:codex": "node tools/test-native-host.js --codex"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "devDependencies": {
+    "katex": "^0.18.1",
+    "markdown-it": "^15.0.2",
+    "pdfjs-dist": "^6.4.299",
+    "playwright-core": "^1.63.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZJU-OmniAI/LLM_in_Work.git",
+    "directory": "LLM_in_PDF"
+  }
+}

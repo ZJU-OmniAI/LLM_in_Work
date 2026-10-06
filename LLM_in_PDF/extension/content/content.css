@@ -1,0 +1,6 @@
+/* 面板打开时，把 arXiv 页面正文向左让出侧栏宽度，避免被遮住。
+   宽度由内容脚本设置的 --paper-read-width 变量决定（默认 440px）。 */
+html.paper-read-open {
+  margin-right: var(--paper-read-width, 440px) !important;
+  transition: margin-right .12s ease;
+}
