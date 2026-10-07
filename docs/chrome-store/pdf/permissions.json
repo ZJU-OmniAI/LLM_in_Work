@@ -1,5 +1,5 @@
 {
-  "single_purpose": "Bring the user's local Claude Code or Codex agent into PDFs and paper webpages in Chrome for precise questions about selected text and cropped figures, without editing the PDF.",
+  "single_purpose": "Help users interactively read local PDFs and papers from arXiv and other platforms in Chrome using their local Claude Code or Codex agent, with questions about selected passages, figures and formulas.",
   "permissions": {
     "storage": "Stores backend/model preferences and per-project or per-document conversations locally so users can resume work. No advertising or analytics identifiers are stored.",
     "nativeMessaging": "Connects only to the separately installed local companion, which invokes the user's installed and signed-in Claude Code or Codex CLI. This is required for the extension's core purpose.",

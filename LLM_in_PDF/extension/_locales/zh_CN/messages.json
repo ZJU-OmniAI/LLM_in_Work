@@ -1,8 +1,8 @@
 {
   "actionTitle": {
-    "message": "LLM_in_PDF · 在 PDF 旁提问"
+    "message": "LLM_in_PDF · 交互式读论文，选局部问答"
   },
   "extDescription": {
-    "message": "把本机 Claude Code、Codex Agent 接入 Chrome 的 PDF 工作流：选中文字、框选图表，在文档旁精确问答，PDF 原文保持不变。"
+    "message": "在 Chrome 中阅读本地 PDF 和 arXiv 等平台论文，交互式调用本机 Claude Code、Codex，选中文字或图表进行局部问答。"
   }
 }

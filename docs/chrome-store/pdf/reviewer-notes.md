@@ -1,6 +1,6 @@
-# Reviewer test instructions — LLM_in_PDF 0.9.1
+# Reviewer test instructions — LLM_in_PDF 0.9.2
 
-Purpose: connect a locally installed Claude Code or Codex agent to selected-text and cropped-image questions about PDFs in Chrome. The original PDF is never edited. The extension uses a bundled PDF.js view to expose text selection and image crops. Its interface is currently Chinese; English questions are supported.
+Purpose: help users interactively read local PDFs and papers from arXiv and other platforms in Chrome with their locally installed Claude Code or Codex agent. Users select passages or crop figures and formulas for focused questions and follow-ups. The original PDF is never edited. The extension uses a bundled PDF.js view to expose text selection and image crops. Its interface is currently Chinese; English questions are supported.
 
 ## Dependencies and setup
 

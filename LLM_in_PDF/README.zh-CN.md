@@ -2,9 +2,10 @@
 
 [English](README.md) · **简体中文**
 
-**把本机 Claude Code 或 Codex 接入 Chrome 中的 PDF，选字或框图，在文档旁精确提问。**
+**在 Chrome 中阅读本地 PDF 和 arXiv 等平台的论文，交互式调用本机 Claude Code、Codex，选中局部内容就能提问、理解和追问。**
 
-这是一个 Chrome 扩展，支持 **arXiv、其他平台论文网页、在线 PDF 和本地 PDF**。继续在浏览器中查看文档，直接选择想讨论的文字或图表，再在右侧对话栏提问；PDF 原文保持不变。回答用的是你本机登录的 **Claude Code** 或 **Codex** 命令行，
+LLM_in_PDF 把你本机已安装、已登录的 **Claude Code** 或 **Codex Agent** 接入论文阅读流程。无论是 Chrome 中打开的本地 PDF，还是 **arXiv 等平台的在线论文、PDF 或论文网页**，都可以边读边选中一段文字，或框选图表、公式，在文档旁解释、总结、翻译并继续追问，让问答精确围绕你正在看的局部内容展开。PDF 原文保持不变。
+
 模型和思考强度（effort）都可选，使用你自己的 Claude/Codex 账号。界面目前为中文，支持中英文提问和回答。
 
 ![PDF 图片提问](docs/images/pdf-image-chat.jpg)

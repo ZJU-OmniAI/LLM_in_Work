@@ -1,8 +1,8 @@
 # Chrome 商店发布包与操作指南
 
-核对日期：2026-10-08。适用：LLM_in_Overleaf 0.9.1、LLM_in_PDF 0.9.1。
+核对日期：2026-10-08。适用：LLM_in_Overleaf 0.9.1、LLM_in_PDF 0.9.2。
 
-核心介绍统一为：**把本机已安装、已登录的 Claude Code、Codex Agent 接入日常工作流，在原软件中使用它们的能力，精确选定局部，审阅并确认修改，或围绕选区问答。** Overleaf 可以修改 LaTeX；PDF 负责 Chrome 中的选字/框图问答，不修改 PDF 原文。桥在本机，模型推理通常仍在服务商。
+核心介绍统一为：**把本机已安装、已登录的 Claude Code、Codex Agent 接入日常工作流，在原软件中使用它们的能力，精确选定局部，审阅并确认修改，或围绕选区问答。** Overleaf 可以修改 LaTeX；PDF 帮你在 Chrome 中阅读本地 PDF 和 arXiv 等平台论文，交互式调用本机 Agent，选中文字或框选图表进行局部问答，原 PDF 保持不变。桥在本机，模型推理通常仍在服务商。
 
 这是可复现的发布准备材料。商店条目 ID、账号验证、最终申报、审核结果由 Chrome 开发者后台确定；本目录不表示已上架。
 
@@ -13,10 +13,10 @@
 | 文件 | 用途 |
 | --- | --- |
 | `LLM_in_Overleaf-0.9.1-chrome.zip` | 上传 Overleaf 的 Chrome 商店条目 |
-| `LLM_in_PDF-0.9.1-chrome.zip` | 上传 PDF 的 Chrome 商店条目 |
+| `LLM_in_PDF-0.9.2-chrome.zip` | 上传 PDF 的 Chrome 商店条目 |
 | `*-companion.zip` | 给用户下载的本机桥及完整运行源码；不要上传到商店的扩展包栏 |
 | `package-report.json`、`SHA256SUMS.txt` | 包内容、权限、资源引用及 SHA-256 校验 |
-| `LLM_in_Work-chrome-store-materials-0.9.1.zip` | 文案、权限说明、审核步骤和图片的材料合集，由 `python3 tools/bundle-store-materials.py` 生成；不上传到扩展包栏 |
+| `LLM_in_Work-chrome-store-materials-0.9.2.zip` | 文案、权限说明、审核步骤和图片的材料合集，由 `python3 tools/bundle-store-materials.py` 生成；不上传到扩展包栏 |
 
 浏览器 ZIP 根目录就是 `manifest.json`，包含全部扩展脚本、图片及第三方运行依赖和许可证，不包含 Node 后端、node_modules、凭证、私钥或测试数据。商店 ZIP 不携带开发版公钥 `key`；源码保留原公钥，避免改变现有开发版 ID。
 
@@ -27,7 +27,7 @@
 1. 打开 [Chrome Developer Dashboard](https://chrome.google.com/webstore/devconsole)，使用原来准备发布时的 Google 账号。
 2. 查看是否已有 LLM_in_Overleaf、LLM_in_PDF 或旧名 paper_read。已有条目就进入该条目更新；确认没有才选 **Add new item**。
 3. 完成开发者注册、邮箱验证和两步验证。账号身份、费用及分发资格按后台提示由账号持有人确认。
-4. 记录每个条目的 **Item ID** 和当前最高包版本。这里准备的是 0.9.1；如果后台曾上传相同或更高版本，先把项目 `package.json`、锁文件、manifest 和本机桥版本一起提升，再重新打包，不要新建重复条目来绕过版本要求。
+4. 记录每个条目的 **Item ID** 和当前最高包版本。这里准备的是 Overleaf 0.9.1、PDF 0.9.2；如果后台曾上传相同或更高版本，先把项目 `package.json`、锁文件、manifest 和本机桥版本一起提升，再重新打包，不要新建重复条目来绕过版本要求。
 
 ## 3. 上传包，核对扩展 ID
 

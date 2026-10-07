@@ -43,7 +43,7 @@ https://github.com/user-attachments/assets/b44d0ada-1b19-463f-98a0-4123b95bac15
 - **Careful by design.** The original text is checked again before writing, so an edit never lands in the wrong place. Table and spreadsheet edits touch only the rows and cells that changed. Claude calls disable your MCP servers and restrict tools; Codex uses a read-only sandbox. See the security notes for details.
 - **Formatting and slide redesign in PowerPoint.** Format mode changes how a slide looks, not its words: from “make this black border lighter” to “polish this whole slide”, which splits crowded bullets into cards, lines up fonts, sizes and colours, and separates text from pictures. Big changes are checked once from a new image of the slide, and Undo puts the whole slide back.
 - **Ask, not only edit.** Document Q&A in Word, Ask mode in Overleaf, PDF questions in Chrome, Presentation Q&A in PowerPoint (speaker notes, consistency checks, with an image of the slide if you like) and Workbook Q&A in Excel (summaries, outliers, formula explanations, with cell addresses) answer questions without changing your text.
-- **Use your agent with PDFs in Chrome.** LLM_in_PDF connects online PDFs, local files and paper webpages to your local agent; select text or crop a figure to ask about it. Markdown, formulas, per-document history and conversation export are built in. PDFs stay unchanged.
+- **Read papers interactively and ask about selected content in Chrome.** LLM_in_PDF helps you read local PDFs and papers from arXiv and other platforms with your local Claude Code or Codex agent. Select a passage or crop a figure for explanations, summaries, translations and follow-up questions. Markdown, formulas, per-document history and conversation export are built in. PDFs stay unchanged.
 - **English and 中文.** The four editing assistants have switchable interfaces. The PDF interface is currently Chinese and supports English/Chinese questions and answers.
 
 ## Five assistants for writing and reading
@@ -131,7 +131,7 @@ All five bridges run locally and add no cloud service of their own. The model it
 
 **You need:** Node.js 22.13+ (22.x) or 24+, and at least one CLI installed and signed in: [Claude Code](https://code.claude.com/docs/en/setup) (`claude auth login`) or [Codex CLI](https://github.com/openai/codex) (`codex login`).
 
-Publishing a Chrome extension? The [store package and submission guide](docs/chrome-store/README.zh-CN.md) includes version 0.9.1 bundles, bilingual listings, images, permission explanations and the [privacy policy](docs/chrome-store/PRIVACY.md). Store approval is still pending submission; the setup below is for unpacked development extensions.
+Publishing a Chrome extension? The [store package and submission guide](docs/chrome-store/README.zh-CN.md) includes Overleaf 0.9.1 / PDF 0.9.2 bundles, bilingual listings, images, permission explanations and the [privacy policy](docs/chrome-store/PRIVACY.md). Store approval is still pending submission; the setup below is for unpacked development extensions.
 
 ```bash
 git clone https://github.com/ZJU-OmniAI/LLM_in_Work.git

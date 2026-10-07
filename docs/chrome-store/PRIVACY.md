@@ -1,6 +1,6 @@
 # Privacy policy — LLM_in_Overleaf and LLM_in_PDF
 
-Effective date: 8 October 2026. Applies to version 0.9.1 of both Chrome extensions and their companion programs in the [LLM_in_Work project](https://github.com/ZJU-OmniAI/LLM_in_Work). Maintained by ZJU-OmniAI and contributors. [中文](#中文).
+Effective date: 8 October 2026. Applies to LLM_in_Overleaf 0.9.1 and LLM_in_PDF 0.9.1–0.9.2, including their companion programs in the [LLM_in_Work project](https://github.com/ZJU-OmniAI/LLM_in_Work). Maintained by ZJU-OmniAI and contributors. [中文](#中文).
 
 ## Purpose and information processed
 
@@ -37,7 +37,7 @@ Material changes to these practices will be reflected in this document and its e
 
 ## 中文
 
-生效日期：2026 年 10 月 8 日。适用于 LLM_in_Overleaf、LLM_in_PDF 两个 Chrome 扩展及其配套本机程序的 0.9.1 版本，由 ZJU-OmniAI 与贡献者维护。
+生效日期：2026 年 10 月 8 日。适用于 LLM_in_Overleaf 0.9.1、LLM_in_PDF 0.9.1–0.9.2 扩展及其配套本机程序，由 ZJU-OmniAI 与贡献者维护。
 
 **用途与数据。** 两个扩展把你本机安装的 Claude Code、Codex Agent 接入工作流。本机桥不等于离线模型。Overleaf 会处理当前 `.tex` 文件、选段、项目/文件标识与网址、指令、会话及主动添加的附件；选区限定写回位置，不限定模型读取的全部上下文。只有点击应用才会写入修改。PDF 会处理打开的文档、网址与标题、提取文字、选段、消息、回复和框选图像；提问时可携带最多 60 万字符正文与最近最多四张图像。导入的原 PDF 字节保存在浏览器，提取文字和图像会用于模型请求，原 PDF 不被改写。
 

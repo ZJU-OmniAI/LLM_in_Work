@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LLM_in_PDF",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "__MSG_extDescription__",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAybDcY6XC1rtPJJ2EQmYp/6lYxVQWK6xwOmdpqcKxLELicHjIvdAYe7ed/EssnoWrtTSDRcvEayU/wZIkTCi+KKq3ztDWviMbeQwv6xH3+EqZ/FIZbdPmfLpNE0opOb8g4uCvWXBddkY575Fj3fN2XYp1wAxoIZTNEN01iAzyhnnvU7WzU7Gm7bwuNAHx5hFy+yON9MjXZ9DVoC5rUaw2mP86f1vwC0emAyvJdfj8Q5ScPR9wzwkAByDTSr02gIIqELjySKcJX41MpT4pPuuMc/OlRGzQiVBv4zjeH5Chx99t7xm6Daej6/ZkKL2Sg8NrpNy0K/zMwoi3x7DZviAZTwIDAQAB",
   "permissions": [

@@ -1,8 +1,8 @@
 {
   "actionTitle": {
-    "message": "LLM_in_PDF · Ask beside your PDF"
+    "message": "LLM_in_PDF · Read papers and ask about selections"
   },
   "extDescription": {
-    "message": "Bring local Claude Code or Codex into PDFs in Chrome. Ask about selected text and figures in place; keep the PDF unchanged."
+    "message": "Read local PDFs and arXiv papers in Chrome with local Claude Code or Codex. Select passages or figures for interactive Q&A."
   }
 }

@@ -1,10 +1,12 @@
 # LLM_in_PDF
 
-**Connect your local Claude Code or Codex to PDFs in Chrome: select text or a figure and ask beside the document.**
+**Read local PDFs and papers from arXiv and other platforms in Chrome, interactively using your local Claude Code or Codex agent to ask about selected passages and figures.**
 
 **English** · [简体中文](README.zh-CN.md) · [LLM_in_Work](../README.md)
 
-Previously `paper_read`, now part of LLM_in_Work. This Chrome extension brings your signed-in local agent into the PDF workflow already in your browser, for online/local PDFs and paper webpages. Select the exact passage or crop a figure and ask about it alongside the document. PDFs remain unchanged. The interface is currently Chinese; questions and answers can be English or Chinese.
+LLM_in_PDF connects the Claude Code or Codex agent already installed and signed in on your computer to your paper-reading workflow. Open a local PDF in Chrome, or a paper from arXiv or another platform, then select a passage or crop a figure or formula. Ask for an explanation, summary or translation, and continue with follow-up questions beside the document. Your questions stay focused on the part you are reading; the original PDF remains unchanged.
+
+Previously `paper_read`, now part of LLM_in_Work. Supports local and online PDFs and paper webpages. The interface is currently Chinese; questions and answers can be English or Chinese.
 
 ![Ask about a PDF figure](docs/images/pdf-image-chat.jpg)
 

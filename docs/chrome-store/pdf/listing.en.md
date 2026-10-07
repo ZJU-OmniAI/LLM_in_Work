@@ -1,15 +1,15 @@
-LLM_in_PDF brings your local Claude Code or Codex agent into your PDF workflow in Chrome. Select a passage or crop a figure and ask beside the document, with the original PDF unchanged.
+LLM_in_PDF helps you read local PDFs and papers from arXiv and other platforms in Chrome, interactively using your local Claude Code or Codex agent to ask about selected passages, figures and formulas.
 
-Your local agent, in the software where you already work.
+Read papers and ask questions with your local agent, right beside the document.
 
-Claude Code and Codex can already edit and explain documents. The missing step is pointing to the exact part you mean and reviewing the result in place. LLM_in_Work connects the agent already installed and signed in on your computer to your everyday workflow, for precise control over selected content and in-place questions.
+When reading a paper, you often want to understand one particular paragraph, chart or formula. Select it, ask beside the document, read the explanation and follow up. LLM_in_PDF connects the Claude Code or Codex agent already installed and signed in on your computer to that reading process, keeping the interaction focused on the part you mean.
 
 THIS EXTENSION'S FOCUS
-LLM_in_PDF provides questions and explanations for selected PDF text and images. It does not modify PDF content. It integrates your local agent into Chrome's document workflow, using a bundled PDF.js view for text selection and image crops.
+Read local PDFs opened in Chrome, online PDFs and paper webpages from arXiv and other platforms. Explore the paper interactively through questions about selected content; the original PDF remains unchanged. A bundled PDF.js view displays PDFs, extracts text and supports image crops.
 
 WHAT YOU CAN DO
-• Open online PDFs, import local PDFs, or read supported paper webpages.
-• Select the exact passage you want explained, summarized or translated.
+• Read local PDFs in Chrome and online papers from arXiv and other platforms.
+• Select the exact passage you want explained, summarized or translated, then ask follow-up questions in context.
 • Crop a chart, formula or scanned region and discuss the actual image.
 • Keep conversations per document, revisit archived chats and copy conversations as Markdown.
 • Read streamed replies with tables, code and mathematical notation.

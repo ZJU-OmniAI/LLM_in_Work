@@ -8,7 +8,7 @@ import { runModel } from './cli.js';
 import { buildPrompt } from './prompt.js';
 import { getModels } from './models.js';
 
-const VERSION = '0.9.1';
+const VERSION = '0.9.2';
 
 // Chrome 限制：发给插件的单条消息不能超过 1MB
 const MAX_MSG_BYTES = 1000 * 1024;

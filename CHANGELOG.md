@@ -1,5 +1,12 @@
 # 更新记录 / Changelog
 
+## 2026-10-08 — LLM_in_PDF 0.9.2 · Interactive paper reading
+
+- Clarify the PDF introduction in the English/Chinese READMEs, store metadata, listing and popup: read local PDFs and papers from arXiv and other platforms in Chrome, interactively using a local Claude Code or Codex agent for questions about selected passages and figures.
+- Refresh publication materials and PDF promotional copy. Version 0.9.2 changes descriptive copy and version identifiers; document handling, permissions and data flow are unchanged.
+
+中文：明确 LLM_in_PDF 帮助用户在 Chrome 中阅读本地 PDF 和 arXiv 等平台论文，交互式调用本机 Claude Code、Codex，选择局部文字、图表或公式进行问答与追问。同步中英文介绍、弹窗和发布材料。
+
 ## 2026-10-08 — Chrome publication preparation · Overleaf / PDF 0.9.1
 
 - Prepare separate extension upload ZIPs and local companion bundles, with resource validation, checksums and tests against the extracted packages.

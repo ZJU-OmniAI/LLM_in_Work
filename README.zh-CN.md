@@ -43,7 +43,7 @@ https://github.com/user-attachments/assets/08b40aef-50ba-4772-aff1-d24c1b488da0
 - **写回前再核对。** 写入前会重新核对原文，防止改错位置；表格和工作簿只改真正变化的行和单元格。Claude 调用不加载你本机的 MCP 服务并限制工具；Codex 使用只读沙箱，详情见安全说明。
 - **PowerPoint 还能调版式、整页美化。**「调整版式」模式改格式不改文字：小到「把这个黑框改浅一点」，大到「把这一页整体美化」——把挤在一起的要点拆成卡片、统一字体字号和配色、图文分区。大改应用后自动截图自查一轮，撤销时整页原样换回。
 - **不只改写，还能提问。** Word 的「文档问答」、Overleaf 的「问答」模式、Chrome 中的 PDF 问答、PowerPoint 的「演示文稿问答」（写讲稿、查前后一致，还可以附上当前页截图）和 Excel 的「表格问答」（总结、找异常、解释公式，注明单元格地址）可以讨论全文，不会改动正文。
-- **把 Agent 接入 Chrome 中的 PDF。** LLM_in_PDF 支持浏览器里的在线 PDF、本地文件和论文网页；选中文字或框选图表直接提问，支持 Markdown、公式、按文档保存会话和完整导出，PDF 原文保持不变。
+- **在 Chrome 中交互式读论文、选局部问答。** LLM_in_PDF 帮你阅读 Chrome 中打开的本地 PDF 和 arXiv 等平台的论文，调用本机 Claude Code 或 Codex，选中文字或框选图表即可解释、总结、翻译和继续追问。支持 Markdown、公式、按文档保存会话和完整导出，PDF 原文保持不变。
 - **中英文支持。** 四个编辑助手可切换界面语言；PDF 界面目前为中文，支持中英文提问和回答。
 
 ## 五个助手，覆盖写作与阅读
@@ -131,7 +131,7 @@ flowchart LR
 
 **准备：** Node.js 22.13+（22.x）或 24+；至少安装并登录一个命令行工具：[Claude Code](https://code.claude.com/docs/en/setup)（`claude auth login`）或 [Codex CLI](https://github.com/openai/codex)（`codex login`）。
 
-准备发布 Chrome 插件？[商店发布包与操作指南](docs/chrome-store/README.zh-CN.md) 已整理 0.9.1 版本包、中英文介绍、图片、权限说明和[隐私政策](docs/chrome-store/PRIVACY.md)。目前材料待提交审核，尚未宣称商店上架；下表是开发版加载方式。
+准备发布 Chrome 插件？[商店发布包与操作指南](docs/chrome-store/README.zh-CN.md) 已整理 Overleaf 0.9.1 / PDF 0.9.2 版本包、中英文介绍、图片、权限说明和[隐私政策](docs/chrome-store/PRIVACY.md)。目前材料待提交审核，尚未宣称商店上架；下表是开发版加载方式。
 
 ```bash
 git clone https://github.com/ZJU-OmniAI/LLM_in_Work.git
