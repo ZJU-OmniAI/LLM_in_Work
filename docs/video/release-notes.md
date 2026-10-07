@@ -12,6 +12,16 @@
 
 The attached **English and Chinese** videos cover all five assistants, with bilingual captions and separate SRT subtitles. Each language has a full 1080p file and a compact 720p version.
 
+Play the 720p demos directly below; 1080p originals and subtitles are available in **Assets**.
+
+**English narration**
+
+https://github.com/user-attachments/assets/d4366a5c-7f58-4e2c-8c76-561d4f38b9d1
+
+**中文讲解 · 点击下方直接播放**
+
+https://github.com/user-attachments/assets/97164522-3a90-49fc-b5ba-5e64ad1b49f1
+
 The four editing chapters reuse the October 1 real recordings. The new PDF chapter uses the actual extension, a synthetic document and real Claude Code (Sonnet) answers. The PDF interface is Chinese in both versions. Source scripts: [docs/video](https://github.com/ZJU-OmniAI/LLM_in_Work/tree/main/docs/video).
 
 ## Validation

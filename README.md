@@ -19,9 +19,9 @@ Edit in place with a reviewed diff, or read a PDF and ask about a passage or fig
 
 </div>
 
-[![Watch the five-assistant demo (English narration)](docs/video/poster-en.jpg)](https://github.com/ZJU-OmniAI/LLM_in_Work/releases/download/2026-10-07/LLM_in_Work_demo_en_720p.mp4)
+**Watch the five-assistant demo · English narration**
 
-[▶ Watch the five-assistant demo (English narration)](https://github.com/ZJU-OmniAI/LLM_in_Work/releases/download/2026-10-07/LLM_in_Work_demo_en_720p.mp4)
+https://github.com/user-attachments/assets/d4366a5c-7f58-4e2c-8c76-561d4f38b9d1
 
 <p align="center"><sub>Real recordings, English narration, bilingual subtitles · <a href="README.zh-CN.md">中文配音版</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-07">Download 1080p + subtitles</a></sub></p>
 

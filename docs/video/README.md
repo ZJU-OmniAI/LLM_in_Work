@@ -2,6 +2,8 @@
 
 The third edition covers **Word, PowerPoint, Excel, Overleaf and PDF**. English and Chinese narration each have bilingual burned-in captions and separate SRT subtitles. Full videos and compact 720p copies are published with the [2026-10-07 release](https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-07).
 
+**Play in your browser:** [English narration](../../README.md) · [中文讲解](../../README.zh-CN.md). The READMEs and release notes embed the 720p videos as GitHub video attachments. The release assets remain available for downloading the 1080p originals and subtitles.
+
 The four editing chapters reuse the real recordings from the October 1 release. The title, PDF chapter, architecture explanation and ending are new. The PDF chapter records the real extension, using its real HTTP bridge and Claude Code (Sonnet, low effort). Its source document is explicitly synthetic. Model waiting periods may be shortened or held during narration. The UI is Chinese in both narration versions.
 
 ## Reproduce
@@ -26,5 +28,7 @@ The previous folder must contain `LLM_in_Work_demo_{en,zh}.mp4` and matching `.s
 - `script.json`: bilingual narration and captions.
 - `tts.py`: caches narration in `build/tts/` and synthesizes changed lines only.
 - `compose.py`: combines the existing chapters with new recordings and cards; outputs MP4, SRT and chapter timing JSON in ignored `build/`.
+
+For inline playback, upload the compact MP4s as GitHub video attachments and place each returned `https://github.com/user-attachments/assets/...` URL in its own paragraph in the Markdown. Keep the canonical attachment URL, not the temporary signed playback URL. A release download URL triggers a download and does not embed a player.
 
 原有四个编辑模块沿用上一版真实录屏；PDF 部分为合成文档、真实扩展和真实模型回答。代码、脚本与字幕可复现；渲染缓存和大视频不提交到 Git 历史，成片作为 Release 附件分发。

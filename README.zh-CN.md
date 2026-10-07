@@ -19,9 +19,9 @@
 
 </div>
 
-[![观看五个助手演示（中文讲解）](docs/video/poster-zh.jpg)](https://github.com/ZJU-OmniAI/LLM_in_Work/releases/download/2026-10-07/LLM_in_Work_demo_zh_720p.mp4)
+**五个助手演示 · 中文讲解 · 点击下方播放**
 
-[▶ 观看五个助手演示（中文讲解）](https://github.com/ZJU-OmniAI/LLM_in_Work/releases/download/2026-10-07/LLM_in_Work_demo_zh_720p.mp4)
+https://github.com/user-attachments/assets/97164522-3a90-49fc-b5ba-5e64ad1b49f1
 
 <p align="center"><sub>真实操作录屏，中文讲解，中英双语字幕 · <a href="README.md">English narration</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-07">下载 1080p 视频和字幕</a></sub></p>
 
