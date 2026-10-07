@@ -27,11 +27,11 @@ Claude Code and Codex can already edit Word documents, revise slides and read PD
 
 **Demo order: Word → Overleaf → Chrome PDF → PowerPoint → Excel.**
 
-**Watch the five-assistant demo · English narration**
+**Watch the story demo · English narration**
 
-https://github.com/user-attachments/assets/c5499978-7145-47cf-a166-05e66c75d31e
+https://github.com/user-attachments/assets/b44d0ada-1b19-463f-98a0-4123b95bac15
 
-<p align="center"><sub>Real recordings, English narration, bilingual subtitles · <a href="README.zh-CN.md">中文配音版</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-08">Download 1080p + subtitles</a></sub></p>
+<p align="center"><sub>Real recordings, a story opening, warm narration and bilingual subtitles · <a href="README.zh-CN.md">中文配音版</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-08-story">Download 1080p + subtitles</a></sub></p>
 
 ## What you can do
 

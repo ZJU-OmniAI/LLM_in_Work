@@ -1,204 +1,624 @@
 {
+  "edition": "story-2026-10-08",
   "voices": {
-    "zh": "zh-CN-XiaoxiaoNeural",
-    "en": "en-US-AndrewMultilingualNeural"
+    "zh": "zh-CN-XiaoyiNeural",
+    "en": "en-US-AvaMultilingualNeural"
   },
   "rates": {
-    "zh": "+4%",
-    "en": "+0%"
+    "zh": "-5%",
+    "en": "-3%"
+  },
+  "pitches": {
+    "zh": "-3Hz",
+    "en": "-2Hz"
   },
   "scenes": [
     {
-      "id": "title",
+      "id": "hook",
+      "chapter": "opening",
+      "layout": "hook",
+      "title": {
+        "zh": "只想改好\n这一段。",
+        "en": "Just this\nparagraph."
+      },
+      "shots": [
+        "word_doc",
+        "word_select"
+      ],
       "sentences": [
         {
           "zh": [
-            "Claude Code 和 Codex 已经能编辑 Word、修改幻灯片，也能阅读 PDF。",
-            "但只在 Agent 窗口下指令，很难直接指明软件里正在看的那一段或某个局部。"
+            "稿子快交了。",
+            "你只想把眼前这一段，改得更清楚。"
           ],
           "en": [
-            "Claude Code and Codex can already edit Word documents, revise slides and read PDFs.",
-            "But a separate agent window makes it hard to target the exact passage or detail you are looking at."
-          ]
+            "The draft is almost due.",
+            "You just want this one paragraph to read a little better."
+          ],
+          "rate": "-9%",
+          "zh_say": "稿子快交了。你只想把眼前这一段，改得更清楚。",
+          "en_say": "The draft is almost due. You just want this one paragraph to read a little better."
         }
       ]
     },
     {
-      "id": "motivation",
+      "id": "friction",
+      "chapter": "opening",
+      "layout": "friction",
+      "title": {
+        "zh": "“这里”，该怎么说清？",
+        "en": "How do you point to “here”?"
+      },
+      "shots": [
+        "word_select",
+        "word_doc"
+      ],
       "sentences": [
         {
           "zh": [
-            "我们希望把本机已安装、已登录的 Agent，无缝接入日常工作软件。",
-            "依次是 Word、Overleaf、Chrome 中的 PDF、PowerPoint 和 Excel。"
+            "你打开 Agent。它很能干，",
+            "可你还得解释：哪一页，哪一段，哪里别动。"
           ],
           "en": [
-            "Our goal is to bring the agents already installed and signed in on your computer into your everyday apps.",
-            "Word, Overleaf, PDFs in Chrome, PowerPoint and Excel, in that order."
-          ]
+            "You open your agent. It can do the work.",
+            "But first: which page, which paragraph, and what should stay untouched?"
+          ],
+          "rate": "-6%",
+          "zh_say": "你打开 Agent。它很能干，可你还得解释：哪一页，哪一段，哪里别动。",
+          "en_say": "You open your agent. It can do the work. But first: which page, which paragraph, and what should stay untouched?"
         }
       ]
     },
     {
-      "id": "workflow",
+      "id": "turn",
+      "chapter": "opening",
+      "layout": "turn",
+      "title": {
+        "zh": "直接，指给它看。",
+        "en": "What if you could just point?"
+      },
+      "shots": [
+        "word_select"
+      ],
       "sentences": [
         {
           "zh": [
-            "选定局部，提出要求，查看差异，确认后再应用。边编辑、边修改、边确认。",
-            "在 Chrome 的 PDF 中，则可以选字或框图提问，让每一步操作都精确可控。"
+            "如果……直接指给它看呢？"
           ],
           "en": [
-            "Select a precise target, request a change, review the diff, then confirm what to apply, right where you work.",
-            "For PDFs in Chrome, select text or crop a figure and ask beside the document. Every step stays under your control."
-          ]
+            "What if… you could simply point to it?"
+          ],
+          "rate": "-10%",
+          "zh_say": "如果……直接指给它看呢？",
+          "en_say": "What if… you could simply point to it?"
         }
       ]
     },
     {
-      "id": "word",
-      "source": {
-        "en": [
-          20.086,
-          89.153
-        ],
-        "zh": [
-          20.878,
-          92.473
-        ]
-      }
-    },
-    {
-      "id": "overleaf",
-      "source": {
-        "en": [
-          172.993,
-          223.775579
-        ],
-        "zh": [
-          179.843,
-          232.95787
-        ]
-      }
-    },
-    {
-      "id": "pdf_open",
+      "id": "proof",
+      "chapter": "opening",
+      "layout": "proof",
+      "title": {
+        "zh": "选中 → 审阅 → 确认",
+        "en": "Select → Review → Confirm"
+      },
+      "shots": [
+        "word_select",
+        "word_diff",
+        "word_confirm"
+      ],
       "sentences": [
         {
           "zh": [
-            "接下来是在 Chrome 中使用 PDF。LLM_in_PDF 把本机 Agent 接入浏览器里的在线或本地 PDF。",
-            "选中文字或框选图表，就能在旁边提问。这里用一份合成示例演示。"
+            "选中，说要求。修改先摆在你眼前。",
+            "你确认，它才写回。"
           ],
           "en": [
-            "Next, PDFs in Chrome. LLM_in_PDF connects your local agent to online or local PDFs in the browser.",
-            "Select text or crop a figure and ask beside the document. Here we use a synthetic example."
+            "Select it. Say what you want. See the changes first.",
+            "They go into your document when you say yes."
           ],
-          "zh_say": "接下来是在 Chrome 中使用 PDF。LLM in PDF 把本机 Agent 接入浏览器里的在线或本地 PDF。选中文字或框选图表，就能在旁边提问。这里用一份合成示例演示。",
-          "en_say": "Next, PDFs in Chrome. LLM in PDF connects your local agent to online or local PDFs in the browser. Select text or crop a figure and ask beside the document. Here we use a synthetic example."
+          "rate": "-5%",
+          "zh_say": "选中，说要求。修改先摆在你眼前。你确认，它才写回。",
+          "en_say": "Select it. Say what you want. See the changes first. They go into your document when you say yes."
         }
       ]
     },
     {
-      "id": "pdf_text",
+      "id": "reveal",
+      "chapter": "opening",
+      "layout": "reveal",
+      "title": {
+        "zh": "LLM_in_Work",
+        "en": "LLM_in_Work"
+      },
+      "shots": [
+        "word_diff",
+        "overleaf_select",
+        "pdf_figure"
+      ],
       "sentences": [
         {
           "zh": [
-            "选中一段文字，点击问一下，就能带着全文上下文提问。",
-            "这里让模型区分十四个百分点和百分之十九点四的相对提升。"
+            "这就是 LLM in Work。",
+            "让本机的 Claude Code 或 Codex，来到你正在工作的地方。"
           ],
           "en": [
-            "Select a passage and ask a question with the full document as context.",
-            "Here the model distinguishes fourteen percentage points from a relative gain of nineteen point four percent."
-          ]
+            "Meet LLM in Work.",
+            "Your local Claude Code or Codex, right where you are already working."
+          ],
+          "rate": "-5%",
+          "zh_say": "这就是 LLM in Work。让本机的 Claude Code 或 Codex，来到你正在工作的地方。",
+          "en_say": "Meet LLM in Work. Your local Claude Code or Codex, right where you are already working."
+        }
+      ]
+    },
+    {
+      "id": "word_select",
+      "chapter": "word",
+      "layout": "demo",
+      "title": {
+        "zh": "改哪里，你来指。",
+        "en": "You choose the passage."
+      },
+      "shots": [
+        "word_select",
+        "word_doc"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "先从 Word 开始。",
+            "选中这一段，也可以再加一段。改哪里，由你来指。"
+          ],
+          "en": [
+            "Start in Word.",
+            "Select this passage, and add another if you need it. You choose exactly where the work happens."
+          ],
+          "zh_say": "先从 Word 开始。选中这一段，也可以再加一段。改哪里，由你来指。",
+          "en_say": "Start in Word. Select this passage, and add another if you need it. You choose exactly where the work happens."
+        }
+      ]
+    },
+    {
+      "id": "word_diff",
+      "chapter": "word",
+      "layout": "demo",
+      "title": {
+        "zh": "每处改动，都看得见。",
+        "en": "Every change, in view."
+      },
+      "shots": [
+        "word_diff",
+        "word_diff"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "想更简洁？保留所有数字？",
+            "把要求说清，红色和绿色，就把变化交代明白了。"
+          ],
+          "en": [
+            "Make it shorter. Keep every number.",
+            "Say what matters, then read the changes in red and green."
+          ],
+          "zh_say": "想更简洁？保留所有数字？把要求说清，红色和绿色，就把变化交代明白了。",
+          "en_say": "Make it shorter. Keep every number. Say what matters, then read the changes in red and green."
+        }
+      ]
+    },
+    {
+      "id": "word_apply",
+      "chapter": "word",
+      "layout": "demo",
+      "title": {
+        "zh": "最后一笔，由你确认。",
+        "en": "The final decision is yours."
+      },
+      "shots": [
+        "word_confirm",
+        "word_review"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "满意，再点应用。它会写成 Word 修订，",
+            "接受还是拒绝，依然由你决定。"
+          ],
+          "en": [
+            "Happy with it? Apply it as Word tracked changes.",
+            "Accept or reject them, on your terms."
+          ],
+          "zh_say": "满意，再点应用。它会写成 Word 修订，接受还是拒绝，依然由你决定。",
+          "en_say": "Happy with it? Apply it as Word tracked changes. Accept or reject them, on your terms."
+        }
+      ]
+    },
+    {
+      "id": "overleaf_select",
+      "chapter": "overleaf",
+      "layout": "demo",
+      "title": {
+        "zh": "写论文，不必换地方。",
+        "en": "Stay with your paper."
+      },
+      "shots": [
+        "overleaf_select",
+        "overleaf_select"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "换到 Overleaf，还是这个习惯。",
+            "圈出几段 LaTeX，不必来回复制。"
+          ],
+          "en": [
+            "Move into Overleaf, and keep the same rhythm.",
+            "Select a few LaTeX passages, right in the editor."
+          ],
+          "zh_say": "换到 Overleaf，还是这个习惯。圈出几段 LaTeX，不必来回复制。",
+          "en_say": "Move into Overleaf, and keep the same rhythm. Select a few LaTeX passages, right in the editor."
+        }
+      ]
+    },
+    {
+      "id": "overleaf_diff",
+      "chapter": "overleaf",
+      "layout": "demo",
+      "title": {
+        "zh": "选段明确，上下文完整。",
+        "en": "Precise targets. Full context."
+      },
+      "shots": [
+        "overleaf_diff",
+        "overleaf_diff"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "整篇源码提供上下文，",
+            "每个选段都有自己的差异。引用和公式，也留在原来的位置。"
+          ],
+          "en": [
+            "The full source gives context.",
+            "Each passage gets its own diff, with citations and math kept intact."
+          ],
+          "zh_say": "整篇源码提供上下文，每个选段都有自己的差异。引用和公式，也留在原来的位置。",
+          "en_say": "The full source gives context. Each passage gets its own diff, with citations and math kept intact."
+        }
+      ]
+    },
+    {
+      "id": "overleaf_apply",
+      "chapter": "overleaf",
+      "layout": "demo",
+      "title": {
+        "zh": "确认，也能回退。",
+        "en": "Confirm. And keep an undo."
+      },
+      "shots": [
+        "overleaf_apply",
+        "overleaf_apply"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "看过以后，一起应用。想退回？",
+            "一次撤销，就回到刚才。"
+          ],
+          "en": [
+            "Review them, then apply the group. Changed your mind?",
+            "One undo takes the whole group back."
+          ],
+          "zh_say": "看过以后，一起应用。想退回？一次撤销，就回到刚才。",
+          "en_say": "Review them, then apply the group. Changed your mind? One undo takes the whole group back."
+        }
+      ]
+    },
+    {
+      "id": "pdf_select",
+      "chapter": "pdf",
+      "layout": "demo",
+      "title": {
+        "zh": "这一句，什么意思？",
+        "en": "What does this sentence mean?"
+      },
+      "shots": [
+        "pdf_select",
+        "pdf_answer"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "再打开 Chrome 里的 PDF。",
+            "读到不明白的一句？选中，就在文档旁边问。"
+          ],
+          "en": [
+            "Now open a PDF in Chrome.",
+            "A sentence leaves you wondering? Select it, and ask beside the document."
+          ],
+          "zh_say": "再打开 Chrome 里的 PDF。读到不明白的一句？选中，就在文档旁边问。",
+          "en_say": "Now open a PDF in Chrome. A sentence leaves you wondering? Select it, and ask beside the document."
         }
       ]
     },
     {
       "id": "pdf_figure",
+      "chapter": "pdf",
+      "layout": "demo",
+      "title": {
+        "zh": "这一张图，直接聊。",
+        "en": "Talk about the actual figure."
+      },
+      "shots": [
+        "pdf_figure",
+        "pdf_figure"
+      ],
       "sentences": [
         {
           "zh": [
-            "再框选图表，发送真实图像，让模型比较两根柱子并说明局限。",
-            "回答可以直接显示成表格，也支持公式和代码。"
+            "遇到图表，也一样。",
+            "框出想讨论的部分，把真实图像交给模型。"
           ],
           "en": [
-            "Crop a figure to send its actual pixels, then ask about the bars and the limitations.",
-            "Answers can include tables, formulas and code."
-          ]
+            "A figure works the same way.",
+            "Frame the part you want to discuss, and let the model see the actual image."
+          ],
+          "zh_say": "遇到图表，也一样。框出想讨论的部分，把真实图像交给模型。",
+          "en_say": "A figure works the same way. Frame the part you want to discuss, and let the model see the actual image."
         }
       ]
     },
     {
       "id": "pdf_history",
+      "chapter": "pdf",
+      "layout": "demo",
+      "title": {
+        "zh": "沿着文档，继续理解。",
+        "en": "Keep the conversation in context."
+      },
+      "shots": [
+        "pdf_answer",
+        "pdf_history"
+      ],
       "sentences": [
         {
           "zh": [
-            "刷新后，对话和图片仍然保留。",
-            "还可以把整段会话复制成 Markdown，PDF 原文始终不变。"
+            "问题跟着文档，",
+            "对话可以接着聊。你越读越明白，PDF 原文始终不变。"
           ],
           "en": [
-            "Conversations and images remain after reloading.",
-            "Copy the complete chat as Markdown. The original PDF stays unchanged."
-          ]
+            "The conversation stays with the document.",
+            "Keep asking, keep understanding. The original PDF stays unchanged."
+          ],
+          "zh_say": "问题跟着文档，对话可以接着聊。你越读越明白，PDF 原文始终不变。",
+          "en_say": "The conversation stays with the document. Keep asking, keep understanding. The original PDF stays unchanged."
         }
       ]
     },
     {
-      "id": "powerpoint",
-      "source": {
-        "en": [
-          89.153,
-          126.17
-        ],
-        "zh": [
-          92.473,
-          131.949
-        ]
-      }
-    },
-    {
-      "id": "excel",
-      "source": {
-        "en": [
-          126.17,
-          172.993
-        ],
-        "zh": [
-          131.949,
-          179.843
-        ]
-      }
-    },
-    {
-      "id": "arch",
+      "id": "ppt_select",
+      "chapter": "powerpoint",
+      "layout": "demo",
+      "title": {
+        "zh": "让重点，浮出来。",
+        "en": "Bring the point into focus."
+      },
+      "shots": [
+        "ppt_overview",
+        "ppt_select"
+      ],
       "sentences": [
         {
           "zh": [
-            "五个助手都通过本机桥调用你已登录的命令行工具，不需要额外 API Key。",
-            "发送的问题、正文和图片会交给对应模型服务。"
+            "接着是 PowerPoint。",
+            "标题太长，要点太散？把要改的内容选出来。"
           ],
           "en": [
-            "All five assistants use a local bridge and your signed-in CLI, with no extra API key.",
-            "Questions, document context and attached images go to the chosen model provider."
-          ]
+            "Next, PowerPoint.",
+            "A title that rambles? Bullets that feel too long? Choose what needs attention."
+          ],
+          "zh_say": "接着是 PowerPoint。标题太长，要点太散？把要改的内容选出来。",
+          "en_say": "Next, PowerPoint. A title that rambles? Bullets that feel too long? Choose what needs attention."
+        }
+      ]
+    },
+    {
+      "id": "ppt_diff",
+      "chapter": "powerpoint",
+      "layout": "demo",
+      "title": {
+        "zh": "先看变化，再写回。",
+        "en": "See it before you apply it."
+      },
+      "shots": [
+        "ppt_diff",
+        "ppt_apply"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "先看每个文本框怎么改，再决定是否应用。",
+            "变化的字词写回，原有格式尽量保留。"
+          ],
+          "en": [
+            "Review each text box, then decide what to apply.",
+            "Only changed words are written back, preserving the existing formatting."
+          ],
+          "zh_say": "先看每个文本框怎么改，再决定是否应用。变化的字词写回，原有格式尽量保留。",
+          "en_say": "Review each text box, then decide what to apply. Only changed words are written back, preserving the existing formatting."
+        }
+      ]
+    },
+    {
+      "id": "excel_select",
+      "chapter": "excel",
+      "layout": "demo",
+      "title": {
+        "zh": "从这一块数据开始。",
+        "en": "Start with this range."
+      },
+      "shots": [
+        "excel_select",
+        "excel_diff"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "最后是 Excel。圈出一块数据，就能清洗整理；",
+            "预览只列出需要改变的单元格。"
+          ],
+          "en": [
+            "Finally, Excel. Select a range to clean up.",
+            "The preview shows exactly which cells will change."
+          ],
+          "zh_say": "最后是 Excel。圈出一块数据，就能清洗整理；预览只列出需要改变的单元格。",
+          "en_say": "Finally, Excel. Select a range to clean up. The preview shows exactly which cells will change."
+        }
+      ]
+    },
+    {
+      "id": "excel_apply",
+      "chapter": "excel",
+      "layout": "demo",
+      "title": {
+        "zh": "每一格，都有依据。",
+        "en": "A reason behind every cell."
+      },
+      "shots": [
+        "excel_fill",
+        "excel_apply"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "也可以选中空白列，让模型按每行内容补齐。",
+            "确认以后再写入，格式和编号仍然保留。"
+          ],
+          "en": [
+            "Or select an empty column, and fill it from each row’s context.",
+            "Confirm before writing, with formats and identifiers preserved."
+          ],
+          "zh_say": "也可以选中空白列，让模型按每行内容补齐。确认以后再写入，格式和编号仍然保留。",
+          "en_say": "Or select an empty column, and fill it from each row’s context. Confirm before writing, with formats and identifiers preserved."
+        }
+      ]
+    },
+    {
+      "id": "connection",
+      "chapter": "connection",
+      "layout": "connection",
+      "title": {
+        "zh": "你的 Agent，接入日常。",
+        "en": "Your agent. Your everyday apps."
+      },
+      "shots": [
+        "word_diff",
+        "overleaf_diff",
+        "pdf_figure"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "背后，用的就是本机已登录的 Claude Code 或 Codex。",
+            "不需要再配一把 API Key。"
+          ],
+          "en": [
+            "Behind it all is the Claude Code or Codex already signed in on your computer.",
+            "No extra API key to set up."
+          ],
+          "rate": "-6%",
+          "zh_say": "背后，用的就是本机已登录的 Claude Code 或 Codex。不需要再配一把 API Key。",
+          "en_say": "Behind it all is the Claude Code or Codex already signed in on your computer. No extra API key to set up."
+        }
+      ]
+    },
+    {
+      "id": "context",
+      "chapter": "connection",
+      "layout": "montage",
+      "title": {
+        "zh": "继续工作，保持节奏。",
+        "en": "Stay in your flow."
+      },
+      "shots": [
+        "pdf_answer",
+        "ppt_apply",
+        "excel_fill"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "请求会通过本机桥交给对应的模型服务。",
+            "你留在文档里，保持自己的工作节奏。"
+          ],
+          "en": [
+            "A local bridge sends your request to the chosen model provider.",
+            "You stay in your document, and keep your flow."
+          ],
+          "rate": "-6%",
+          "zh_say": "请求会通过本机桥交给对应的模型服务。你留在文档里，保持自己的工作节奏。",
+          "en_say": "A local bridge sends your request to the chosen model provider. You stay in your document, and keep your flow."
+        }
+      ]
+    },
+    {
+      "id": "return",
+      "chapter": "closing",
+      "layout": "return",
+      "title": {
+        "zh": "“这里”，就是这里。",
+        "en": "“Here” means right here."
+      },
+      "shots": [
+        "word_select",
+        "word_diff"
+      ],
+      "sentences": [
+        {
+          "zh": [
+            "再回到开头那一段。",
+            "这一次，不用解释“这里”在哪里。选中，它就明白了。"
+          ],
+          "en": [
+            "Back to that opening paragraph.",
+            "This time, there is no need to explain where “here” is. Select it. That is the starting point."
+          ],
+          "rate": "-8%",
+          "zh_say": "再回到开头那一段。这一次，不用解释“这里”在哪里。选中，它就明白了。",
+          "en_say": "Back to that opening paragraph. This time, there is no need to explain where “here” is. Select it. That is the starting point."
         }
       ]
     },
     {
       "id": "outro",
+      "chapter": "closing",
+      "layout": "outro",
+      "title": {
+        "zh": "让 AI 帮你改。\n让决定留给你。",
+        "en": "AI helps with the changes.\nYou keep the decisions."
+      },
+      "shots": [
+        "word_confirm",
+        "overleaf_apply",
+        "pdf_figure",
+        "ppt_apply",
+        "excel_fill"
+      ],
       "sentences": [
         {
           "zh": [
-            "把本机 Agent 带进日常软件，让每一处操作都看得见、可确认。",
-            "在 LLM_in_Work 仓库选择需要的助手，按 README 安装。"
+            "让 AI 帮你改，让决定留给你。",
+            "LLM in Work，从你正在用的软件开始。"
           ],
           "en": [
-            "Bring your local agent into your everyday apps, with precise selections and changes you can review and confirm.",
-            "Choose your assistants in the LLM_in_Work repository and follow the README to install."
+            "Let AI help with the changes. Keep the decisions for yourself.",
+            "LLM in Work. Start where you already work."
           ],
-          "zh_say": "把本机 Agent 带进日常软件，让每一处操作都看得见、可确认。在 LLM in Work 仓库选择需要的助手，按 Readme 安装。",
-          "en_say": "Bring your local agent into your everyday apps, with precise selections and changes you can review and confirm. Choose your assistants in the LLM in Work repository and follow the Readme to install."
+          "rate": "-9%",
+          "zh_say": "让 AI 帮你改，让决定留给你。LLM in Work，从你正在用的软件开始。",
+          "en_say": "Let AI help with the changes. Keep the decisions for yourself. LLM in Work. Start where you already work."
         }
       ]
     }
-  ],
-  "source_release": "2026-10-07"
+  ]
 }

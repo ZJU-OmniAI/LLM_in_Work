@@ -4,7 +4,7 @@ import edge_tts
 from typing import Awaitable
 HERE = os.path.dirname(os.path.abspath(__file__))
 script = json.load(open(os.path.join(HERE, 'script.json'), encoding='utf-8'))
-OUT = os.path.join(HERE, 'build', 'tts')
+OUT = os.path.join(HERE, 'build', 'story-tts')
 os.makedirs(OUT, exist_ok=True)
 
 def duration(path: str) -> float:
@@ -15,17 +15,17 @@ def spoken_text(s: dict, lang: str) -> str:
         return s.get('zh_say') or ''.join(s['zh'])
     return s.get('en_say') or ' '.join(s['en'])
 
-async def synth(text: str, voice: str, rate: str, path: str) -> None:
+async def synth(text: str, voice: str, rate: str, pitch: str, path: str) -> None:
     meta_path = path + '.json'
     if os.path.exists(path) and os.path.exists(meta_path):
         meta = json.load(open(meta_path, encoding='utf-8'))
-        if meta.get('text') == text and meta.get('voice') == voice and meta.get('rate') == rate and meta.get('words'):
+        if meta.get('text') == text and meta.get('voice') == voice and meta.get('rate') == rate and meta.get('pitch') == pitch and meta.get('words'):
             return
     for attempt in range(4):
         try:
             words: list[list] = []
             audio = bytearray()
-            comm = edge_tts.Communicate(text, voice, rate=rate, boundary='WordBoundary')
+            comm = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch, boundary='WordBoundary')
             async for chunk in comm.stream():
                 if chunk['type'] == 'audio':
                     audio += chunk['data']
@@ -35,7 +35,7 @@ async def synth(text: str, voice: str, rate: str, path: str) -> None:
                 raise RuntimeError('empty tts result')
             with open(path, 'wb') as f:
                 f.write(audio)
-            json.dump({'text': text, 'voice': voice, 'rate': rate, 'words': words}, open(meta_path, 'w', encoding='utf-8'), ensure_ascii=False)
+            json.dump({'text': text, 'voice': voice, 'rate': rate, 'pitch': pitch, 'words': words}, open(meta_path, 'w', encoding='utf-8'), ensure_ascii=False)
             return
         except Exception as e:
             print('retry', attempt, e, file=sys.stderr)
@@ -48,7 +48,7 @@ async def main() -> None:
         for i, s in enumerate(scene.get('sentences', [])):
             for lang in ('zh', 'en'):
                 path = os.path.join(OUT, f"{scene['id']}_{i}_{lang}.mp3")
-                jobs.append(synth(spoken_text(s, lang), script['voices'][lang], script['rates'][lang], path))
+                jobs.append(synth(spoken_text(s, lang), script['voices'][lang], s.get('rate', script['rates'][lang]), script['pitches'][lang], path))
                 index.append((scene['id'], i, lang, path))
     sem = asyncio.Semaphore(4)
     async def run(j: Awaitable[None]) -> None:

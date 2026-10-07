@@ -27,11 +27,11 @@ Claude Code、Codex 这样的 Agent 已经能编辑 Word 文字、修改 PPT、�
 
 **介绍顺序：Word → Overleaf → Chrome PDF → PowerPoint → Excel。**
 
-**五个助手演示 · 中文讲解 · 点击下方播放**
+**从“只改这一段”开始 · 故事版演示 · 点击下方播放**
 
-https://github.com/user-attachments/assets/ec40642c-06cc-481d-bbe6-05ccfc7015df
+https://github.com/user-attachments/assets/08b40aef-50ba-4772-aff1-d24c1b488da0
 
-<p align="center"><sub>真实操作录屏，中文讲解，中英双语字幕 · <a href="README.md">English narration</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-08">下载 1080p 视频和字幕</a></sub></p>
+<p align="center"><sub>真实操作录屏，故事开场，温暖女声，中英双语字幕 · <a href="README.md">English narration</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-08-story">下载 1080p 视频和字幕</a></sub></p>
 
 ## 亮点
 

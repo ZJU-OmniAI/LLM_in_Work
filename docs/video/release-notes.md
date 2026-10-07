@@ -1,25 +1,30 @@
-## Precise control inside your everyday apps
+## “Just this paragraph.” — a new story edit
 
-Claude Code and Codex can already edit documents and read PDFs. LLM_in_Work connects those locally installed, signed-in agents to the apps where you work, so you can select an exact target, review the proposed change, and confirm what to apply in place.
+A draft is nearly due. You want to improve one paragraph, but first you have to explain where it is. What if you could simply point to it?
 
-This presentation update puts that motivation first in both READMEs and the narrated videos. The demos now follow **Word → Overleaf → Chrome PDF → PowerPoint → Excel**. The PDF introduction describes using a local agent with PDFs in Chrome: select text or crop a figure and ask beside the document. PDF content stays unchanged.
+The new introduction follows that small problem through selection, review and confirmation. Live-action close-ups and a moving three-panel sequence show the answer; the closing returns to the opening paragraph.
 
-## Watch in your browser
+- Fresh, warm female narration in both Chinese and English, with conversational phrasing and deliberate pauses.
+- Moving application windows, operation close-ups, animated scenario bubbles, a connection diagram and a closing montage.
+- A quiet original instrumental score that ducks under speech.
+- Bilingual subtitles, inline 720p playback, downloadable 1080p videos and reusable caption-free source clips.
 
-Both videos have bilingual captions. Play the 720p versions below; 1080p originals and separate SRT subtitles are available in **Assets**.
+The product order remains **Word → Overleaf → Chrome PDF → PowerPoint → Excel**. PDF questions leave the original file unchanged. Narration is synthesized; demonstrations use real recordings, with shortened waits. Overleaf is shown on a local demo page running the real extension.
+
+## Watch
 
 **English narration**
 
-https://github.com/user-attachments/assets/c5499978-7145-47cf-a166-05e66c75d31e
+https://github.com/user-attachments/assets/b44d0ada-1b19-463f-98a0-4123b95bac15
 
-**中文讲解 · 点击下方直接播放**
+**中文讲解 · 温暖女声 · 故事版**
 
-https://github.com/user-attachments/assets/ec40642c-06cc-481d-bbe6-05ccfc7015df
-
-The four editing chapters reuse real recordings from the October 7 edition, reordered for this introduction. The PDF demonstration uses a real Chrome extension, a synthetic document and real Claude Code answers. The new opening, PDF introduction and closing have fresh English/Chinese narration. [Video source and reproduction instructions](https://github.com/ZJU-OmniAI/LLM_in_Work/tree/main/docs/video).
+https://github.com/user-attachments/assets/08b40aef-50ba-4772-aff1-d24c1b488da0
 
 ## 中文
 
-这次更新 README 和视频介绍，优先说明项目动机：把本机已安装、已登录的 Claude Code 或 Codex 无缝接入日常工作软件，精确选定局部，审阅差异，确认后应用，实现边编辑、边修改、边确认。
+从“稿子快交了，只想改好眼前这一段”切入，讲清为什么需要把本机 Agent 接进日常工作软件。全片重录温暖自然的女声，配合短句、停顿和轻音乐；增加真实操作特写、动态分屏、窗口切换和结尾蒙太奇。最后回到开场那一段，以“让 AI 帮你改，让决定留给你”收束。
 
-介绍顺序统一为 **Word → Overleaf → Chrome 中的 PDF → PowerPoint → Excel**。PDF 部分强调在 Chrome 中选字、框图并向本机 Agent 提问，原文保持不变。中英文配音、双语字幕、1080p 和 720p 视频均已更新。
+顺序继续保持 **Word → Overleaf → Chrome 中的 PDF → PowerPoint → Excel**。本机 Agent、精确选区、审阅确认与 PDF 原文不变的定位保持一致。
+
+[Reproduction instructions / 制作说明](https://github.com/ZJU-OmniAI/LLM_in_Work/tree/main/docs/video). Assets include 1080p/720p videos, SRT subtitles and the caption-free source-clip bundle.
