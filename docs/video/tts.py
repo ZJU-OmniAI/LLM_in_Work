@@ -45,7 +45,7 @@ async def synth(text: str, voice: str, rate: str, path: str) -> None:
 async def main() -> None:
     jobs, index = [], []
     for scene in script['scenes']:
-        for i, s in enumerate(scene['sentences']):
+        for i, s in enumerate(scene.get('sentences', [])):
             for lang in ('zh', 'en'):
                 path = os.path.join(OUT, f"{scene['id']}_{i}_{lang}.mp3")
                 jobs.append(synth(spoken_text(s, lang), script['voices'][lang], script['rates'][lang], path))

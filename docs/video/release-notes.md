@@ -1,35 +1,25 @@
-## LLM_in_PDF 0.9.0 joins LLM_in_Work
+## Precise control inside your everyday apps
 
-`paper_read` is now **LLM_in_PDF**, alongside Word, PowerPoint, Excel and Overleaf.
+Claude Code and Codex can already edit documents and read PDFs. LLM_in_Work connects those locally installed, signed-in agents to the apps where you work, so you can select an exact target, review the proposed change, and confirm what to apply in place.
 
-- Read online/local PDFs and paper webpages. Ask about selected passages or cropped figures, with the full extracted text as context.
-- Render Markdown tables, code and math; save per-document conversations and copy current/all history.
-- Keep the existing extension ID, conversation data and `PAPER_READ_*` settings compatible. New settings use `LLM_IN_PDF_*`.
-- Install the native bridge on macOS/Linux with `cd LLM_in_PDF && ./install.sh`. Windows uses `npm start` and the HTTP fallback.
-- Both language READMEs, security documentation and CI now include the PDF assistant. No private extension signing key is included.
+This presentation update puts that motivation first in both READMEs and the narrated videos. The demos now follow **Word → Overleaf → Chrome PDF → PowerPoint → Excel**. The PDF introduction describes using a local agent with PDFs in Chrome: select text or crop a figure and ask beside the document. PDF content stays unchanged.
 
-## New narrated videos
+## Watch in your browser
 
-The attached **English and Chinese** videos cover all five assistants, with bilingual captions and separate SRT subtitles. Each language has a full 1080p file and a compact 720p version.
-
-Play the 720p demos directly below; 1080p originals and subtitles are available in **Assets**.
+Both videos have bilingual captions. Play the 720p versions below; 1080p originals and separate SRT subtitles are available in **Assets**.
 
 **English narration**
 
-https://github.com/user-attachments/assets/d4366a5c-7f58-4e2c-8c76-561d4f38b9d1
+https://github.com/user-attachments/assets/c5499978-7145-47cf-a166-05e66c75d31e
 
 **中文讲解 · 点击下方直接播放**
 
-https://github.com/user-attachments/assets/97164522-3a90-49fc-b5ba-5e64ad1b49f1
+https://github.com/user-attachments/assets/ec40642c-06cc-481d-bbe6-05ccfc7015df
 
-The four editing chapters reuse the October 1 real recordings. The new PDF chapter uses the actual extension, a synthetic document and real Claude Code (Sonnet) answers. The PDF interface is Chinese in both versions. Source scripts: [docs/video](https://github.com/ZJU-OmniAI/LLM_in_Work/tree/main/docs/video).
-
-## Validation
-
-286 offline tests passed locally across the five projects. Both PDF Chromium suites passed, as did real Claude/Codex native-bridge smoke tests and the real PDF text/image recording. See [verification details](https://github.com/ZJU-OmniAI/LLM_in_Work/blob/main/LLM_in_PDF/docs/verification.md) for coverage and limits.
+The four editing chapters reuse real recordings from the October 7 edition, reordered for this introduction. The PDF demonstration uses a real Chrome extension, a synthetic document and real Claude Code answers. The new opening, PDF introduction and closing have fresh English/Chinese narration. [Video source and reproduction instructions](https://github.com/ZJU-OmniAI/LLM_in_Work/tree/main/docs/video).
 
 ## 中文
 
-新增第五个助手 **LLM_in_PDF**（原 `paper_read`）：在线 / 本地 PDF、论文网页、选字与框图提问、Markdown / 公式、会话恢复与完整导出。保留扩展 ID、旧会话键与旧环境变量；从新目录重装原生桥并重新加载扩展即可迁移，勿先卸载旧扩展。
+这次更新 README 和视频介绍，优先说明项目动机：把本机已安装、已登录的 Claude Code 或 Codex 无缝接入日常工作软件，精确选定局部，审阅差异，确认后应用，实现边编辑、边修改、边确认。
 
-中英文 README、截图、CI 与介绍视频已更新。附件包含两种配音的 1080p、720p 成片和独立双语字幕；PDF 演示使用合成文档和真实模型回复。本机共 286 项离线测试通过，另通过两组浏览器回归与 Claude / Codex 真实问答检查。
+介绍顺序统一为 **Word → Overleaf → Chrome 中的 PDF → PowerPoint → Excel**。PDF 部分强调在 Chrome 中选字、框图并向本机 Agent 提问，原文保持不变。中英文配音、双语字幕、1080p 和 720p 视频均已更新。

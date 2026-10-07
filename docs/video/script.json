@@ -13,31 +13,86 @@
       "sentences": [
         {
           "zh": [
-            "LLM_in_Work：把本机的 Claude Code 和 Codex，",
-            "带进 Word、PowerPoint、Excel、Overleaf 和 PDF 阅读器。"
+            "Claude Code 和 Codex 已经能编辑 Word、修改幻灯片，也能阅读 PDF。",
+            "但只在 Agent 窗口下指令，很难直接指明软件里正在看的那一段或某个局部。"
           ],
           "en": [
-            "LLM_in_Work brings your local Claude Code and Codex",
-            "into Word, PowerPoint, Excel, Overleaf and a PDF reader."
-          ],
-          "zh_say": "LLM in Work，把本机的 Claude Code 和 Codex，带进 Word、PowerPoint、Excel、Overleaf 和 PDF 阅读器。",
-          "en_say": "LLM in Work brings your local Claude Code and Codex into Word, PowerPoint, Excel, Overleaf and a PDF reader."
+            "Claude Code and Codex can already edit Word documents, revise slides and read PDFs.",
+            "But a separate agent window makes it hard to target the exact passage or detail you are looking at."
+          ]
         }
       ]
+    },
+    {
+      "id": "motivation",
+      "sentences": [
+        {
+          "zh": [
+            "我们希望把本机已安装、已登录的 Agent，无缝接入日常工作软件。",
+            "依次是 Word、Overleaf、Chrome 中的 PDF、PowerPoint 和 Excel。"
+          ],
+          "en": [
+            "Our goal is to bring the agents already installed and signed in on your computer into your everyday apps.",
+            "Word, Overleaf, PDFs in Chrome, PowerPoint and Excel, in that order."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workflow",
+      "sentences": [
+        {
+          "zh": [
+            "选定局部，提出要求，查看差异，确认后再应用。边编辑、边修改、边确认。",
+            "在 Chrome 的 PDF 中，则可以选字或框图提问，让每一步操作都精确可控。"
+          ],
+          "en": [
+            "Select a precise target, request a change, review the diff, then confirm what to apply, right where you work.",
+            "For PDFs in Chrome, select text or crop a figure and ask beside the document. Every step stays under your control."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "word",
+      "source": {
+        "en": [
+          20.086,
+          89.153
+        ],
+        "zh": [
+          20.878,
+          92.473
+        ]
+      }
+    },
+    {
+      "id": "overleaf",
+      "source": {
+        "en": [
+          172.993,
+          223.775579
+        ],
+        "zh": [
+          179.843,
+          232.95787
+        ]
+      }
     },
     {
       "id": "pdf_open",
       "sentences": [
         {
           "zh": [
-            "第五个助手，LLM_in_PDF，支持在线 PDF、论文网页和本地文件。",
-            "这里导入一份合成示例，保留 PDF 原始排版。"
+            "接下来是在 Chrome 中使用 PDF。LLM_in_PDF 把本机 Agent 接入浏览器里的在线或本地 PDF。",
+            "选中文字或框选图表，就能在旁边提问。这里用一份合成示例演示。"
           ],
           "en": [
-            "The fifth assistant, LLM_in_PDF, reads online PDFs, paper webpages and local files.",
-            "Here we import a synthetic example, with its original layout preserved."
+            "Next, PDFs in Chrome. LLM_in_PDF connects your local agent to online or local PDFs in the browser.",
+            "Select text or crop a figure and ask beside the document. Here we use a synthetic example."
           ],
-          "zh_say": "第五个助手，LLM in PDF，支持在线 PDF、论文网页和本地文件。这里导入一份合成示例，保留 PDF 原始排版。"
+          "zh_say": "接下来是在 Chrome 中使用 PDF。LLM in PDF 把本机 Agent 接入浏览器里的在线或本地 PDF。选中文字或框选图表，就能在旁边提问。这里用一份合成示例演示。",
+          "en_say": "Next, PDFs in Chrome. LLM in PDF connects your local agent to online or local PDFs in the browser. Select text or crop a figure and ask beside the document. Here we use a synthetic example."
         }
       ]
     },
@@ -87,6 +142,32 @@
       ]
     },
     {
+      "id": "powerpoint",
+      "source": {
+        "en": [
+          89.153,
+          126.17
+        ],
+        "zh": [
+          92.473,
+          131.949
+        ]
+      }
+    },
+    {
+      "id": "excel",
+      "source": {
+        "en": [
+          126.17,
+          172.993
+        ],
+        "zh": [
+          131.949,
+          179.843
+        ]
+      }
+    },
+    {
       "id": "arch",
       "sentences": [
         {
@@ -106,17 +187,18 @@
       "sentences": [
         {
           "zh": [
-            "写作时审阅差异，阅读时直接提问。",
+            "把本机 Agent 带进日常软件，让每一处操作都看得见、可确认。",
             "在 LLM_in_Work 仓库选择需要的助手，按 README 安装。"
           ],
           "en": [
-            "Review edits while writing. Ask questions while reading.",
+            "Bring your local agent into your everyday apps, with precise selections and changes you can review and confirm.",
             "Choose your assistants in the LLM_in_Work repository and follow the README to install."
           ],
-          "zh_say": "写作时审阅差异，阅读时直接提问。在 LLM in Work 仓库选择需要的助手，按 Readme 安装。",
-          "en_say": "Review edits while writing. Ask questions while reading. Choose your assistants in the LLM in Work repository and follow the Readme to install."
+          "zh_say": "把本机 Agent 带进日常软件，让每一处操作都看得见、可确认。在 LLM in Work 仓库选择需要的助手，按 Readme 安装。",
+          "en_say": "Bring your local agent into your everyday apps, with precise selections and changes you can review and confirm. Choose your assistants in the LLM in Work repository and follow the Readme to install."
         }
       ]
     }
-  ]
+  ],
+  "source_release": "2026-10-07"
 }

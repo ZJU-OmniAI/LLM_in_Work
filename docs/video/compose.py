@@ -1,6 +1,6 @@
-"""Build the five-assistant demo from the prior release and a real PDF capture.
+"""Build the ordered five-assistant demo from the October 7 release and PDF capture.
 
-python3 docs/video/compose.py --previous /path/to/video_v2/out --lang en
+python3 docs/video/compose.py --previous /path/to/2026-10-07-video-files --lang en
 Dependencies: ffmpeg, ffprobe, Pillow. See README.md for the recording/voice steps.
 """
 from __future__ import annotations
@@ -65,18 +65,35 @@ def card(scene: str, lang: str, target: Path) -> None:
     d.ellipse((1200, -350, 2250, 700), fill='#163c30')
     d.ellipse((-450, 620, 550, 1620), fill='#15382d')
     d.text((130, 100), 'LLM_IN_WORK   /   2026.10', font=font(27), fill='#90cbb4')
-    title = {'title':'LLM_in_Work', 'arch':('Your CLI. Five assistants.' if lang=='en' else '你的命令行，五个助手。'), 'outro':('Write. Read. Stay in context.' if lang=='en' else '写作与阅读，都在文档旁。')}[scene]
-    d.text((125, 235), title, font=font(76), fill='#f3f8f5')
-    subtitle = {'title':('AI beside the work you already do.' if lang=='en' else '把已登录的 AI，带进日常工作。'), 'arch':('Local bridges → Claude Code / Codex → model provider' if lang=='en' else '本机桥 → Claude Code / Codex → 模型服务'), 'outro':'github.com/ZJU-OmniAI/LLM_in_Work'}[scene]
+    titles = {
+        'title': ('Agents can edit. You need control.', 'Agent 已经能做，更要精确可控。'),
+        'motivation': ('Your local agent. Inside your apps.', '把本机 Agent，接入日常软件。'),
+        'workflow': ('Select. Review. Confirm.', '精确选择，审阅差异，确认应用。'),
+        'arch': ('Your CLI. Five assistants.', '你的命令行，五个助手。'),
+        'outro': ('Precise edits. Your confirmation.', '边编辑、边修改、边确认。'),
+    }
+    title = titles[scene][lang == 'zh']
+    title_size = 76
+    while font(title_size).getlength(title) > 1660:
+        title_size -= 2
+    d.text((125, 235), title, font=font(title_size), fill='#f3f8f5')
+    subtitles = {
+        'title': ('Choose the exact passage or detail, right where you work.', '直接选中正在看的段落或局部，在原处审阅每一步。'),
+        'motivation': ('Claude Code / Codex → the software you already use', 'Claude Code / Codex → 你正在使用的工作软件'),
+        'workflow': ('Editing: confirm changes. Chrome PDF: select and ask.', '编辑内容先确认再写回；Chrome 中的 PDF 选字、框图提问。'),
+        'arch': ('Local bridges → Claude Code / Codex → model provider', '本机桥 → Claude Code / Codex → 模型服务'),
+        'outro': ('github.com/ZJU-OmniAI/LLM_in_Work', 'github.com/ZJU-OmniAI/LLM_in_Work'),
+    }
+    subtitle = subtitles[scene][lang == 'zh']
     d.text((132, 358), subtitle, font=font(38), fill='#bbd9ca')
-    names=['Word','PowerPoint','Excel','Overleaf','PDF']
-    colors=['#5487bc','#d08766','#5cb78a','#9bc96d','#e7ad71']
+    names=['Word','Overleaf','Chrome PDF','PowerPoint','Excel']
+    colors=['#5487bc','#9bc96d','#e7ad71','#d08766','#5cb78a']
     for i,(name,col) in enumerate(zip(names,colors)):
         x=132+i*330
         d.rounded_rectangle((x,510,x+302,710),radius=20,fill='#204738',outline='#3a6754',width=2)
         d.rounded_rectangle((x+24,540,x+70,547),radius=3,fill=col)
         d.text((x+24,584),name,font=font(34),fill='#f4faf6')
-        d.text((x+24,647),('Read & ask' if i==4 else 'Review & edit') if lang=='en' else ('阅读与问答' if i==4 else '审阅与编辑'),font=font(22),fill='#aacbbb')
+        d.text((x+24,647),('Select & ask' if i==2 else 'Review & edit') if lang=='en' else ('选字 / 框图提问' if i==2 else '审阅与编辑'),font=font(22),fill='#aacbbb')
     im.save(target)
 
 def stamp(t: float) -> str:
@@ -86,6 +103,9 @@ def stamp(t: float) -> str:
 def seconds(t: str) -> float:
     h,m,s=t.replace(',','.').split(':')
     return int(h)*3600+int(m)*60+float(s)
+
+def normalize_text(text: str) -> str:
+    return re.sub(r'[\W_]+', '', text).casefold()
 
 def previous_cues(file: Path, start: float, end: float, offset: float) -> list[tuple[float,float,str]]:
     result=[]
@@ -101,6 +121,8 @@ def main() -> None:
     parser.add_argument('--previous',type=Path,required=True)
     parser.add_argument('--lang',choices=['en','zh'],required=True)
     args=parser.parse_args();lang=args.lang;other='zh' if lang=='en' else 'en'
+    if args.previous.resolve() == BUILD.resolve():
+        parser.error('--previous must be a separate folder so source recordings are preserved')
     spec=json.loads((HERE/'script.json').read_text())
     marks={x['label']:x['t'] for x in json.loads((BUILD/'pdf-marks.json').read_text())['marks']}
     pdf=BUILD/'pdf-live.webm'
@@ -113,15 +135,33 @@ def main() -> None:
     clips=[];cues=[];timeline=[];at=0.
     out=BUILD/lang;out.mkdir(exist_ok=True)
     for scene in spec['scenes']:
+        if 'source' in scene:
+            sid = scene['id']
+            start, end = scene['source'][lang]
+            source = args.previous / f'LLM_in_Work_demo_{lang}.mp4'
+            target = out / f'{sid}.mp4'
+            run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(start),'-i',str(source),'-t',str(end-start),'-vf','fps=30,setsar=1','-c:v','libx264','-preset','veryfast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-ar','48000','-ac','2','-b:a','128k',str(target)])
+            D = duration(target)
+            clips.append(target)
+            cues += previous_cues(args.previous/f'LLM_in_Work_demo_{lang}.srt', start, end, at)
+            timeline.append({'id':sid,'start':at,'duration':D})
+            at += D
+            print(lang, sid, round(at, 2), flush=True)
+            continue
         sid=scene['id'];sent=scene['sentences'][0]
         audio=BUILD/'tts'/f'{sid}_0_{lang}.mp3';D=duration(audio)+1.2
         pngs=[]
-        # Captions follow the first spoken word of each sentence using TTS boundaries.
+        # Match the first caption line to TTS word boundaries, including pronunciation overrides.
         meta=json.loads(Path(str(audio)+'.json').read_text());words=meta['words']
-        # The first two logical lines partition the spoken text; proportional timing is
-        # used for title overrides that pronounce product identifiers differently.
         weight=len(sent[lang][0]) / sum(len(x) for x in sent[lang])
         split=.25+duration(audio)*weight
+        first_line = normalize_text(sent[lang][0])
+        spoken = ''
+        for index, word in enumerate(words[:-1]):
+            spoken += normalize_text(word[2])
+            if spoken == first_line:
+                split = .25 + words[index + 1][0]
+                break
         for i,(a,b) in enumerate([(.25,split),(split,D-.35)]):
             cp=out/f'{sid}-caption-{i}.png';caption(sent[lang][i],sent[other][i],cp);pngs.append(cp)
             cues.append((at+a,at+b,sent[lang][i]+'\n'+sent[other][i]))
@@ -139,17 +179,14 @@ def main() -> None:
         base+=['-i',str(audio),'-loop','1','-i',str(pngs[0]),'-loop','1','-i',str(pngs[1])]
         vf+=f"[bg][2:v]overlay=enable='between(t,0.25,{split})'[sub1];[sub1][3:v]overlay=enable='between(t,{split},{D-.35})'[v];[1:a]adelay=250|250,apad[a]"
         run(base+['-filter_complex',vf,'-map','[v]','-map','[a]','-t',str(D),'-c:v','libx264','-preset','veryfast','-crf','20','-pix_fmt','yuv420p','-r','30','-c:a','aac','-ar','48000','-ac','2','-b:a','128k','-movflags','+faststart',str(target)])
+        D = duration(target)
         clips.append(target);timeline.append({'id':sid,'start':at,'duration':D});at+=D
         print(lang,sid,round(at,2),flush=True)
-        if sid=='title':
-            start,end=(10.246,224.013579) if lang=='en' else (10.534,232.955870)
-            old=args.previous/f'LLM_in_Work_demo_{lang}.mp4';middle=out/'editing.mp4'
-            run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(start),'-i',str(old),'-t',str(end-start),'-vf','fps=30,setsar=1','-c:v','libx264','-preset','veryfast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-ar','48000','-ac','2','-b:a','128k',str(middle)])
-            clips.append(middle);cues+=previous_cues(args.previous/f'LLM_in_Work_demo_{lang}.srt',start,end,at)
-            timeline.append({'id':'four_editing_assistants','start':at,'duration':end-start});at+=end-start
     listing=out/'concat.txt';listing.write_text(''.join("file '"+str(p).replace("'", "'\\''")+"'\n" for p in clips))
     final=BUILD/f'LLM_in_Work_demo_{lang}.mp4'
-    run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(listing),'-c','copy','-movflags','+faststart',str(final)])
+    # Normalize timestamps across cuts: audio padding can outlast a scene's last
+    # video frame, so copying the concatenated streams can duplicate timestamps.
+    run(['ffmpeg','-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i',str(listing),'-vf','fps=30','-af','aresample=async=1:first_pts=0','-c:v','libx264','-preset','veryfast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-ar','48000','-ac','2','-b:a','128k','-movflags','+faststart',str(final)])
     (BUILD/f'LLM_in_Work_demo_{lang}.srt').write_text('\n\n'.join(f'{i+1}\n{stamp(a)} --> {stamp(b)}\n{text}' for i,(a,b,text) in enumerate(cues))+'\n')
     (BUILD/f'timeline-{lang}.json').write_text(json.dumps(timeline,indent=2))
     # A compact companion file is kept below 10 MB for GitHub attachment embeds.

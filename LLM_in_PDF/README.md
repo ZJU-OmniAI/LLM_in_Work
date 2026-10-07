@@ -1,10 +1,10 @@
 # LLM_in_PDF
 
-**Read and discuss online/local PDFs and paper webpages with your local Claude Code or Codex CLI.**
+**Connect your local Claude Code or Codex to PDFs in Chrome: select text or a figure and ask beside the document.**
 
 **English** · [简体中文](README.zh-CN.md) · [LLM_in_Work](../README.md)
 
-Previously `paper_read`, now the fifth assistant in LLM_in_Work. Select a passage or crop a figure and ask about it alongside the document. PDFs remain unchanged. The interface is currently Chinese; questions and answers can be English or Chinese.
+Previously `paper_read`, now part of LLM_in_Work. This Chrome extension brings your signed-in local agent into the PDF workflow already in your browser, for online/local PDFs and paper webpages. Select the exact passage or crop a figure and ask about it alongside the document. PDFs remain unchanged. The interface is currently Chinese; questions and answers can be English or Chinese.
 
 ![Ask about a PDF figure](docs/images/pdf-image-chat.jpg)
 
@@ -29,13 +29,13 @@ The extension bundles PDF.js, Markdown-it and KaTeX. Installing from this checko
 
 | Source | How to open |
 | --- | --- |
-| arXiv | Open an abstract, HTML or PDF page; the panel/reader opens automatically. |
+| arXiv | Open an abstract, HTML or PDF page; the panel/PDF view opens automatically. |
 | Online PDF | Open its URL. PDF responses are detected even without a `.pdf` suffix. |
 | Publisher page | Click the extension, then **打开当前 PDF / 论文的 PDF 链接** to discover a PDF link, or **读取当前论文网页** to read the current page. |
 | Local PDF | Choose **选择 / 拖入本地 PDF** and import a file (up to 100 MB). |
 | `file://` PDF | Enable **Allow access to file URLs** in extension settings; import does not need this permission. |
 
-The reader preserves PDF layout, extracts the text layer, and supports zoom, page navigation and search. Select text, click **问一下**, and send a question. For figures, charts or scans, choose **框选图片**, drag a rectangle on one page, and ask about the actual pixels. Up to four recent images accompany each request. Scanned PDFs support image questions but do not gain automatic full-document OCR.
+The extension’s in-browser PDF view preserves PDF layout, extracts the text layer, and supports zoom, page navigation and search. Select text, click **问一下**, and send a question. For figures, charts or scans, choose **框选图片**, drag a rectangle on one page, and ask about the actual pixels. Up to four recent images accompany each request. Scanned PDFs support image questions but do not gain automatic full-document OCR.
 
 Use the backend, model and effort menus to choose Claude/Codex. Model lists come from the installed CLIs, including each Codex model's supported reasoning levels. Replies stream with Markdown tables, code and LaTeX formulas.
 
@@ -56,7 +56,7 @@ Re-run the installer after moving this directory, changing Node, or changing pro
 ## Data and architecture
 
 ```text
-Paper page / PDF.js reader → extension background → Native Messaging host → Claude Code / Codex CLI
+Chrome paper page / PDF view (PDF.js) → extension background → Native Messaging host → Claude Code / Codex CLI
                                                   ↘ HTTP fallback (127.0.0.1:8765)
 ```
 
@@ -79,7 +79,7 @@ npm run test:live:codex         # optional real Codex smoke test
 
 Live checks require signed-in CLIs and consume account usage. Browser regressions use temporary profiles and do not access personal documents or existing browser history.
 
-Source: `extension/` (MV3 reader, panel and background), `server/` (native and HTTP bridges, CLI adapters), `tests/`, `tools/` (installer and vendoring).
+Source: `extension/` (MV3 PDF view, panel and background), `server/` (native and HTTP bridges, CLI adapters), `tests/`, `tools/` (installer and vendoring).
 
 ## License
 
