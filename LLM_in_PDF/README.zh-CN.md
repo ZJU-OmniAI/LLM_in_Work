@@ -9,6 +9,8 @@
 
 ![PDF 图片提问](docs/images/pdf-image-chat.jpg)
 
+[Chrome 商店发布材料与流程](../docs/chrome-store/README.zh-CN.md) · [隐私政策](../docs/chrome-store/PRIVACY.md#中文)
+
 ## 安装
 
 需要 Node.js 22.13+ 和已登录的 Claude Code 或 Codex CLI。macOS / Linux：
@@ -75,7 +77,7 @@ Windows 暂用 HTTP 模式：在本目录运行 `npm start`，保持终端开启
 新安装器将桥启动脚本写入 `~/.llm_in_pdf`，并把原有原生消息注册指向新代码。
 环境变量改用 `LLM_IN_PDF_*`（例如 `LLM_IN_PDF_PORT`、`LLM_IN_PDF_CODEX_BIN`）；旧 `PAPER_READ_*` 仍兼容，新名称优先。
 
-## 0.9.0 功能
+## 功能
 
 - 新增其他平台 PDF、论文网页、浏览器本地文件，以及本地文件选择 / 拖放导入。
 - 导入的 PDF 保存在浏览器本地，刷新可继续阅读；入口页列出已导入文件，可移除文件并保留对话历史。单个本地 PDF 最大 100 MB。

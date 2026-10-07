@@ -1,0 +1,8 @@
+{
+  "actionTitle": {
+    "message": "LLM_in_PDF · 在 PDF 旁提问"
+  },
+  "extDescription": {
+    "message": "把本机 Claude Code、Codex Agent 接入 Chrome 的 PDF 工作流：选中文字、框选图表，在文档旁精确问答，PDF 原文保持不变。"
+  }
+}

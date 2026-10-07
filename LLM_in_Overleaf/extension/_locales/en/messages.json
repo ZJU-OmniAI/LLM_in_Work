@@ -1,6 +1,6 @@
 {
   "extDescription": {
-    "message": "Select LaTeX in Overleaf, let your local Claude Code or Codex CLI revise it, review the diff and apply it in place."
+    "message": "Bring local Claude Code or Codex into Overleaf: edit selected LaTeX, review changes, apply with control, and ask in place."
   },
   "actionTitle": {
     "message": "LLM_in_Overleaf writing assistant"

@@ -8,6 +8,8 @@ Previously `paper_read`, now part of LLM_in_Work. This Chrome extension brings y
 
 ![Ask about a PDF figure](docs/images/pdf-image-chat.jpg)
 
+[Chrome Web Store publishing kit](../docs/chrome-store/README.zh-CN.md) · [Privacy policy](../docs/chrome-store/PRIVACY.md)
+
 ## Install
 
 You need **Node.js 22.13+** and a signed-in Claude Code or Codex CLI. No separate API key is required.

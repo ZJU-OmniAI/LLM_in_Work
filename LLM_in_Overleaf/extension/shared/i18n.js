@@ -240,6 +240,9 @@
 
     // Popup
     '你的论文写作助手': 'Your paper writing assistant',
+    '发送时会把当前文件与选段交给所选模型服务。': 'Sending shares the current file and selection with your chosen model service.',
+    '隐私政策': 'Privacy policy',
+    '本机 Agent，接入 Overleaf 工作流': 'Your local agent, in your Overleaf workflow',
     '打开写作助手': 'Open writing assistant',
     '在 Overleaf 项目中打开，有选区时会自动读取。': 'Opens in the current Overleaf project and picks up any selection.',
     '检查本机桥…': 'Checking the native host…',

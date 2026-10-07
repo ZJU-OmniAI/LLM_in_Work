@@ -12,9 +12,11 @@ import { runModel } from './cli.js';
 import { buildPrompt } from './prompt.js';
 import { getModels } from './models.js';
 
-const VERSION = '0.9.0';
+const VERSION = '0.9.1';
 
-const EXTENSION_ORIGIN = 'chrome-extension://acafiedlcaibhilacmadmiklkfhmlhjo';
+const extensionId = process.env.LLM_IN_PDF_EXTENSION_ID || 'acafiedlcaibhilacmadmiklkfhmlhjo';
+if (!/^[a-p]{32}$/.test(extensionId)) throw new Error('LLM_IN_PDF_EXTENSION_ID must contain exactly 32 letters a-p.');
+const EXTENSION_ORIGIN = `chrome-extension://${extensionId}`;
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', EXTENSION_ORIGIN);

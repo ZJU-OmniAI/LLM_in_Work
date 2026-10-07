@@ -5,7 +5,7 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="brand"><span>✦</span> LLM_in_Overleaf</div><p class="subtitle" data-i18n="你的论文写作助手">你的论文写作助手</p>
+  <div class="brand"><span>✦</span> LLM_in_Overleaf</div><p class="subtitle" data-i18n="本机 Agent，接入 Overleaf 工作流">本机 Agent，接入 Overleaf 工作流</p>
   <button id="open-panel" type="button"><span data-i18n="打开写作助手">打开写作助手</span> <span aria-hidden="true">↗</span></button>
   <p id="page-status" role="status" data-i18n="在 Overleaf 项目中打开，有选区时会自动读取。">在 Overleaf 项目中打开，有选区时会自动读取。</p>
   <div id="status" role="status" class="status" data-i18n="检查本机桥…">检查本机桥…</div>
@@ -37,6 +37,7 @@
     <p data-i18n="在 Overleaf 项目的 Code Editor 中选中一段 LaTeX，点「✦ 改这段」开始。没有浮标？点上方「打开写作助手」，再点面板里的「添加选段」。可依次添加同一文件中的多个不连续段落。快捷键 ⌘⇧E（Windows / Linux：Ctrl⇧E）。">在 Overleaf 项目的 Code Editor 中选中一段 LaTeX，点「✦ 改这段」开始。没有浮标？点上方「打开写作助手」，再点面板里的「添加选段」。可依次添加同一文件中的多个不连续段落。快捷键 ⌘⇧E（Windows / Linux：Ctrl⇧E）。</p>
     <a href="https://www.overleaf.com/project" target="_blank" rel="noopener noreferrer">overleaf.com/project ↗</a>
   </div>
+  <p class="tip"><span data-i18n="发送时会把当前文件与选段交给所选模型服务。">发送时会把当前文件与选段交给所选模型服务。</span><br><a href="https://github.com/ZJU-OmniAI/LLM_in_Work/blob/main/docs/chrome-store/PRIVACY.md" target="_blank" rel="noopener noreferrer" data-i18n="隐私政策">隐私政策</a></p>
   <div id="install-tip" class="install hidden">
     <span data-i18n="本机桥未安装/未就绪。在下载的 LLM_in_Work 仓库目录执行：">本机桥未安装/未就绪。在下载的 LLM_in_Work 仓库目录执行：</span><br>
     <code id="install-command">cd LLM_in_Overleaf && ./install.sh</code>

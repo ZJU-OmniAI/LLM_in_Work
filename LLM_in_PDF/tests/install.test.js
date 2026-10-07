@@ -27,6 +27,14 @@ for (const platform of ['darwin', 'linux']) test(`install, update, native ping a
     assert.equal(result.status, 0, String(result.stderr));
     assert.equal(JSON.parse(result.stdout.subarray(4)).type, 'pong');
     await assert.rejects(access('NEVER_EXECUTE'));
+    const storeId = 'abcdefghijklmnopabcdefghijklmnop';
+    install('--extension-id', storeId);
+    assert.deepEqual(JSON.parse(await readFile(filename, 'utf8')).allowed_origins, [`chrome-extension://${storeId}/`]);
+    for (const bad of ['invalid', '*', 'a'.repeat(31), 'q'.repeat(32)]) {
+      const invalid = spawnSync(process.execPath, ['tools/install.mjs', '--home', home, '--platform', platform, '--extension-id', bad]);
+      assert.notEqual(invalid.status, 0);
+    }
+    assert.deepEqual(JSON.parse(await readFile(filename, 'utf8')).allowed_origins, [`chrome-extension://${storeId}/`]);
     install('--uninstall');
     await assert.rejects(access(filename), { code: 'ENOENT' });
     await assert.rejects(access(path.join(home, '.llm_in_pdf')), { code: 'ENOENT' });

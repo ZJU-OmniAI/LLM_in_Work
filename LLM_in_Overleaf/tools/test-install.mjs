@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 const project = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const hostName = 'com.llm_in_overleaf.host';
 const origin = 'chrome-extension://fabclfbbpmgoojaccbpmopjfkocoaoik/';
+const storeId = 'abcdefghijklmnopabcdefghijklmnop';
 const temp = mkdtempSync(path.join(os.tmpdir(), 'llm-in-overleaf-install-'));
 const run = (cmd, args, env) => {
   const result = spawnSync(cmd, args, { cwd: project, env: { ...process.env, ...env }, encoding: 'utf8' });
@@ -32,6 +33,9 @@ if (process.platform === 'win32') {
   const key = `HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts\\${hostName}`;
   assert.ok(execFileSync('reg.exe', ['query', key, '/ve'], { encoding: 'utf8' }).includes(manifestPath), 'Chrome registry entry points to the manifest');
   assert.match(ping(manifest.path), /Native host v\d+\.\d+\.\d+ responded/);
+  console.log(run('powershell.exe', [...ps, '-ExtensionId', storeId], env));
+  assert.deepEqual(JSON.parse(readFileSync(manifestPath, 'utf8')).allowed_origins, [`chrome-extension://${storeId}/`]);
+  assert.notEqual(spawnSync('powershell.exe', [...ps, '-ExtensionId', 'invalid'], { env: { ...process.env, ...env } }).status, 0);
   console.log(run('powershell.exe', [...ps, '-Uninstall'], env));
   assert.notEqual(spawnSync('reg.exe', ['query', key]).status, 0, 'registry entry removed');
   assert.equal(existsSync(manifest.path), false);
@@ -48,6 +52,13 @@ if (process.platform === 'win32') {
   const launcher = readFileSync(manifest.path, 'utf8');
   assert.doesNotMatch(launcher, /\/var\/folders\/|codex-arg0/, 'temporary PATH entries are not recorded');
   assert.match(ping(manifest.path), /Native host v\d+\.\d+\.\d+ responded/);
+  console.log(run('bash', [path.join(project, 'install.sh'), '--extension-id', storeId], env));
+  assert.deepEqual(JSON.parse(readFileSync(path.join(root, `${hostName}.json`), 'utf8')).allowed_origins, [`chrome-extension://${storeId}/`]);
+  assert.match(ping(manifest.path), /Native host v\d+\.\d+\.\d+ responded/);
+  for (const bad of ['invalid', '*', 'a'.repeat(31), 'q'.repeat(32)]) {
+    assert.notEqual(spawnSync('bash', [path.join(project, 'install.sh'), '--extension-id', bad], { env: { ...process.env, ...env } }).status, 0);
+  }
+  assert.deepEqual(JSON.parse(readFileSync(path.join(root, `${hostName}.json`), 'utf8')).allowed_origins, [`chrome-extension://${storeId}/`], 'invalid IDs leave existing authorization intact');
   console.log(run('bash', [path.join(project, 'install.sh'), '--uninstall'], env));
   assert.equal(existsSync(path.join(root, `${hostName}.json`)), false);
   assert.equal(existsSync(manifest.path), false);

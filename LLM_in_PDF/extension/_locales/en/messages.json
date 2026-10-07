@@ -1,0 +1,8 @@
+{
+  "actionTitle": {
+    "message": "LLM_in_PDF · Ask beside your PDF"
+  },
+  "extDescription": {
+    "message": "Bring local Claude Code or Codex into PDFs in Chrome. Ask about selected text and figures in place; keep the PDF unchanged."
+  }
+}

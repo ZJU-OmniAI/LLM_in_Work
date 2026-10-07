@@ -2,7 +2,7 @@
 
 [← LLM_in_Work 首页](../README.zh-CN.md) · [LLM_in_Word](../LLM_in_Word/README.zh-CN.md) · [LLM_in_PowerPoint](../LLM_in_PowerPoint/README.zh-CN.md) · [LLM_in_Excel](../LLM_in_Excel/README.zh-CN.md)
 
-**在 Overleaf 的 LaTeX 编辑器里审阅 AI 修改，再直接写回源码。**
+**把本机 Claude Code、Codex Agent 接入 Overleaf 工作流：在熟悉的软件中，精确选段、审阅差异、确认写回，也能直接问答。**
 
 [English](README.md) · 简体中文
 
@@ -46,6 +46,8 @@
 ![问答模式检查 main.tex 的引用是否都在 refs.bib 里有定义](docs/images/overleaf-ask.zh-CN.jpg)
 
 截图来自本地演示页面里运行的真实扩展和 CodeMirror 编辑器，文稿是专门编写的示例，不是 Overleaf 官网截图；所有回答都由 Claude Code 经本项目的本机桥实际生成。[截图说明](docs/images/README.md)。
+
+[Chrome 商店发布材料与流程](../docs/chrome-store/README.zh-CN.md) · [隐私政策](../docs/chrome-store/PRIVACY.md#中文)
 
 ## 安装
 

@@ -184,3 +184,16 @@ jobs:
       - name: Test PDF selection, images, history and document sources
         if: runner.os == 'Linux'
         run: npm run test:ui
+      - name: Build and verify Chrome store packages
+        if: runner.os == 'Linux'
+        working-directory: .
+        run: |
+          python3 tools/package-chrome.py
+          node tools/test-chrome-packages.mjs
+          python3 tools/bundle-store-materials.py
+      - name: Preserve validated Chrome packages
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-store-packages
+          path: dist/chrome-store/

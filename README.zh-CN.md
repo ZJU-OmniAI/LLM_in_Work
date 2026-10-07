@@ -131,6 +131,8 @@ flowchart LR
 
 **准备：** Node.js 22.13+（22.x）或 24+；至少安装并登录一个命令行工具：[Claude Code](https://code.claude.com/docs/en/setup)（`claude auth login`）或 [Codex CLI](https://github.com/openai/codex)（`codex login`）。
 
+准备发布 Chrome 插件？[商店发布包与操作指南](docs/chrome-store/README.zh-CN.md) 已整理 0.9.1 版本包、中英文介绍、图片、权限说明和[隐私政策](docs/chrome-store/PRIVACY.md)。目前材料待提交审核，尚未宣称商店上架；下表是开发版加载方式。
+
 ```bash
 git clone https://github.com/ZJU-OmniAI/LLM_in_Work.git
 cd LLM_in_Work

@@ -76,9 +76,14 @@ test('Native bridge discovers paginated models and streams both CLIs without ove
 });
 
 test('HTTP models route and SSE survive completion of the request body', { timeout: 15000 }, async () => {
-  const child = spawn(process.execPath, ['server/server.js'], { env: { ...env, LLM_IN_PDF_PORT: '18765' }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, ['server/server.js'], { env: { ...env, LLM_IN_PDF_PORT: '18765', LLM_IN_PDF_EXTENSION_ID: 'abcdefghijklmnopabcdefghijklmnop' }, stdio: ['ignore', 'pipe', 'pipe'] });
   try {
     await once(child.stdout, 'data');
+    const origin = 'chrome-extension://abcdefghijklmnopabcdefghijklmnop';
+    const allowed = await fetch('http://127.0.0.1:18765/health', { headers: { Origin: origin } });
+    assert.equal(allowed.status, 200);
+    assert.equal(allowed.headers.get('access-control-allow-origin'), origin);
+    assert.equal((await fetch('http://127.0.0.1:18765/health', { headers: { Origin: 'chrome-extension://acafiedlcaibhilacmadmiklkfhmlhjo' } })).status, 403);
     const catalog = await (await fetch('http://127.0.0.1:18765/api/models')).json();
     assert.equal(catalog.ok, true);
     assert.equal((await (await fetch('http://127.0.0.1:18765/health')).json()).service, 'LLM_in_PDF');

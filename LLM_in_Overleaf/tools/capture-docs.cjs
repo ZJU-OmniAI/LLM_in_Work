@@ -11,10 +11,11 @@ const assert = require('node:assert/strict');
 const project = path.resolve(__dirname, '..');
 const lang = process.argv.includes('--lang=zh-CN') ? 'zh-CN' : 'en';
 const instruction = lang === 'en'
-  ? 'Fix the grammar and remove redundancy. Keep the meaning. Explain the change in one sentence.'
-  : '修正这段英文的语法，精简重复表达，保留原意。用一句中文说明修改。';
-const output = path.join(project, 'docs/images');
-const shot = (name) => ({ path: path.join(output, `overleaf-${name}${lang === 'en' ? '' : '.zh-CN'}.jpg`), type: 'jpeg', quality: 90 });
+  ? 'Fix only the grammar of the selected paragraph. Keep the meaning and return only the corrected paragraph in the replacement; exclude all surrounding LaTeX commands. Explain briefly.'
+  : '只修正选中段落的英文语法，保留原意。替换内容仅包含修正后的这一段，不要加入周围的 LaTeX 命令。用一句中文说明修改。';
+const storeCapture = process.argv.includes('--store');
+const output = storeCapture ? path.join(project, '../docs/chrome-store/overleaf/assets', lang === 'en' ? 'en' : 'zh_CN') : path.join(project, 'docs/images');
+const shot = (name) => storeCapture ? ({ path: path.join(output, `screenshot-${name}.png`), type: 'png' }) : ({ path: path.join(output, `overleaf-${name}${lang === 'en' ? '' : '.zh-CN'}.jpg`), type: 'jpeg', quality: 90 });
 const original = 'Large language models has become useful tools for academic writing. However, their output often contain grammatical errors and redundant expressions. We evaluate a simple review workflow that help authors inspect each change before applying it.';
 const source = [
   '\\documentclass{article}', '\\usepackage{amsmath}', '',
@@ -68,7 +69,7 @@ function nativeRequest(message, onEvent = () => {}) {
   assert.equal(health?.ok, true, health?.error || healthEvents.find((event) => event.type === 'error')?.error || 'The real Claude CLI must be ready for this capture.');
   const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN || (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : undefined), headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+    const page = await browser.newPage({ viewport: storeCapture ? { width: 1280, height: 800 } : { width: 1440, height: 900 }, deviceScaleFactor: 1 });
     page.setDefaultTimeout(10000);
     const browserErrors = [];
     const generationErrors = [];
@@ -127,14 +128,16 @@ function nativeRequest(message, onEvent = () => {}) {
     await page.locator('.ole-apply').first().waitFor({ timeout: 180000 });
     assert.deepEqual(generationErrors, []);
     await page.waitForFunction(() => document.querySelector('#llm-in-overleaf-host').shadowRoot.querySelector('#ole-panel').getAttribute('aria-busy') === 'false');
+    const replacement = await page.locator('.ole-newview').first().textContent();
+    assert.ok(replacement && !replacement.includes('\\'), 'The demo replacement must contain only the selected prose paragraph.');
     await page.screenshot(shot('diff'));
     await page.locator('.ole-apply').first().click();
     await page.waitForFunction((before) => editor.state.doc.toString() !== before, source);
     await page.locator('.ole-card-status').first().filter({ hasText: lang === 'en' ? 'Applied' : '已应用' }).waitFor();
     await page.screenshot(shot('applied'));
     const revised = await page.evaluate(() => editor.state.doc.toString());
-    assert.ok(revised.includes('y = f(x)'), 'Unselected equation must be unchanged.');
-    assert.ok(revised.includes('\\section{Method}'), 'Unselected section must be unchanged.');
+    assert.equal(revised, source.replace(original, replacement), 'Only the selected paragraph may change.');
+    assert.equal(revised.match(/\\end\{document\}/g)?.length, 1, 'Document closing command must not be duplicated.');
     assert.deepEqual(browserErrors, []);
     const model = generated.find((event) => event.type === 'model')?.model || 'sonnet';
     console.log(`Model: ${model}. If these images replace the published ones, update docs/images/README.md.`);

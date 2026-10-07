@@ -9,8 +9,21 @@ set -euo pipefail
 cd "$(dirname "$0")"
 PROJ="$(pwd)"
 
-# The extension ID is fixed by the public key in extension/manifest.json.
+# Default ID is for the unpacked build. A store build can authorize its actual ID.
 EXT_ID="fabclfbbpmgoojaccbpmopjfkocoaoik"
+if [ "${1:-}" = "--extension-id" ]; then
+  EXT_ID="${2:-}"
+  shift
+  [ "$#" -gt 0 ] && shift
+fi
+if ! [[ "$EXT_ID" =~ ^[a-p]{32}$ ]]; then
+  echo "Invalid extension ID: expected exactly 32 letters a-p." >&2
+  exit 1
+fi
+if [ "$#" -gt 0 ] && { [ "$#" -ne 1 ] || [ "$1" != "--uninstall" ]; }; then
+  echo "Usage: ./install.sh [--extension-id ID] [--uninstall]" >&2
+  exit 1
+fi
 HOST_NAME="com.llm_in_overleaf.host"
 WRAP_DIR="$HOME/.llm_in_overleaf"
 
@@ -116,6 +129,9 @@ echo "Checking the host…"
 
 echo ""
 echo "✅ LLM_in_Overleaf is installed ($installed browser registration(s))."
+echo "Authorized extension ID: $EXT_ID"
+echo "If installed from the Chrome Web Store, reload that extension; no Developer mode is required."
+echo "For the unpacked development build only:"
 echo "  1. Open chrome://extensions, turn on Developer mode, choose Load unpacked and select:"
 echo "     $PROJ/extension"
 echo "     (Already loaded? Click Reload on the extension card.)"

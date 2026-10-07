@@ -1,0 +1,22 @@
+{
+  "single_purpose": "Bring the user's local Claude Code or Codex agent into Overleaf for selected LaTeX revision with reviewed, confirmed write-back and in-place questions.",
+  "permissions": {
+    "storage": "Stores backend/model preferences and per-project or per-document conversations locally so users can resume work. No advertising or analytics identifiers are stored.",
+    "nativeMessaging": "Connects only to the separately installed local companion, which invokes the user's installed and signed-in Claude Code or Codex CLI. This is required for the extension's core purpose.",
+    "activeTab": "Accesses the currently active document after the user clicks the extension, to open the assistant or obtain the selected document context.",
+    "scripting": "Injects the bundled assistant scripts into the supported current page when requested, including recovery for pages opened before the extension was installed. No downloaded scripts are executed."
+  },
+  "host_permissions": {},
+  "content_script_sites": "Only project pages on https://overleaf.com, https://www.overleaf.com and https://cn.overleaf.com. The MAIN-world bridge uses the CodeMirror editor API to capture selected ranges and apply user-confirmed edits.",
+  "remote_code": "No remotely hosted executable extension code. JavaScript and, for PDF, PDF.js workers, WASM, fonts, KaTeX and Markdown-it are included in the ZIP. Documents and model replies are data; replies are not evaluated as JavaScript. Native companion and CLI installation is disclosed separately.",
+  "data_practices": {
+    "types_to_disclose": [
+      "Website content",
+      "Web history (only document/project URLs and titles used to identify conversations)",
+      "Personal communications (user questions and model conversations)"
+    ],
+    "use": "Only the stated editing or document-questioning workflow; no advertising, data sale, credit scoring or unrelated profiling. Document context is sent to the configured CLI/model provider when the user submits a request.",
+    "authentication": "The extension does not collect account passwords or API keys. Existing local CLI authentication is used by the companion.",
+    "review_before_submission": "Review the current dashboard definitions against this disclosure. Document contents may themselves contain sensitive information; do not claim that no user data is handled or that processing is entirely offline."
+  }
+}

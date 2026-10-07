@@ -59,7 +59,7 @@ function inRounded(x, y, x0, y0, x1, y1, r) {
   return dx * dx + dy * dy <= r * r;
 }
 
-function drawIcon(S) {
+function drawIcon(S, canvasSize = S) {
   const buf = Buffer.alloc(S * S * 4);
   const set = (x, y, c) => {
     const i = (y * S + x) * 4;
@@ -99,11 +99,17 @@ function drawIcon(S) {
       set(x, y, c);
     }
   }
+  if (canvasSize !== S) {
+    const padded = Buffer.alloc(canvasSize * canvasSize * 4);
+    const inset = (canvasSize - S) / 2;
+    for (let y = 0; y < S; y++) buf.copy(padded, ((y + inset) * canvasSize + inset) * 4, y * S * 4, (y + 1) * S * 4);
+    return encodePNG(canvasSize, canvasSize, padded);
+  }
   return encodePNG(S, S, buf);
 }
 
 for (const size of [16, 48, 128]) {
-  const png = drawIcon(size);
+  const png = drawIcon(size === 128 ? 96 : size, size);
   const file = path.join(OUT_DIR, `icon${size}.png`);
   writeFileSync(file, png);
   console.log(`✓ ${file} (${png.length} bytes)`);

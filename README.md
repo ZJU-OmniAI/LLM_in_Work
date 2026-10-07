@@ -131,6 +131,8 @@ All five bridges run locally and add no cloud service of their own. The model it
 
 **You need:** Node.js 22.13+ (22.x) or 24+, and at least one CLI installed and signed in: [Claude Code](https://code.claude.com/docs/en/setup) (`claude auth login`) or [Codex CLI](https://github.com/openai/codex) (`codex login`).
 
+Publishing a Chrome extension? The [store package and submission guide](docs/chrome-store/README.zh-CN.md) includes version 0.9.1 bundles, bilingual listings, images, permission explanations and the [privacy policy](docs/chrome-store/PRIVACY.md). Store approval is still pending submission; the setup below is for unpacked development extensions.
+
 ```bash
 git clone https://github.com/ZJU-OmniAI/LLM_in_Work.git
 cd LLM_in_Work

@@ -2,7 +2,7 @@
 
 [← LLM_in_Work](../README.md) · [LLM_in_Word](../LLM_in_Word/README.md) · [LLM_in_PowerPoint](../LLM_in_PowerPoint/README.md) · [LLM_in_Excel](../LLM_in_Excel/README.md)
 
-**Review and apply AI edits right inside Overleaf's LaTeX editor.**
+**Bring your local Claude Code or Codex agent into your Overleaf workflow: select precisely, review changes, apply with control, and ask in place.**
 
 English · [简体中文](README.zh-CN.md)
 
@@ -46,6 +46,8 @@ Works on `overleaf.com` and `cn.overleaf.com` in the **Code Editor** (not the Vi
 ![Ask mode answering whether every citation in main.tex is defined in refs.bib](docs/images/overleaf-ask.jpg)
 
 The screenshots show the real extension and CodeMirror editor on a local demo page with sample text, not the hosted Overleaf website. Every answer came from Claude Code through this project's native host. [Screenshot notes](docs/images/README.md).
+
+[Chrome Web Store publishing kit](../docs/chrome-store/README.zh-CN.md) · [Privacy policy](../docs/chrome-store/PRIVACY.md)
 
 ## Install
 

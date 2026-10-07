@@ -57,3 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
   action('openLocal', () => chrome.tabs.create({ url: chrome.runtime.getURL('reader/reader.html') }));
   action('openUrl', () => openPdf($('pdfUrl').value.trim()));
 });
+
+// Store and unpacked extensions may have different IDs. Show the actual one.
+if (/^[a-p]{32}$/.test(chrome.runtime.id || "")) {
+  document.getElementById("install-command").textContent = `./install.sh --extension-id ${chrome.runtime.id}`;
+  document.getElementById("http-command").textContent = `$env:LLM_IN_PDF_EXTENSION_ID='${chrome.runtime.id}'; npm start`;
+}

@@ -1,5 +1,14 @@
 # 更新记录 / Changelog
 
+## 2026-10-08 — Chrome publication preparation · Overleaf / PDF 0.9.1
+
+- Prepare separate extension upload ZIPs and local companion bundles, with resource validation, checksums and tests against the extracted packages.
+- Align the bilingual store descriptions with the project's purpose: bring local Claude Code / Codex agents into existing workflows, with precise selections, reviewed edits and in-place questions. PDF supports questions without editing the original document.
+- Add store graphics, real-model demonstration screenshots, a privacy policy, permission explanations and reviewer instructions. These materials do not represent Chrome Web Store approval.
+- Support explicit store extension IDs in both native installers and PDF HTTP CORS. Popups show installation commands for their actual ID; existing development IDs are preserved.
+
+中文：Overleaf、PDF 升至 0.9.1，补齐发布包及商店材料；介绍强调将本机 Agent 接入工作流，实现精确、局部可控的修改和问答。修复商店扩展 ID 与本机桥授权可能不一致的问题，保留原开发版 ID；尚未提交商店审核。
+
 ## 2026-10-07 — LLM_in_PDF joins LLM_in_Work
 
 - Import `paper_read` as **LLM_in_PDF 0.9.0**: online/local PDF and paper webpage reading, passage and figure questions, Markdown/math rendering, document history and export.

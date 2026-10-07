@@ -1,4 +1,4 @@
-// Register the fixed extension ID without copying credentials into the repository.
+// Register the development ID or an explicit store ID without copying CLI credentials.
 import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -32,7 +32,9 @@ if (process.argv.includes('--uninstall')) {
   console.log('LLM_in_PDF native bridge removed. Browser documents and conversations are unchanged.');
 } else {
   const manifest = JSON.parse(await readFile(path.join(project, 'extension/manifest.json'), 'utf8'));
-  const id = createHash('sha256').update(Buffer.from(manifest.key, 'base64')).digest('hex').slice(0, 32).replace(/[0-9a-f]/g, (c) => String.fromCharCode(97 + parseInt(c, 16)));
+  const defaultId = createHash('sha256').update(Buffer.from(manifest.key, 'base64')).digest('hex').slice(0, 32).replace(/[0-9a-f]/g, (c) => String.fromCharCode(97 + parseInt(c, 16)));
+  const id = option('--extension-id', defaultId);
+  if (!/^[a-p]{32}$/.test(id || '')) throw new Error('Invalid extension ID: expected exactly 32 letters a-p.');
   const quote = (value) => "'" + value.replace(/'/g, "'\\''") + "'";
   const exports = ['http_proxy', 'https_proxy', 'all_proxy', 'no_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY', 'LLM_IN_PDF_CLAUDE_BIN', 'LLM_IN_PDF_CODEX_BIN', 'PAPER_READ_CLAUDE_BIN', 'PAPER_READ_CODEX_BIN']
     .filter((key) => process.env[key]).map((key) => `export ${key}=${quote(process.env[key])}`);
@@ -43,6 +45,7 @@ if (process.argv.includes('--uninstall')) {
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, `${host}.json`), registration, { mode: 0o600 });
   }
-  console.log(`LLM_in_PDF installed. Load unpacked extension: ${path.join(project, 'extension')}`);
+  console.log(`LLM_in_PDF installed. Authorized extension ID: ${id}`);
+  console.log(`For a store install, reload that extension. For development only, load unpacked: ${path.join(project, 'extension')}`);
   console.log('Restart/reload the extension after installation. Re-run install.sh after moving the project or changing Node/proxy settings.');
 }

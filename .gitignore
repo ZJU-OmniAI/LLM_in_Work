@@ -56,3 +56,6 @@ pfx-password.txt
 docs/video/build/
 __pycache__/
 *.pyc
+
+# Reproducible Chrome distribution artifacts
+dist/

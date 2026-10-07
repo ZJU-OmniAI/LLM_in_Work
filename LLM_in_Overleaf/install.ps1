@@ -5,12 +5,12 @@
 #   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1              install or update
 #   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall   remove the registration
 [CmdletBinding()]
-param([switch]$Uninstall)
+param([switch]$Uninstall, [ValidatePattern('^[a-p]{32}$')][string]$ExtensionId = 'fabclfbbpmgoojaccbpmopjfkocoaoik')
 $ErrorActionPreference = 'Stop'
 if ($env:OS -ne 'Windows_NT') { throw 'Use install.sh on macOS or Linux.' }
 
-# The extension ID is fixed by the public key in extension\manifest.json.
-$ExtId = 'fabclfbbpmgoojaccbpmopjfkocoaoik'
+# Default ID is for the unpacked build; store installs pass their actual ID.
+$ExtId = $ExtensionId
 $HostName = 'com.llm_in_overleaf.host'
 $Base = Join-Path $env:LOCALAPPDATA 'LLM_in_Overleaf'
 $Launcher = Join-Path $Base 'host.cmd'
@@ -98,6 +98,9 @@ if ($LASTEXITCODE -ne 0) { throw "The native host did not respond. Launcher: $La
 
 Write-Host ''
 Write-Host "LLM_in_Overleaf is installed ($Registered browser registration(s))."
+Write-Host "Authorized extension ID: $ExtId"
+Write-Host 'If installed from the Chrome Web Store, reload that extension; no Developer mode is required.'
+Write-Host 'For the unpacked development build only:'
 Write-Host '  1. Open chrome://extensions, turn on Developer mode, choose Load unpacked and select:'
 Write-Host "     $(Join-Path $PSScriptRoot 'extension')"
 Write-Host '     (Already loaded? Click Reload on the extension card.)'

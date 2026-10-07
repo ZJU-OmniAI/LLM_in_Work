@@ -13,7 +13,7 @@ import { getModels } from './models.js';
 import { getHealth } from './health.js';
 import { classifyError } from './process.js';
 
-const VERSION = '0.9.0';
+const VERSION = '0.9.1';
 
 // 二进制附件（图片/PDF）先写进临时目录，再把路径写进 prompt / 传给 codex -i
 const MAX_ATTACH = 8;

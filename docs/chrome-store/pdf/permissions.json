@@ -1,0 +1,30 @@
+{
+  "single_purpose": "Bring the user's local Claude Code or Codex agent into PDFs and paper webpages in Chrome for precise questions about selected text and cropped figures, without editing the PDF.",
+  "permissions": {
+    "storage": "Stores backend/model preferences and per-project or per-document conversations locally so users can resume work. No advertising or analytics identifiers are stored.",
+    "nativeMessaging": "Connects only to the separately installed local companion, which invokes the user's installed and signed-in Claude Code or Codex CLI. This is required for the extension's core purpose.",
+    "activeTab": "Accesses the currently active document after the user clicks the extension, to open the assistant or obtain the selected document context.",
+    "scripting": "Injects the bundled assistant scripts into the supported current page when requested, including recovery for pages opened before the extension was installed. No downloaded scripts are executed.",
+    "unlimitedStorage": "Stores user-imported PDFs in IndexedDB (up to 100 MB per file) and associated local conversations without the normal extension-storage quota. The user chooses which files to import and can remove imported files.",
+    "declarativeNetRequestWithHostAccess": "Applies bundled redirect rules for arXiv PDF navigation to the extension's local PDF.js page, enabling text selection and figure questions. Users can disable automatic opening or return to the original PDF.",
+    "clipboardWrite": "Copies the current conversation or conversation history as Markdown only when the user clicks a copy action. It does not read clipboard contents.",
+    "webRequest": "Observes main-frame response headers to recognize application/pdf even when a URL has no .pdf suffix, and opens that document in the bundled view. Detection is local; there is no general browsing-history telemetry."
+  },
+  "host_permissions": {
+    "http://*/*": "Loads PDFs selected from arbitrary document hosts, identifies top-level PDF responses, and connects to the configured loopback HTTP companion. Paper and institutional sites cannot be exhaustively listed in advance.",
+    "https://*/*": "Loads user-selected online PDFs from publishers, repositories and institutional domains, and detects top-level PDF responses. The loaded content is used for document questions; no advertising or cross-site tracking is performed.",
+    "file:///*": "Opens local PDF URLs only if the user separately enables Allow access to file URLs. Importing through the file picker works without enabling that switch."
+  },
+  "content_script_sites": "Automatic paper-page injection is limited to arxiv.org and its subdomains. Other paper pages are read through an explicit popup action. Broad HTTP(S) host access supports PDF retrieval and main-frame PDF detection, not automatic assistant injection into all websites.",
+  "remote_code": "No remotely hosted executable extension code. JavaScript and, for PDF, PDF.js workers, WASM, fonts, KaTeX and Markdown-it are included in the ZIP. Documents and model replies are data; replies are not evaluated as JavaScript. Native companion and CLI installation is disclosed separately.",
+  "data_practices": {
+    "types_to_disclose": [
+      "Website content",
+      "Web history (only document/project URLs and titles used to identify conversations)",
+      "Personal communications (user questions and model conversations)"
+    ],
+    "use": "Only the stated editing or document-questioning workflow; no advertising, data sale, credit scoring or unrelated profiling. Document context is sent to the configured CLI/model provider when the user submits a request.",
+    "authentication": "The extension does not collect account passwords or API keys. Existing local CLI authentication is used by the companion.",
+    "review_before_submission": "Review the current dashboard definitions against this disclosure. Document contents may themselves contain sensitive information; do not claim that no user data is handled or that processing is entirely offline."
+  }
+}

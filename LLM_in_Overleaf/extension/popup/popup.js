@@ -19,6 +19,9 @@ function applyLanguage() {
   $('install-command').textContent = windows
     ? 'cd LLM_in_Overleaf; powershell -NoProfile -ExecutionPolicy Bypass -File .\\install.ps1'
     : 'cd LLM_in_Overleaf && ./install.sh';
+  if (/^[a-p]{32}$/.test(chrome.runtime.id || '')) {
+    $('install-command').textContent += windows ? ` -ExtensionId ${chrome.runtime.id}` : ` --extension-id ${chrome.runtime.id}`;
+  }
   fillModels();
   if (lastHealth) renderHealth(lastHealth);
 }
