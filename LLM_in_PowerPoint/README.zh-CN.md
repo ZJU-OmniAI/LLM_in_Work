@@ -1,8 +1,8 @@
 # LLM_in_PowerPoint
 
-[← LLM_in_Work](../README.zh-CN.md) · [LLM_in_Word](../LLM_in_Word/README.zh-CN.md) · [LLM_in_Excel](../LLM_in_Excel/README.zh-CN.md) · [LLM_in_Overleaf](../LLM_in_Overleaf/README.zh-CN.md)
+[← LLM_in_Work](../README.zh-CN.md) · [LLM_in_Word](../LLM_in_Word/README.zh-CN.md) · [LLM_in_Excel](../LLM_in_Excel/README.zh-CN.md) · [LLM_in_Overleaf](../LLM_in_Overleaf/README.zh-CN.md) · [LLM_in_PDF](../LLM_in_PDF/README.zh-CN.md)
 
-**把本机的 Claude Code 或 Codex CLI 装进 Microsoft PowerPoint。**
+**把本机 Claude Code、Codex Agent 接入 PowerPoint 工作流：精确选择目标、审阅差异、只改变化的字词或调整版式，也能直接问答。**
 
 [English](README.md) · 简体中文
 

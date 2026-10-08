@@ -1,6 +1,6 @@
 # LLM_in_Overleaf
 
-[← LLM_in_Work](../README.md) · [LLM_in_Word](../LLM_in_Word/README.md) · [LLM_in_PowerPoint](../LLM_in_PowerPoint/README.md) · [LLM_in_Excel](../LLM_in_Excel/README.md)
+[← LLM_in_Work](../README.md) · [LLM_in_Word](../LLM_in_Word/README.md) · [LLM_in_PowerPoint](../LLM_in_PowerPoint/README.md) · [LLM_in_Excel](../LLM_in_Excel/README.md) · [LLM_in_PDF](../LLM_in_PDF/README.md)
 
 **Bring your local Claude Code or Codex agent into your Overleaf workflow: select precisely, review changes, apply with control, and ask in place.**
 

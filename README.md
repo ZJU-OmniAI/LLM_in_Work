@@ -2,9 +2,9 @@
 
 # LLM_in_Work
 
-**Your local Claude Code or Codex, inside Word, Overleaf, PDFs in Chrome, PowerPoint and Excel.**
+**Your local Claude Code or Codex agent, wired into Word, Overleaf, PowerPoint, Excel and the PDFs and papers you read in Chrome.**
 
-Select exactly what you mean. Review each proposed edit. Confirm it in the app where you work.
+Select exactly what you mean. Edit only that part after reviewing the diff, or just ask about it, without leaving the app you work in.
 
 [![CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ZJU-OmniAI/LLM_in_Work/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
@@ -31,9 +31,7 @@ https://github.com/user-attachments/assets/3180e9f8-1c2e-4a95-9eb9-462a146fd208
 
 <p align="center"><sub>Your local agent, wired into your work: precise, scoped, in your control · <a href="README.zh-CN.md">中文配音版</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-08-intro">Download 1080p + subtitles</a></sub></p>
 
-**Demo order: Word → Overleaf → Chrome PDF → PowerPoint → Excel.**
-
-**Watch the full story demo (3 min) · English narration**
+**Full story demo (3 min) · Word → Overleaf → Chrome PDF → PowerPoint → Excel · English narration**
 
 https://github.com/user-attachments/assets/b44d0ada-1b19-463f-98a0-4123b95bac15
 
@@ -41,15 +39,16 @@ https://github.com/user-attachments/assets/b44d0ada-1b19-463f-98a0-4123b95bac15
 
 ## What you can do
 
+- **Precise: point at exactly what you mean.** Select a passage or a whole table in Word, one or more passages in an Overleaf `.tex` file, text boxes, tables or whole slides in PowerPoint, cell ranges in Excel, or text and figures in a PDF. No more describing “page 3, second paragraph” to an agent in another window.
+- **Scoped: only that part changes.** Edits are written back only where you selected. PowerPoint rewrites only the changed words, so fonts, colours and bullet levels stay. Excel writes only the cells that change, as if typed, so number formats stay and IDs like `00123` stay text. Everything you didn't select stays untouched.
+- **In your control: review before anything changes.** Every edit arrives as a diff (red for deletions, green for additions) and stays a preview until you click Apply. Word receives real tracked changes that you accept or reject in the Review tab; Overleaf applies a whole group of edits as one step that a single undo reverts; PowerPoint and Excel have a one-click Undo.
+- **Ask, not only edit.** Document Q&A in Word, Ask mode in Overleaf, Presentation Q&A in PowerPoint (speaker notes, consistency checks, with an image of the slide if you like) and Workbook Q&A in Excel (summaries, outliers, formula explanations, with cell addresses) answer questions without changing your text.
+- **Read papers interactively and ask about selected content in Chrome.** LLM_in_PDF helps you read local PDFs and papers from arXiv and other platforms with your local Claude Code or Codex agent. Select a passage or crop a figure for explanations, summaries, translations and follow-up questions. Markdown, formulas, per-document history and conversation export are built in. PDFs stay unchanged.
 - **No API key, no new account.** It drives the Claude Code or Codex CLI already signed in on your computer, so it uses the subscription you already have.
-- **Review before anything changes.** Every edit arrives as a diff (red for deletions, green for additions). Your document stays untouched until you click Apply.
-- **Native write-back.** Word receives real tracked changes that you accept or reject in the Review tab. Overleaf applies a whole group of edits as one step that a single undo reverts. PowerPoint rewrites only the changed words, so fonts, colours and bullet levels stay. Excel writes only the cells that change, as if typed, so number formats stay and IDs like `00123` stay text. PowerPoint and Excel both have a one-click Undo.
 - **Several passages, one instruction.** Up to eight paragraphs or whole tables in Word; several separate selections in one `.tex` file in Overleaf; up to sixteen text boxes, tables or whole slides in PowerPoint; up to eight cell ranges in Excel, including empty columns to fill.
 - **Whole-document context.** The full document, the whole deck, the workbook's sheets or the `.tex` file goes along with your request, so terminology, citations and math stay consistent. Add `.bib` files, other chapters or PDFs when you need more.
 - **Careful by design.** The original text is checked again before writing, so an edit never lands in the wrong place. Table and spreadsheet edits touch only the rows and cells that changed. Claude calls disable your MCP servers and restrict tools; Codex uses a read-only sandbox. See the security notes for details.
 - **Formatting and slide redesign in PowerPoint.** Format mode changes how a slide looks, not its words: from “make this black border lighter” to “polish this whole slide”, which splits crowded bullets into cards, lines up fonts, sizes and colours, and separates text from pictures. Big changes are checked once from a new image of the slide, and Undo puts the whole slide back.
-- **Ask, not only edit.** Document Q&A in Word, Ask mode in Overleaf, PDF questions in Chrome, Presentation Q&A in PowerPoint (speaker notes, consistency checks, with an image of the slide if you like) and Workbook Q&A in Excel (summaries, outliers, formula explanations, with cell addresses) answer questions without changing your text.
-- **Read papers interactively and ask about selected content in Chrome.** LLM_in_PDF helps you read local PDFs and papers from arXiv and other platforms with your local Claude Code or Codex agent. Select a passage or crop a figure for explanations, summaries, translations and follow-up questions. Markdown, formulas, per-document history and conversation export are built in. PDFs stay unchanged.
 - **English and 中文.** The four editing assistants have switchable interfaces. The PDF interface is currently Chinese and supports English/Chinese questions and answers.
 
 ## Five assistants for writing and reading
@@ -110,7 +109,7 @@ https://github.com/user-attachments/assets/b44d0ada-1b19-463f-98a0-4123b95bac15
   </tr>
 </table>
 
-Screenshots come from real apps on macOS: desktop Word, PowerPoint and Excel, and for Overleaf the real extension and CodeMirror editor on a local demo page (not the hosted Overleaf site). The Word, Excel and Overleaf images are frames from the demo recordings, with answers from Claude Code (Sonnet 5.5, low effort); the PowerPoint images were taken separately, with answers from Claude Code (Haiku 4.5, low effort). The updated video covers all five assistants; its PDF section uses a synthetic document in the real extension with real CLI answers.
+Screenshots come from real apps on macOS: desktop Word, PowerPoint and Excel, and for Overleaf the real extension and CodeMirror editor on a local demo page (not the hosted Overleaf site). The Word, Excel and Overleaf images are frames from the demo recordings, with answers from Claude Code (Sonnet 5.5, low effort); the PowerPoint images were taken separately, with answers from Claude Code (Haiku 4.5, low effort). Both videos cover all five assistants: the 60-second intro reads our own paper (arXiv:2503.21696) and the story demo's PDF section uses a synthetic document, both in the real extension with real CLI answers.
 
 ## How it works
 
@@ -136,8 +135,6 @@ All five bridges run locally and add no cloud service of their own. The model it
 ## Quick start
 
 **You need:** Node.js 22.13+ (22.x) or 24+, and at least one CLI installed and signed in: [Claude Code](https://code.claude.com/docs/en/setup) (`claude auth login`) or [Codex CLI](https://github.com/openai/codex) (`codex login`).
-
-Publishing a Chrome extension? The [store package and submission guide](docs/chrome-store/README.zh-CN.md) includes Overleaf 0.9.1 / PDF 0.9.2 bundles, bilingual listings, images, permission explanations and the [privacy policy](docs/chrome-store/PRIVACY.md). Store approval is still pending submission; the setup below is for unpacked development extensions.
 
 ```bash
 git clone https://github.com/ZJU-OmniAI/LLM_in_Work.git
@@ -165,12 +162,10 @@ Your instruction, the selected passages, the document (Word), the text of the wh
 LLM_in_PDF is read-only. In the editing assistants, results are previews until you click Apply. In Word you can still reject each tracked change; in PowerPoint and Excel each applied card has an Undo button; in Overleaf one undo reverts the whole group.
 
 **Which editors are supported?**
-Microsoft 365 desktop Word, PowerPoint and Excel on Windows and macOS, and the Code Editor on `overleaf.com` and `cn.overleaf.com`. Office for the web, the Overleaf visual editor and self-hosted Overleaf are not supported out of the box.
+Microsoft 365 desktop Word, PowerPoint and Excel on Windows and macOS; the Code Editor on `overleaf.com` and `cn.overleaf.com`; and local PDFs, online PDFs and paper pages such as arXiv in Chrome and other Chromium browsers (see the [LLM_in_PDF guide](LLM_in_PDF/README.md) for native-bridge and HTTP support). Office for the web, the Overleaf visual editor and self-hosted Overleaf are not supported out of the box.
 
 **Is this an official Microsoft, Overleaf, Anthropic or OpenAI product?**
 No. It is an independent open-source project by ZJU-OmniAI.
-
-LLM_in_PDF adds online/local PDFs and paper webpages in Chromium browsers. See its guide for native-bridge and HTTP platform support.
 
 ## Repository
 
@@ -186,6 +181,8 @@ LLM_in_Work/
 ```
 
 All bridges use Node built-ins. LLM_in_PDF bundles PDF.js, Markdown-it and KaTeX with their licenses. Offline tests use mock CLIs and synthetic documents, and [CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions) runs them on Linux, macOS and Windows. See [Contributing](CONTRIBUTING.md) and the [changelog](CHANGELOG.md).
+
+For maintainers: the [Chrome Web Store package and submission guide](docs/chrome-store/README.zh-CN.md) includes Overleaf 0.9.1 / PDF 0.9.2 bundles, bilingual listings, images, permission explanations and the [privacy policy](docs/chrome-store/PRIVACY.md). Store approval is still pending submission; the Quick start above loads unpacked development extensions.
 
 ## License
 

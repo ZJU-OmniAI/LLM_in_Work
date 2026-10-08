@@ -2,9 +2,9 @@
 
 # LLM_in_Work
 
-**把本机 Claude Code 或 Codex，无缝接入 Word、Overleaf、Chrome 中的 PDF、PowerPoint 和 Excel。**
+**把本机 Claude Code、Codex Agent 无缝接入你的工作流：Word、Overleaf、PowerPoint、Excel，以及在 Chrome 中阅读的 PDF 和论文。**
 
-精确选择正在处理的局部，先审阅差异，再确认应用。在熟悉的软件里，边编辑、边修改、边确认。
+选中正在处理的局部，只改这一部分（先审阅差异，再确认应用），也可以直接提问。全程不离开你熟悉的软件。
 
 [![CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ZJU-OmniAI/LLM_in_Work/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f)](LICENSE)
@@ -31,9 +31,7 @@ https://github.com/user-attachments/assets/65ea026d-2250-474c-8a94-27305406dc86
 
 <p align="center"><sub>把本机 Agent 接进你的工作流：精确、局部、可控 · <a href="README.md">English narration</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-08-intro">下载 1080p 视频和字幕</a></sub></p>
 
-**介绍顺序：Word → Overleaf → Chrome PDF → PowerPoint → Excel。**
-
-**从“只改这一段”开始 · 故事版完整演示（3 分钟） · 点击下方播放**
+**故事版完整演示（3 分钟）· 从“只改这一段”开始 · Word → Overleaf → Chrome PDF → PowerPoint → Excel**
 
 https://github.com/user-attachments/assets/08b40aef-50ba-4772-aff1-d24c1b488da0
 
@@ -41,15 +39,16 @@ https://github.com/user-attachments/assets/08b40aef-50ba-4772-aff1-d24c1b488da0
 
 ## 亮点
 
+- **精确：想改哪里，就选中哪里。** 在 Word 里选段落或整张表格，在 Overleaf 的 `.tex` 文件里选一处或几处，在 PowerPoint 里选文本框、表格或整页，在 Excel 里选单元格区域，在 PDF 里选文字或框选图表。不用再在另一个窗口里向 Agent 描述“第 3 页第 2 段”。
+- **局部：只改选中的部分。** 修改只写回你选中的位置：PowerPoint 只改动有变化的字词，字体、颜色和要点层级都保持原样；Excel 只写入有变化的单元格，写法和手动输入一样，数字格式不变，`00123` 这样的编号仍是文本。没选中的内容一点都不动。
+- **可控：先看差异，再动文档。** 每处修改都先以差异对比显示（红色是删除，绿色是新增），点「应用」之前，文档一个字都不会变。Word 里写成真正的「修订」，可以在「审阅」里逐条接受或拒绝；Overleaf 里整组修改作为一步写入，撤销一次就全部还原；PowerPoint 和 Excel 每处修改都能一键撤销。
+- **不只改写，还能提问。** Word 的「文档问答」、Overleaf 的「问答」模式、PowerPoint 的「演示文稿问答」（写讲稿、查前后一致，还可以附上当前页截图）和 Excel 的「表格问答」（总结、找异常、解释公式，注明单元格地址）可以讨论全文，不会改动正文。
+- **在 Chrome 中交互式读论文、选局部问答。** LLM_in_PDF 帮你阅读 Chrome 中打开的本地 PDF 和 arXiv 等平台的论文，调用本机 Claude Code 或 Codex，选中文字或框选图表即可解释、总结、翻译和继续追问。支持 Markdown、公式、按文档保存会话和完整导出，PDF 原文保持不变。
 - **不要 API Key，不用新注册。** 直接调用你电脑上已登录的 Claude Code 或 Codex 命令行工具，用的就是你现有的订阅。
-- **先看差异，再动文档。** 每处修改都先以差异对比显示（红色是删除，绿色是新增），点「应用」之前，文档一个字都不会变。
-- **按编辑器自己的方式写回。** Word 里写成真正的「修订」，可以在「审阅」里逐条接受或拒绝；Overleaf 里整组修改作为一步写入，撤销一次就全部还原；PowerPoint 里只改动有变化的字词，字体、颜色和要点层级都保持原样；Excel 里只写入有变化的单元格，写法和手动输入一样，数字格式不变，`00123` 这样的编号仍是文本；PowerPoint 和 Excel 每处修改都能一键撤销。
 - **多段内容，一条要求。** Word 一次最多 8 段正文或整张表格；Overleaf 可以把同一个 `.tex` 文件里不相邻的几段一起修改；PowerPoint 一次最多 16 个文本框、表格或整页，可以跨页；Excel 一次最多 8 块单元格区域，也可以是要填写的空白列。
 - **带着全文上下文。** 会把整篇文档、整份演示文稿、工作簿里的表格或整个 `.tex` 文件一起交给模型，术语、引用和公式能保持一致；需要时还能加上 `.bib`、其他章节或 PDF。
 - **写回前再核对。** 写入前会重新核对原文，防止改错位置；表格和工作簿只改真正变化的行和单元格。Claude 调用不加载你本机的 MCP 服务并限制工具；Codex 使用只读沙箱，详情见安全说明。
 - **PowerPoint 还能调版式、整页美化。**「调整版式」模式改格式不改文字：小到「把这个黑框改浅一点」，大到「把这一页整体美化」——把挤在一起的要点拆成卡片、统一字体字号和配色、图文分区。大改应用后自动截图自查一轮，撤销时整页原样换回。
-- **不只改写，还能提问。** Word 的「文档问答」、Overleaf 的「问答」模式、Chrome 中的 PDF 问答、PowerPoint 的「演示文稿问答」（写讲稿、查前后一致，还可以附上当前页截图）和 Excel 的「表格问答」（总结、找异常、解释公式，注明单元格地址）可以讨论全文，不会改动正文。
-- **在 Chrome 中交互式读论文、选局部问答。** LLM_in_PDF 帮你阅读 Chrome 中打开的本地 PDF 和 arXiv 等平台的论文，调用本机 Claude Code 或 Codex，选中文字或框选图表即可解释、总结、翻译和继续追问。支持 Markdown、公式、按文档保存会话和完整导出，PDF 原文保持不变。
 - **中英文支持。** 四个编辑助手可切换界面语言；PDF 界面目前为中文，支持中英文提问和回答。
 
 ## 五个助手，覆盖写作与阅读
@@ -110,7 +109,7 @@ https://github.com/user-attachments/assets/08b40aef-50ba-4772-aff1-d24c1b488da0
   </tr>
 </table>
 
-截图都来自 macOS 上的真实应用：Word、PowerPoint、Excel 桌面版；Overleaf 部分是在本地演示页面里运行的真实扩展和 CodeMirror 编辑器（不是 Overleaf 官网）。Word、Excel 和 Overleaf 的截图取自演示录屏，回答由 Claude Code（Sonnet 5.5，low 思考强度）生成；PowerPoint 的截图单独拍摄，回答由 Claude Code（Haiku 4.5，low 思考强度）生成。新版视频介绍全部五个助手；PDF 部分使用合成文档、真实扩展和真实 CLI 回答。
+截图都来自 macOS 上的真实应用：Word、PowerPoint、Excel 桌面版；Overleaf 部分是在本地演示页面里运行的真实扩展和 CodeMirror 编辑器（不是 Overleaf 官网）。Word、Excel 和 Overleaf 的截图取自演示录屏，回答由 Claude Code（Sonnet 5.5，low 思考强度）生成；PowerPoint 的截图单独拍摄，回答由 Claude Code（Haiku 4.5，low 思考强度）生成。两个视频都介绍了全部五个助手：60 秒介绍读的是本组论文（arXiv:2503.21696），故事版的 PDF 部分使用合成文档，回答都来自真实扩展和真实 CLI。
 
 ## 工作原理
 
@@ -136,8 +135,6 @@ flowchart LR
 ## 快速开始
 
 **准备：** Node.js 22.13+（22.x）或 24+；至少安装并登录一个命令行工具：[Claude Code](https://code.claude.com/docs/en/setup)（`claude auth login`）或 [Codex CLI](https://github.com/openai/codex)（`codex login`）。
-
-准备发布 Chrome 插件？[商店发布包与操作指南](docs/chrome-store/README.zh-CN.md) 已整理 Overleaf 0.9.1 / PDF 0.9.2 版本包、中英文介绍、图片、权限说明和[隐私政策](docs/chrome-store/PRIVACY.md)。目前材料待提交审核，尚未宣称商店上架；下表是开发版加载方式。
 
 ```bash
 git clone https://github.com/ZJU-OmniAI/LLM_in_Work.git
@@ -165,12 +162,10 @@ cd LLM_in_Work
 LLM_in_PDF 只读原文；其他助手点「应用」之前都只是预览。Word 里还能逐条拒绝修订；PowerPoint 和 Excel 里每张已应用的卡片都有「撤销」按钮；Overleaf 里撤销一次就能还原整组修改。
 
 **支持哪些编辑器？**
-Windows 和 macOS 上的 Microsoft 365 Word、PowerPoint、Excel 桌面版，以及 `overleaf.com`、`cn.overleaf.com` 的 Code Editor。Office 网页版、Overleaf 可视化编辑器和自建 Overleaf 默认不支持。
+Windows 和 macOS 上的 Microsoft 365 Word、PowerPoint、Excel 桌面版；`overleaf.com`、`cn.overleaf.com` 的 Code Editor；以及 Chrome 等 Chromium 浏览器里的本地 PDF、在线 PDF 和 arXiv 等论文网页（各系统的本机桥和 HTTP 方式见 [LLM_in_PDF 说明](LLM_in_PDF/README.zh-CN.md)）。Office 网页版、Overleaf 可视化编辑器和自建 Overleaf 默认不支持。
 
 **这是 Microsoft、Overleaf、Anthropic 或 OpenAI 的官方产品吗？**
 不是。这是 ZJU-OmniAI 独立维护的开源项目。
-
-LLM_in_PDF 另支持 Chromium 浏览器里的在线、本地 PDF 与论文网页；各系统安装方式见子项目说明。
 
 ## 仓库结构
 
@@ -186,6 +181,8 @@ LLM_in_Work/
 ```
 
 各桥程序使用 Node 内置模块；LLM_in_PDF 随扩展打包了 PDF.js、Markdown-it、KaTeX 及许可证。离线测试使用模拟 CLI 和合成文档，[CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions) 在 Linux、macOS、Windows 上运行。详见[参与开发](CONTRIBUTING.md)和[更新记录](CHANGELOG.md)。
+
+维护者：[Chrome 商店发布包与操作指南](docs/chrome-store/README.zh-CN.md) 已整理 Overleaf 0.9.1 / PDF 0.9.2 版本包、中英文介绍、图片、权限说明和[隐私政策](docs/chrome-store/PRIVACY.md)。目前材料待提交审核，尚未宣称商店上架；上面的「快速开始」是开发版加载方式。
 
 ## 许可证
 

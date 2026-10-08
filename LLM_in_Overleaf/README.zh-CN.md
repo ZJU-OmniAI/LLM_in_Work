@@ -1,6 +1,6 @@
 # LLM_in_Overleaf
 
-[← LLM_in_Work 首页](../README.zh-CN.md) · [LLM_in_Word](../LLM_in_Word/README.zh-CN.md) · [LLM_in_PowerPoint](../LLM_in_PowerPoint/README.zh-CN.md) · [LLM_in_Excel](../LLM_in_Excel/README.zh-CN.md)
+[← LLM_in_Work 首页](../README.zh-CN.md) · [LLM_in_Word](../LLM_in_Word/README.zh-CN.md) · [LLM_in_PowerPoint](../LLM_in_PowerPoint/README.zh-CN.md) · [LLM_in_Excel](../LLM_in_Excel/README.zh-CN.md) · [LLM_in_PDF](../LLM_in_PDF/README.zh-CN.md)
 
 **把本机 Claude Code、Codex Agent 接入 Overleaf 工作流：在熟悉的软件中，精确选段、审阅差异、确认写回，也能直接问答。**
 
