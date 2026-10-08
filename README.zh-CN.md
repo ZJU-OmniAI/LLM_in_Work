@@ -25,9 +25,15 @@ Claude Code、Codex 这样的 Agent 已经能编辑 Word 文字、修改 PPT、�
 
 **LLM_in_Work 希望把电脑本机已安装、已登录的 Agent，无缝接入日常工作软件。** 在 Word、Overleaf 中选段，在 Chrome 的 PDF 中选字或框图，在 PowerPoint 中选择修改目标，在 Excel 中选择单元格区域。你继续在原来的软件里工作，选定局部、提出要求、审阅结果、确认应用，让操作精确可控。编辑助手在确认后写回；PDF 用于选区提问，原文保持不变。
 
+**60 秒快速了解 · 中文配音 · 点击下方播放**
+
+https://github.com/user-attachments/assets/65ea026d-2250-474c-8a94-27305406dc86
+
+<p align="center"><sub>把本机 Agent 接进你的工作流：精确、局部、可控 · <a href="README.md">English narration</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-08-intro">下载 1080p 视频和字幕</a></sub></p>
+
 **介绍顺序：Word → Overleaf → Chrome PDF → PowerPoint → Excel。**
 
-**从“只改这一段”开始 · 故事版演示 · 点击下方播放**
+**从“只改这一段”开始 · 故事版完整演示（3 分钟） · 点击下方播放**
 
 https://github.com/user-attachments/assets/08b40aef-50ba-4772-aff1-d24c1b488da0
 

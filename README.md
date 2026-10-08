@@ -25,9 +25,15 @@ Claude Code and Codex can already edit Word documents, revise slides and read PD
 
 **LLM_in_Work connects the agents already installed and signed in on your computer to your everyday software.** Select a passage in Word or Overleaf, text or a figure in a PDF in Chrome, a target on a PowerPoint slide, or a range in Excel. Keep working in the same place: select, request, review and confirm. Editing assistants apply changes only after your confirmation; PDF questions leave the original document unchanged.
 
+**60-second intro · English narration**
+
+https://github.com/user-attachments/assets/3180e9f8-1c2e-4a95-9eb9-462a146fd208
+
+<p align="center"><sub>Your local agent, wired into your work: precise, scoped, in your control · <a href="README.zh-CN.md">中文配音版</a> · <a href="https://github.com/ZJU-OmniAI/LLM_in_Work/releases/tag/2026-10-08-intro">Download 1080p + subtitles</a></sub></p>
+
 **Demo order: Word → Overleaf → Chrome PDF → PowerPoint → Excel.**
 
-**Watch the story demo · English narration**
+**Watch the full story demo (3 min) · English narration**
 
 https://github.com/user-attachments/assets/b44d0ada-1b19-463f-98a0-4123b95bac15
 
