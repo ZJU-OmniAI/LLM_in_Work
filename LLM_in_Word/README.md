@@ -1,8 +1,8 @@
 # LLM_in_Word
 
-[← LLM_in_Work](../README.md) · [LLM_in_PowerPoint](../LLM_in_PowerPoint/README.md) · [LLM_in_Excel](../LLM_in_Excel/README.md) · [LLM_in_Overleaf](../LLM_in_Overleaf/README.md)
+[← LLM_in_Work](../README.md) · [LLM_in_PowerPoint](../LLM_in_PowerPoint/README.md) · [LLM_in_Excel](../LLM_in_Excel/README.md) · [LLM_in_Overleaf](../LLM_in_Overleaf/README.md) · [LLM_in_PDF](../LLM_in_PDF/README.md)
 
-**Your local Claude Code or Codex CLI, right inside Microsoft Word.**
+**Bring your local Claude Code or Codex agent into your Word workflow: select precisely, review changes, apply them as tracked changes, and ask in place.**
 
 English · [简体中文](README.zh-CN.md)
 

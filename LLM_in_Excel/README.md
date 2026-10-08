@@ -1,8 +1,8 @@
 # LLM_in_Excel
 
-[← LLM_in_Work](../README.md) · [LLM_in_Word](../LLM_in_Word/README.md) · [LLM_in_PowerPoint](../LLM_in_PowerPoint/README.md) · [LLM_in_Overleaf](../LLM_in_Overleaf/README.md)
+[← LLM_in_Work](../README.md) · [LLM_in_Word](../LLM_in_Word/README.md) · [LLM_in_PowerPoint](../LLM_in_PowerPoint/README.md) · [LLM_in_Overleaf](../LLM_in_Overleaf/README.md) · [LLM_in_PDF](../LLM_in_PDF/README.md)
 
-**Your local Claude Code or Codex CLI, right inside Microsoft Excel.**
+**Bring your local Claude Code or Codex agent into your Excel workflow: select precise ranges, review a cell preview, write only the cells that change, and ask in place.**
 
 English · [简体中文](README.zh-CN.md)
 
