@@ -6,9 +6,8 @@
 - The same finer comparison is used when writing back, so formatting is kept word by word in long passages too. A newly inserted paragraph follows the paragraph before it.
 - **✕ Clear target** on the reply card (and a ✕ next to the target summary at the top) releases the target without applying, so you can select the next passage. The preview stays usable: its anchor is kept, hidden, until you apply it or start a new chat, and it still asks before overwriting text that was edited in the meantime.
 - **🔁 Retry** on a card regenerates that card's own passage with its own instruction, even after you moved on to another target.
-- The edit prompt now says the reply must contain the whole replacement even when a long passage needs only one or two changes. In a real-Word test, the model once listed three fixes and said the other 107 sentences could stay, which left nothing to preview or apply. Calls without this rule usually returned the full text too (9 of 9 in a direct check), so this guards a rare case.
 
-中文摘要：长段落的预览不再整段标红标绿：先按句、再按词（中文逐字）比较，和 LLM_in_Overleaf 0.9.2 一样；很长的未改动部分折叠起来，卡片标题显示几处改动。写回时也按这个更细的比较保留格式，新插入的段落沿用前一段的格式。回复卡片新增「✕ 清除目标」（顶部目标摘要旁也有 ✕），不应用也能放开目标去选下一段；这张预览之后仍可应用（锚点隐藏保留到应用或开新会话），中途被改过的文字仍会先请你确认。卡片上的「🔁 重试」按这张卡片自己的目标和指令重新生成。提示词明确要求：长段落哪怕只改一两处，也要给出整段完整文本（真实 Word 测试里出现过一次模型只列改动、不给全文，导致没有预览可应用）。更新：在仓库目录运行 `npm run update`，然后在侧栏点 ⟳。
+中文摘要：长段落的预览不再整段标红标绿：先按句、再按词（中文逐字）比较，和 LLM_in_Overleaf 0.9.2 一样；很长的未改动部分折叠起来，卡片标题显示几处改动。写回时也按这个更细的比较保留格式，新插入的段落沿用前一段的格式。回复卡片新增「✕ 清除目标」（顶部目标摘要旁也有 ✕），不应用也能放开目标去选下一段；这张预览之后仍可应用（锚点隐藏保留到应用或开新会话），中途被改过的文字仍会先请你确认。卡片上的「🔁 重试」按这张卡片自己的目标和指令重新生成。更新：在仓库目录运行 `npm run update`，然后在侧栏点 ⟳。
 
 ## 0.7.2 — 2026-09-30
 

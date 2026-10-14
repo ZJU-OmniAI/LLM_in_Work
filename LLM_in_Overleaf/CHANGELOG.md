@@ -1,11 +1,5 @@
 # 更新记录
 
-## Unreleased
-
-- The edit prompt says the reply must contain the whole replacement even when a long selection needs only one or two changes, the same rule as LLM_in_Word 0.7.3. A reply that only lists the fixes cannot be previewed or applied.
-
-中文摘要：提示词明确要求长选段哪怕只改一两处也要给出整段完整内容；只列改动的回复没法生成预览和应用。
-
 ## 0.9.2 — 2026-10-14
 
 - Long selections get a real diff. The old word-by-word comparison gave up at roughly 350 words and only offered the new text; the new comparison works sentence by sentence first and then word by word inside changed sentences, so a 20,000-character passage compares in milliseconds. Chinese and Japanese are compared character by character instead of as one block per paragraph, and LaTeX commands stay whole.

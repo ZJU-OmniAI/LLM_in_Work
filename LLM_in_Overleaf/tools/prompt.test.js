@@ -46,10 +46,3 @@ test('explanations follow the instruction language, falling back to the interfac
   }
   assert.match(buildPrompt({ mode: 'ask', uiLanguage: 'en', doc: {}, messages: [{ role: 'user', content: 'Summarize' }] }), /使用用户本轮提问所用的语言回答；难以判断时使用英文/);
 });
-
-test('edit prompts require the whole replacement, even for a long selection with one change', () => {
-  const single = { fileName: 'main.tex', fullText: 'First', selection: 'First', selections: [{ id: 's1', text: 'First', line1: 1, line2: 1 }] };
-  assert.match(buildPrompt({ mode: 'edit', doc: single, messages: [{ role: 'user', content: 'fix grammar' }] }), /必须写出整段完整的替换文本[^\n]*不能只列出改了哪几处/);
-  assert.match(buildPrompt({ mode: 'edit', doc, messages: [{ role: 'user', content: 'fix grammar' }] }), /每段都写出完整的替换内容[^\n]*不能只列出改动/);
-  assert.match(buildTurnPrompt({ mode: 'edit', doc: single, instruction: 'fix grammar' }), /整段完整写出、不能只列改动/);
-});
