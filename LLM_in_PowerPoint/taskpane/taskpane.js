@@ -293,65 +293,33 @@
     return out.trim();
   }
 
-  // ---------- 逐字 diff（LCS）：中文按单字切、英文按词切，否则整段中文会被当成一个词 ----------
-  // 返回操作序列 [['='|'-'|'+', 文本], ...]，diff 展示和"只改变化的地方"共用。
-  // 先掐掉公共前后缀再对中段做 LCS（长文也能细粒度对比）；中段规模仍超限就退化成
-  // "整段删+整段加"——粗但正确。
-  function tokDiff(s) {
-    return s.match(/[㐀-鿿豈-﫿　-〿＀-￯]|[A-Za-z0-9_]+|\s+|[^\s]/g) || [];
-  }
-  function diffOps(aStr, bStr) {
-    let p = 0;
-    const maxP = Math.min(aStr.length, bStr.length);
-    while (p < maxP && aStr.charCodeAt(p) === bStr.charCodeAt(p)) p++;
-    let sfx = 0;
-    while (sfx < maxP - p && aStr.charCodeAt(aStr.length - 1 - sfx) === bStr.charCodeAt(bStr.length - 1 - sfx)) sfx++;
-    // 公共前后缀不在英文单词中间断开（否则 quarter→Quarter 会显示成 q|uarter），退到词边界
-    const W = /[A-Za-z0-9_]/;
-    while (p > 0 && W.test(aStr[p - 1]) && (W.test(aStr[p] || '') || W.test(bStr[p] || ''))) p--;
-    while (sfx > 0 && W.test(aStr[aStr.length - sfx]) && (W.test(aStr[aStr.length - sfx - 1] || '') || W.test(bStr[bStr.length - sfx - 1] || ''))) sfx--;
-    const am = aStr.slice(p, aStr.length - sfx), bm = bStr.slice(p, bStr.length - sfx);
-    const ops = [];
-    const push = (t, s) => {
-      if (!s) return;
-      if (ops.length && ops[ops.length - 1][0] === t) ops[ops.length - 1][1] += s;
-      else ops.push([t, s]);
-    };
-    push('=', aStr.slice(0, p));
-    const a = tokDiff(am), b = tokDiff(bm);
-    const n = a.length, m = b.length;
-    if (n * m > 2000000) {
-      push('-', am);
-      push('+', bm);
-    } else if (n || m) {
-      const cols = m + 1;
-      const dp = new Uint32Array((n + 1) * cols);
-      for (let i = n - 1; i >= 0; i--) {
-        for (let j = m - 1; j >= 0; j--) {
-          dp[i * cols + j] = a[i] === b[j] ? dp[(i + 1) * cols + j + 1] + 1 : Math.max(dp[(i + 1) * cols + j], dp[i * cols + j + 1]);
-        }
-      }
-      let i = 0, j = 0;
-      while (i < n && j < m) {
-        if (a[i] === b[j]) { push('=', a[i]); i++; j++; }
-        else if (dp[(i + 1) * cols + j] >= dp[i * cols + j + 1]) { push('-', a[i]); i++; }
-        else { push('+', b[j]); j++; }
-      }
-      while (i < n) push('-', a[i++]);
-      while (j < m) push('+', b[j++]);
-    }
-    if (sfx) push('=', aStr.slice(aStr.length - sfx));
-    return ops;
-  }
+  // ---------- 文字对比（diff-utils.js）：先按句子、再按词（中文逐字），长文也能细到词 ----------
+  // diffOps 是精确的操作序列 [['='|'-'|'+', 文本], ...]，"只改变化的地方"用；diffHtml 给预览用，
+  // 很长的未改动文字折起来（点一下展开），并返回改动处数。
+  const diffOps = (aStr, bStr) => window.DiffUtils.ops(aStr, bStr);
   function diffHtml(aStr, bStr) {
-    return diffOps(aStr, bStr)
-      .map(([t, s]) => {
-        const e = escapeHtml(s);
-        if (t === '-') return `<del>${e}</del>`;
-        if (t === '+') return `<ins>${e}</ins>`;
-        return e;
-      })
-      .join('');
+    const D = window.DiffUtils;
+    const ops = D.diff(aStr, bStr);
+    const changes = D.changeCount(ops);
+    if (!changes) return { html: `<i class="muted">${tr('与原文相同，没有改动')}</i>`, changes };
+    const html = ops.map(([t, s], i) => {
+      if (t === '-') return `<del>${escapeHtml(s)}</del>`;
+      if (t === '+') return `<ins>${escapeHtml(s)}</ins>`;
+      const f = D.fold(s, i === 0, i === ops.length - 1);
+      if (!f) return escapeHtml(s);
+      return escapeHtml(f[0]) + `<button type="button" class="diff-fold">${escapeHtml(tr`… 未改动 ${f[1].length} 字符 · 展开 …`)}</button>` +
+        `<span class="diff-fold-text hidden">${escapeHtml(f[1])}</span>` + escapeHtml(f[2]);
+    }).join('');
+    return { html, changes };
+  }
+  // 预览里点「展开」：换成被折起来的原文
+  function bindFolds(view) {
+    view.addEventListener('click', (e) => {
+      const btn = e.target.closest('.diff-fold');
+      if (!btn) return;
+      btn.nextElementSibling.classList.remove('hidden');
+      btn.remove();
+    });
   }
 
   // ---------- 只改变化的地方：把 diff 变成一串"在第 pos 个字处删 del 个字、插入 ins" ----------
@@ -892,11 +860,25 @@
     renderTargetBar();
   }
 
-  function clearTargets() {
+  // 清除目标（ids 为空 = 全部）。预览卡片按自己记下的原文找写入位置，清除后照样能应用。
+  function releaseTargets(ids = null) {
     if (state.streaming) return;
-    state.targets = [];
+    state.targets = ids ? state.targets.filter((t) => !ids.includes(t.id)) : [];
     saveTargets();
     renderTargetBar();
+  }
+  const clearTargets = () => releaseTargets();
+
+  // 预览卡片的 🔁 重试：按这张卡片自己的目标和指令重新生成。目标已被清除或换过的，先把它恢复成唯一的当前目标。
+  async function retryCard(tk, instruction) {
+    if (state.streaming || !instruction) return;
+    if (!(state.targets.length === 1 && state.targets[0].id === tk.id)) {
+      state.targets = [{ ...tk, id: 't' + (++tgtSeq) }];
+      delete state.targets[0].k;
+      const r = await refreshTargets(true);
+      if (r.ok && !state.targets.length) { addNote(tr('⚠️ 这处目标的原文已被改动或删除，没法按原来的目标重试，请重新选中后添加')); return; }
+    }
+    sendInstruction(instruction, { isRetry: true });
   }
 
   // 📍 定位：跳到那一页、选中那个形状；部分目标再选中那段文字
@@ -2162,6 +2144,7 @@
   function renderTargetBar() {
     const ts = state.targets;
     renderContextSummary();
+    syncClearButtons();
     $('#target-count').textContent = `${ts.length} / ${MAX_TARGETS}`;
     $('#btn-clear').classList.toggle('hidden', !ts.length);
     els.targetList.innerHTML = '';
@@ -2206,6 +2189,7 @@
 
   // 顶部一行：目标数和字数；详情（目标列表、定位、移除）在设置浮层里。
   function renderContextSummary() {
+    $('#btn-clear-top').classList.toggle('hidden', !state.targets.length || state.cfg.mode === 'format');
     if (state.cfg.mode === 'format') {
       const sc = state.fmtScope;
       els.contextSummary.textContent = !sc ? tr('当前页') : sc.shapes ? tr`第 ${sc.slideNo} 页 · 选中 ${sc.shapes} 个形状` : tr`第 ${sc.slideNo} 页 · 整页`;
@@ -2326,6 +2310,30 @@
   }
 
   // ---------- 替换卡片（diff 预览 + 应用 + 撤销）----------
+  // 「✕ 清除目标」：先不应用，放开这条回复的目标去选下一处；预览卡片之后仍可应用。
+  // 只在这些目标还是当前目标时显示（见 syncClearButtons）。
+  function clearTargetButton(ids, statusEl) {
+    const btn = document.createElement('button');
+    btn.className = 'btn clear-target';
+    btn.textContent = tr('✕ 清除目标');
+    btn.title = tr('先不应用：放开这处目标，去幻灯片里选下一处。这张预览之后仍可应用。');
+    btn.dataset.targets = ids.join(' ');
+    btn.addEventListener('click', () => {
+      if (state.streaming) return;
+      releaseTargets(ids);
+      if (statusEl) statusEl.textContent = tr('已清除目标 · 这张预览仍可应用');
+      addNote(tr('已清除目标。在幻灯片里选中下一处，点「＋ 添加选中」继续。'));
+    });
+    btn.classList.toggle('hidden', !ids.some((id) => state.targets.some((t) => t.id === id)));
+    return btn;
+  }
+  function syncClearButtons() {
+    const current = new Set(state.targets.map((t) => t.id));
+    for (const btn of els.messages.querySelectorAll('.clear-target')) {
+      btn.classList.toggle('hidden', !btn.dataset.targets.split(' ').some((id) => current.has(id)));
+    }
+  }
+
   // tk = 请求时的目标快照 { k, id, slideId, shapeId, kind, text, values, ... }；返回 doApply 供「应用全部」调用
   function attachReplacementCard(bubble, tk, replacement, via, multi, lang) {
     const card = document.createElement('div');
@@ -2345,10 +2353,10 @@
     const where = tk ? escapeHtml(whereOf(tk)) : '';
     card.innerHTML =
       `<div class="card-head">` +
-      `<span class="card-title">${multi ? tr`目标 ${tk.k} · ` : ''}${tableVals ? tr('📊 表格替换') : tr('替换预览')}${where ? `<span class="card-where">${where}</span>` : ''}</span>` +
+      `<span class="card-title">${multi ? tr`目标 ${tk.k} · ` : ''}${tableVals ? tr('📊 表格替换') : diff ? tr`替换预览 · ${diff.changes} 处改动` : tr('替换预览')}${where ? `<span class="card-where">${where}</span>` : ''}</span>` +
       `<button class="tab active" data-tab="diff">${title}</button><button class="tab" data-tab="new">${tableVals ? tr('源码') : tr('新文本')}</button>` +
       `</div>` +
-      `<pre class="card-body diffview">${diff != null ? diff : ''}</pre>` +
+      `<pre class="card-body diffview">${diff != null ? diff.html : ''}</pre>` +
       `<pre class="card-body newview hidden">${escapeHtml(newText)}</pre>` +
       `<div class="card-actions">` +
       tr`<button class="btn btn-primary apply">✅ 应用</button>` +
@@ -2358,8 +2366,10 @@
       `<span class="card-status"></span>` +
       `</div>`;
     bubble.appendChild(card);
+    const instruction = [...state.messages].reverse().find((m) => m.role === 'user')?.content || '';
 
     const diffView = card.querySelector('.diffview');
+    bindFolds(diffView);
     // 表格：对比页渲染成真表格，变过的单元格高亮并显示旧值；行增减做文字说明
     if (tableVals) {
       diffView.textContent = '';
@@ -2397,6 +2407,7 @@
     const statusEl = card.querySelector('.card-status');
     const applyBtn = card.querySelector('.apply');
     const undoBtn = card.querySelector('.undo');
+    const retryBtn = card.querySelector('.retry');
     const blocked = (tk && tk.kind === 'table' && !tableVals)                 // 表格目标没解析出表格
       || (tk && tk.kind !== 'table' && lang === 'table')                     // 文字目标不能换成表格
       || (tableVals && oldVals && oldVals[0] && tableVals[0] && oldVals[0].length !== tableVals[0].length); // 列数变了
@@ -2422,6 +2433,7 @@
       forceNext = false;
       if (r.ok) {
         done = true;
+        if (retryBtn) retryBtn.disabled = true;
         state.targets = state.targets.filter((t) => t.id !== tk.id); // 应用成功 → 该目标自动移除
         saveTargets();
         renderTargetBar();
@@ -2451,6 +2463,7 @@
       if (!r.ok) { statusEl.textContent = '⚠️ ' + (r.error || tr('撤销失败')); undoBtn.disabled = false; return; }
       undoRec = null;
       undoBtn.classList.add('hidden');
+      if (retryBtn) retryBtn.disabled = false;
       // 撤销后把原目标放回列表，方便换个说法再改
       if (state.targets.length < MAX_TARGETS && !state.targets.some((t) => t.slideId === tk.slideId && t.shapeId === tk.shapeId)) {
         const back = { ...tk, id: 't' + (++tgtSeq) };
@@ -2461,14 +2474,14 @@
       statusEl.textContent = tr('↩ 已撤销，这处已恢复为应用前的文字，并重新放回目标列表。') + (r.verified === false ? tr(' ⚠️ 回读与原文不完全一致，请检查。') : '');
     });
     card.querySelector('.copy').addEventListener('click', (e) => copyText(newText, e.target));
-    const retryBtn = card.querySelector('.retry');
     if (retryBtn) {
       retryBtn.addEventListener('click', () => {
-        if (state.streaming) return;
-        const lastUser = [...state.messages].reverse().find((m) => m.role === 'user');
-        if (lastUser) sendInstruction(lastUser.content, { isRetry: true });
+        if (state.streaming || retryBtn.disabled) return;
+        if (tk) retryCard(tk, instruction);
+        else if (instruction) sendInstruction(instruction, { isRetry: true });
       });
     }
+    if (tk && !multi) card.querySelector('.card-actions').insertBefore(clearTargetButton([tk.id], statusEl), statusEl);
     if (via) {
       const foot = document.createElement('div');
       foot.innerHTML = footHtml(via);
@@ -2845,19 +2858,25 @@
           d.textContent = tr`模型未输出目标 ${missing.join('、')} 的替换（视为无需改动）。`;
           aBubble.appendChild(d);
         }
-        if (applyFns.length > 1) {
+        if (multi) {
           const bar = document.createElement('div');
           bar.className = 'applyall';
-          const btn = document.createElement('button');
-          btn.className = 'btn btn-primary';
-          btn.textContent = tr`✅ 应用全部（${applyFns.length} 处）`;
-          btn.addEventListener('click', async () => {
-            btn.disabled = true;
-            let okCount = 0;
-            for (const fn of applyFns) { if (await fn()) okCount++; }
-            btn.textContent = tr`✅ 全部应用完成（成功 ${okCount}/${applyFns.length}）`;
-          });
-          bar.appendChild(btn);
+          if (applyFns.length > 1) {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-primary';
+            btn.textContent = tr`✅ 应用全部（${applyFns.length} 处）`;
+            btn.addEventListener('click', async () => {
+              btn.disabled = true;
+              let okCount = 0;
+              for (const fn of applyFns) { if (await fn()) okCount++; }
+              btn.textContent = tr`✅ 全部应用完成（成功 ${okCount}/${applyFns.length}）`;
+            });
+            bar.appendChild(btn);
+          }
+          const barStatus = document.createElement('span');
+          barStatus.className = 'card-status';
+          bar.appendChild(clearTargetButton(sentTargets.map((t) => t.id), barStatus));
+          bar.appendChild(barStatus);
           aBubble.appendChild(bar);
         }
         const foot = document.createElement('div');
@@ -2919,7 +2938,7 @@
     state.streaming = v;
     els.send.classList.toggle('hidden', v);
     els.stop.classList.toggle('hidden', !v);
-    for (const id of ['sel-language', 'sel-backend', 'sel-model', 'sel-effort', 'btn-reload', 'mode-edit', 'mode-format', 'mode-ask', 'btn-capture', 'btn-clear', 'btn-new', 'btn-hist', 'att-local', 'att-slide', 'btn-models']) {
+    for (const id of ['sel-language', 'sel-backend', 'sel-model', 'sel-effort', 'btn-reload', 'mode-edit', 'mode-format', 'mode-ask', 'btn-capture', 'btn-clear', 'btn-clear-top', 'btn-new', 'btn-hist', 'att-local', 'att-slide', 'btn-models']) {
       const el = $('#' + id); if (el) el.disabled = v || (id === 'att-slide' && !state.api.v18 && state.pptReady);
     }
     els.messages.setAttribute('aria-busy', String(v));
@@ -3245,7 +3264,7 @@
       fillModelOptions(); setMode(state.cfg.mode); refreshStatusUI(); renderTargetBar();
       if (!state.messages.length) { $('.welcome')?.remove(); renderWelcome(); }
       // 已有对话内容保持原语言，只翻译面板自己的控件
-      document.querySelectorAll('#messages .btn, .card .tab, .card-title, .card-status, .warnbox, .think summary').forEach((el) => {
+      document.querySelectorAll('#messages .btn, .card .tab, .card-title, .card-status, .diff-fold, .diffview > .muted, .warnbox, .think summary').forEach((el) => {
         if (el.children.length === 0) el.textContent = uiText(el.textContent);
         if (el.title) el.title = uiText(el.title);
       });
@@ -3260,6 +3279,11 @@
     $('#btn-diagnose').addEventListener('click', () => diagnose());
     $('#btn-capture').addEventListener('click', () => { if (state.pptReady && !state.streaming) addTarget(); else if (!state.pptReady) addNote(tr('请在 PowerPoint 加载项中选中内容，再添加目标。')); });
     $('#btn-clear').addEventListener('click', clearTargets);
+    $('#btn-clear-top').addEventListener('click', () => {
+      if (state.streaming || !state.targets.length) return;
+      clearTargets();
+      addNote(tr('已清除目标。在幻灯片里选中下一处，点「＋ 添加选中」继续。'));
+    });
     $('#btn-new').addEventListener('click', newSession);
     $('#btn-hist').addEventListener('click', openHistView);
     $('#hist-close').addEventListener('click', () => { els.histView.classList.add('hidden'); $('#btn-hist').focus(); });

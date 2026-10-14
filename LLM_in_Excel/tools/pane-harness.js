@@ -5,11 +5,11 @@ import { JSDOM } from 'jsdom';
 import { createFakeExcel, sampleBook } from './fixtures/fake-excel.js';
 
 const read = (p) => readFileSync(new URL(`../taskpane/${p}`, import.meta.url), 'utf8');
-const html = read('taskpane.html'), paneJs = read('taskpane.js'), i18nJs = read('i18n.js'), gridJs = read('grid-utils.js');
+const html = read('taskpane.html'), paneJs = read('taskpane.js'), i18nJs = read('i18n.js'), gridJs = read('grid-utils.js'), diffJs = read('diff-utils.js');
 
 const EXPOSE = 'state, addTarget, getEditContext, getWholeBook, applyGrid, undoGrid, revealTarget, refreshTargets, restoreTargets, buildBookContext, ' +
   'sendInstruction, renderTargetBar, fillModelOptions, stopStream, contextKey, refreshModelList, refreshStatusUI, ' +
-  'clearTargets, removeTarget, onDocSelectionChanged, setMode';
+  'clearTargets, removeTarget, newSession, onDocSelectionChanged, setMode';
 
 export const tick = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -52,6 +52,7 @@ export async function loadPane({ book = sampleBook(), events = [], language = 'z
   };
   w.eval(i18nJs);
   w.eval(gridJs);
+  w.eval(diffJs);
   const hook = `  init();
     window.lx = { ${EXPOSE} };
     ${mockContext ? 'getEditContext = () => window.__context; getWholeBook = () => window.__context;' : ''}

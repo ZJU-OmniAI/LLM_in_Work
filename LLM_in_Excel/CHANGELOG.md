@@ -1,5 +1,13 @@
 # 更新记录
 
+## 0.1.1 — 2026-10-15
+
+- **✕ Clear target** on the reply card (and a ✕ next to the target summary at the top) releases the range without applying, so you can select the next one. The earlier preview still writes its own cells, after the same check that they were not edited in the meantime.
+- **🔁 Retry** on a card regenerates that card's own range with its own instruction, even after you moved on.
+- Long text in a cell is compared sentence by sentence and then word by word (Chinese character by character), with long unchanged stretches folded, the same method as LLM_in_Overleaf 0.9.2.
+
+中文摘要：回复卡片新增「✕ 清除目标」（顶部目标摘要旁也有 ✕），不应用也能放开当前区域去选下一块，之前的预览仍可写回（写之前照样核对单元格有没有被改过）。卡片上的「🔁 重试」按这张卡片自己的区域和指令重新生成。单元格里的长文字按句、再按词（中文逐字）对比，很长的未改动部分折叠。更新：在仓库目录运行 `npm run update`。
+
 ## 0.1.0 — 2026-10-01
 
 First release of LLM_in_Excel, the Excel counterpart of LLM_in_Word and LLM_in_PowerPoint, with the same pane layout and backends.

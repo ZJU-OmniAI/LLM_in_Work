@@ -10,6 +10,9 @@
   const uiText = window.WordI18n.known;
 
   const TAG = 'word_edit_target'; // Stable legacy tag preserves existing document targets. // 目标内容控件的标记，靠它跨会话找回目标
+  // 清除目标时，还有预览卡片没应用的那几个控件不删，改成这个标记：不再算目标，卡片之后仍能按它写回。
+  // 面板重开或开新会话时卡片都没了，这类控件随之解除锚定。
+  const PARK_TAG = 'word_edit_parked';
   const API = ''; // 面板和服务同源，相对路径即可
 
   // 模型列表：[候选值, 显示名]。别名由 CLI 解析成当下最新版本。
@@ -224,61 +227,33 @@
     return out.trim();
   }
 
-  // ---------- 逐字 diff（LCS）：中文按单字切、英文按词切，否则整段中文会被当成一个词 ----------
-  // 返回操作序列 [['='|'-'|'+', 文本], ...]，diff 展示和"保格式替换"共用。
-  // 先掐掉公共前后缀再对中段做 LCS（长文也能细粒度对比）；中段规模仍超限就退化成
-  // "整段删+整段加"——粗但正确，格式迁移照样能用。
-  function tokDiff(s) {
-    return s.match(/[㐀-鿿豈-﫿　-〿＀-￯]|[A-Za-z0-9_]+|\s+|[^\s]/g) || [];
-  }
-  function diffOps(aStr, bStr) {
-    let p = 0;
-    const maxP = Math.min(aStr.length, bStr.length);
-    while (p < maxP && aStr.charCodeAt(p) === bStr.charCodeAt(p)) p++;
-    let sfx = 0;
-    while (sfx < maxP - p && aStr.charCodeAt(aStr.length - 1 - sfx) === bStr.charCodeAt(bStr.length - 1 - sfx)) sfx++;
-    const am = aStr.slice(p, aStr.length - sfx), bm = bStr.slice(p, bStr.length - sfx);
-    const ops = [];
-    const push = (t, s) => {
-      if (!s) return;
-      if (ops.length && ops[ops.length - 1][0] === t) ops[ops.length - 1][1] += s;
-      else ops.push([t, s]);
-    };
-    push('=', aStr.slice(0, p));
-    const a = tokDiff(am), b = tokDiff(bm);
-    const n = a.length, m = b.length;
-    if (n * m > 2000000) {
-      push('-', am);
-      push('+', bm);
-    } else if (n || m) {
-      const W = m + 1;
-      const dp = new Uint32Array((n + 1) * W);
-      for (let i = n - 1; i >= 0; i--) {
-        for (let j = m - 1; j >= 0; j--) {
-          dp[i * W + j] = a[i] === b[j] ? dp[(i + 1) * W + j + 1] + 1 : Math.max(dp[(i + 1) * W + j], dp[i * W + j + 1]);
-        }
-      }
-      let i = 0, j = 0;
-      while (i < n && j < m) {
-        if (a[i] === b[j]) { push('=', a[i]); i++; j++; }
-        else if (dp[(i + 1) * W + j] >= dp[i * W + j + 1]) { push('-', a[i]); i++; }
-        else { push('+', b[j]); j++; }
-      }
-      while (i < n) push('-', a[i++]);
-      while (j < m) push('+', b[j++]);
-    }
-    if (sfx) push('=', aStr.slice(aStr.length - sfx));
-    return ops;
-  }
+  // ---------- 文字对比（diff-utils.js）：先按句子、再按词（中文逐字），长文也能细到词 ----------
+  // diffOps 是精确的操作序列 [['='|'-'|'+', 文本], ...]，"保格式替换"用；diffHtml 给预览用，
+  // 很长的未改动文字折起来（点一下展开），并返回改动处数。
+  const diffOps = (aStr, bStr) => window.DiffUtils.ops(aStr, bStr);
   function diffHtml(aStr, bStr) {
-    return diffOps(aStr, bStr)
-      .map(([t, s]) => {
-        const e = escapeHtml(s);
-        if (t === '-') return `<del>${e}</del>`;
-        if (t === '+') return `<ins>${e}</ins>`;
-        return e;
-      })
-      .join('');
+    const D = window.DiffUtils;
+    const ops = D.diff(aStr, bStr);
+    const changes = D.changeCount(ops);
+    if (!changes) return { html: `<i class="muted">${tr('与原文相同，没有改动')}</i>`, changes };
+    const html = ops.map(([t, s], i) => {
+      if (t === '-') return `<del>${escapeHtml(s)}</del>`;
+      if (t === '+') return `<ins>${escapeHtml(s)}</ins>`;
+      const f = D.fold(s, i === 0, i === ops.length - 1);
+      if (!f) return escapeHtml(s);
+      return escapeHtml(f[0]) + `<button type="button" class="diff-fold">${escapeHtml(tr`… 未改动 ${f[1].length} 字符 · 展开 …`)}</button>` +
+        `<span class="diff-fold-text hidden">${escapeHtml(f[1])}</span>` + escapeHtml(f[2]);
+    }).join('');
+    return { html, changes };
+  }
+  // 预览里点「展开」：换成被折起来的原文
+  function bindFolds(view) {
+    view.addEventListener('click', (e) => {
+      const btn = e.target.closest('.diff-fold');
+      if (!btn) return;
+      btn.nextElementSibling.classList.remove('hidden');
+      btn.remove();
+    });
   }
 
   // ---------- 保格式替换：原 HTML ↔ 新文本逐字对齐，迁移行内格式和段落样式 ----------
@@ -516,6 +491,25 @@
     ccs.load('items/id');
     return ccs;
   }
+  function getParkedCC(ctx) {
+    const ccs = ctx.document.contentControls.getByTag(PARK_TAG);
+    ccs.load('items/id');
+    return ccs;
+  }
+  // 还没应用的预览卡片引用的目标控件 ID
+  const liveCards = new Set();
+  // 解除所有停用的锚点（卡片都没了的时候调用）
+  async function dropParked() {
+    liveCards.clear();
+    if (!state.wordReady) return;
+    await wordRun(async (ctx) => {
+      const parked = getParkedCC(ctx);
+      await ctx.sync();
+      for (const cc of parked.items) cc.delete(true);
+      await ctx.sync();
+      return { ok: true };
+    });
+  }
 
   // 从文档重新读一遍目标列表（按文档顺序编号），顺带更新全文字符数。
   // 表格目标（控件里包着表）读 values → Markdown 表示；文本目标照旧读纯文本。
@@ -572,6 +566,7 @@
       const selTabs = sel.tables;
       selTabs.load('items');
       const ccs = getTargetCC(ctx);
+      const parked = getParkedCC(ctx);
       await ctx.sync();
 
       let targetRange = sel;
@@ -607,6 +602,14 @@
           }
         }
       }
+      // 和停用锚点重叠：那张旧卡片的这段已被重新选中，解除它的锚点（旧卡片应用时会提示找不到）
+      if (parked.items.length) {
+        const rels = parked.items.map((cc) => targetRange.compareLocationWith(cc.getRange('Whole')));
+        await ctx.sync();
+        parked.items.forEach((cc, i) => {
+          if (!['Before', 'After', 'AdjacentBefore', 'AdjacentAfter', 'Unrelated'].includes(rels[i].value)) { cc.delete(true); liveCards.delete(cc.id); }
+        });
+      }
       const cc = targetRange.insertContentControl();
       cc.tag = TAG;
       cc.title = tr('LLM_in_Word 改写目标');
@@ -627,8 +630,9 @@
     els.input.focus();
   }
 
-  // 面板启动时：文档里若还留着上次的目标控件，恢复它们
+  // 面板启动时：文档里若还留着上次的目标控件，恢复它们（停用的锚点没有卡片了，解除）
   async function restoreTarget() {
+    await dropParked();
     await refreshTargets(true);
     if (state.targets.length) {
       addNote(tr`🎯 已从文档恢复上次设的 ${state.targets.length} 段目标（不想要就点 ✕ 清除）`);
@@ -636,28 +640,52 @@
   }
 
   async function removeTarget(ccId) {
-    if (state.streaming) return;
-    await wordRun(async (ctx) => {
-      const ccs = getTargetCC(ctx);
-      await ctx.sync();
-      for (const cc of ccs.items) if (cc.id === ccId) cc.delete(true);
-      await ctx.sync();
-      return { ok: true };
-    });
-    await refreshTargets();
+    await releaseTargets([ccId]);
   }
 
-  async function clearTargets() {
+  // 清除目标（ids 为空 = 全部）：还有预览卡片要用的控件改成停用标记，卡片之后仍能应用；其余直接解除锚定。
+  async function releaseTargets(ids = null) {
     if (state.streaming || !state.wordReady) return;
     await wordRun(async (ctx) => {
       const ccs = getTargetCC(ctx);
       await ctx.sync();
-      for (const cc of ccs.items) cc.delete(true);
+      for (const cc of ccs.items) {
+        if (ids && !ids.includes(cc.id)) continue;
+        if (liveCards.has(cc.id)) cc.tag = PARK_TAG;
+        else cc.delete(true);
+      }
       await ctx.sync();
       return { ok: true };
     });
-    state.targets = [];
+    state.targets = ids ? state.targets.filter((t) => !ids.includes(t.ccId)) : [];
     renderTargetBar();
+  }
+  const clearTargets = () => releaseTargets();
+
+  // 预览卡片的 🔁 重试：按这张卡片自己的目标和指令重新生成。目标已被清除或换过的，先把它恢复成唯一的当前目标。
+  async function retryCard(ids, instruction) {
+    if (state.streaming || !instruction) return;
+    const same = state.targets.length === ids.length && state.targets.every((t) => ids.includes(t.ccId));
+    if (!same) {
+      const r = await wordRun(async (ctx) => {
+        const active = getTargetCC(ctx), parked = getParkedCC(ctx);
+        await ctx.sync();
+        if (!ids.every((id) => active.items.some((cc) => cc.id === id) || parked.items.some((cc) => cc.id === id))) {
+          return { ok: false, error: tr('这个目标已丢失（锚定控件被删除），请重新选中并添加目标') };
+        }
+        for (const cc of active.items) {
+          if (ids.includes(cc.id)) continue;
+          if (liveCards.has(cc.id)) cc.tag = PARK_TAG;
+          else cc.delete(true);
+        }
+        for (const cc of parked.items) if (ids.includes(cc.id)) cc.tag = TAG;
+        await ctx.sync();
+        return { ok: true };
+      });
+      if (!r.ok) { addNote('⚠️ ' + escapeHtml(uiText(r.error))); return; }
+      await refreshTargets(true);
+    }
+    sendInstruction(instruction, { isRetry: true });
   }
 
   async function revealTarget(ccId) {
@@ -754,13 +782,16 @@
   //   表格目标 + 列数没变 → 只改变化的单元格（表格样式/未动单元格格式全保留），行数差异用增删行处理；
   //   表格目标 + 列数变了 → 整表重建（insertHtml，样式重置）；
   //   文本目标 + 表格输出 → 文字转表格（insertHtml 插入真表格）。
+  // opts.expect：卡片生成时目标的原文；文档里这段和它对不上就先请用户确认。
   async function applyReplacement(ccId, newText, force, opts = {}) {
     return await wordRun(async (ctx) => {
       const ccs = getTargetCC(ctx);
+      const parked = getParkedCC(ctx);
       await ctx.sync();
-      const cc = ccs.items.find((c) => c.id === ccId);
+      const cc = ccs.items.find((c) => c.id === ccId) || parked.items.find((c) => c.id === ccId);
       if (!cc) return { ok: false, error: tr('这个目标已丢失（锚定控件被删除），请重新选中并添加目标') };
-      const tk = state.targets.find((t) => t.ccId === ccId);
+      const expect = opts.expect != null ? opts.expect : state.targets.find((t) => t.ccId === ccId)?.text;
+      const tk = expect != null ? { text: expect } : null;
       const ccTabs = cc.getRange('Whole').tables;
       ccTabs.load('items');
       const g = queueText(cc.getRange('Content'));
@@ -995,8 +1026,10 @@
   function renderTargetBar() {
     const ts = state.targets;
     renderContextSummary();
+    syncClearButtons();
     $('#target-count').textContent = `${ts.length} / ${MAX_TARGETS}`;
     $('#btn-clear').classList.toggle('hidden', !ts.length);
+    $('#btn-clear-top').classList.toggle('hidden', !ts.length);
     els.targetList.innerHTML = '';
     if (!ts.length) {
       els.targetInfo.innerHTML = tr('<span class="muted">支持多个段落，也可以添加整张表格。</span>');
@@ -1119,6 +1152,30 @@
   }
 
   // ---------- 替换卡片（diff 预览 + 应用）----------
+  // 「✕ 清除目标」：先不应用，放开这条回复的目标去选下一段；预览卡片之后仍可应用。
+  // 只在这些目标还是当前目标时显示（见 syncClearButtons）。
+  function clearTargetButton(ids, statusEl) {
+    const btn = document.createElement('button');
+    btn.className = 'btn clear-target';
+    btn.textContent = tr('✕ 清除目标');
+    btn.title = tr('先不应用：放开这段目标，去文档里选下一段。这张预览之后仍可应用。');
+    btn.dataset.targets = ids.join(' ');
+    btn.addEventListener('click', async () => {
+      if (state.streaming) return;
+      await releaseTargets(ids);
+      if (statusEl) statusEl.textContent = tr('已清除目标 · 这张预览仍可应用');
+      addNote(tr('已清除目标。在文档里选中下一段，点「＋ 添加选中」继续。'));
+    });
+    btn.classList.toggle('hidden', !ids.some((id) => state.targets.some((t) => t.ccId === id)));
+    return btn;
+  }
+  function syncClearButtons() {
+    const current = new Set(state.targets.map((t) => String(t.ccId)));
+    for (const btn of els.messages.querySelectorAll('.clear-target')) {
+      btn.classList.toggle('hidden', !btn.dataset.targets.split(' ').some((id) => current.has(id)));
+    }
+  }
+
   // tk = 请求时的目标快照 { k, ccId, text }；返回 doApply 供「应用全部」调用
   function attachReplacementCard(bubble, tk, replacement, via, multi, lang) {
     const card = document.createElement('div');
@@ -1139,10 +1196,10 @@
     const title = tableVals ? tr('表格预览') : tr('对比');
     card.innerHTML =
       `<div class="card-head">` +
-      `<span class="card-title">${multi ? tr`目标 ${tk.k} · ` : ''}${tableVals ? tr('📊 表格替换') : tr('替换预览')}</span>` +
+      `<span class="card-title">${multi ? tr`目标 ${tk.k} · ` : ''}${tableVals ? tr('📊 表格替换') : diff ? tr`替换预览 · ${diff.changes} 处改动` : tr('替换预览')}</span>` +
       `<button class="tab active" data-tab="diff">${title}</button><button class="tab" data-tab="new">${tableVals ? tr('源码') : tr('新文本')}</button>` +
       `</div>` +
-      `<pre class="card-body diffview">${diff != null ? diff : ''}</pre>` +
+      `<pre class="card-body diffview">${diff != null ? diff.html : ''}</pre>` +
       `<pre class="card-body newview hidden">${escapeHtml(replacement)}</pre>` +
       `<div class="card-actions">` +
       tr`<button class="btn btn-primary apply">✅ 应用</button>` +
@@ -1151,9 +1208,12 @@
       `<span class="card-status"></span>` +
       `</div>`;
     bubble.appendChild(card);
+    if (tk) liveCards.add(tk.ccId);
+    const instruction = [...state.messages].reverse().find((m) => m.role === 'user')?.content || '';
 
     const diffView = card.querySelector('.diffview');
     const newView = card.querySelector('.newview');
+    bindFolds(diffView);
     // 表格：对比页渲染成真表格，变过的单元格高亮并显示旧值；行列增减做文字说明
     if (tableVals) {
       diffView.textContent = '';
@@ -1190,6 +1250,7 @@
 
     const statusEl = card.querySelector('.card-status');
     const applyBtn = card.querySelector('.apply');
+    const retryBtn = card.querySelector('.retry');
     if (tk && tk.kind === 'table' && !tableVals) applyBtn.disabled = true; // 表格目标没解析出表格 → 不能应用
     let done = false;
     let forceNext = false; // 二次点击确认覆盖（Word 的 WebView 会吞 window.confirm，不能用弹窗）
@@ -1199,7 +1260,7 @@
       if (tk.kind === 'table' && !tableVals) { statusEl.textContent = tr('⚠️ 未解析出表格，无法应用'); return false; }
       applyBtn.disabled = true;
       statusEl.textContent = tr('应用中…');
-      const opts = tableVals ? { tableVals } : {};
+      const opts = tableVals ? { tableVals, expect: tk.text } : { expect: tk.text };
       let r = await applyReplacement(tk.ccId, replacement, forceNext, opts);
       if (r.needConfirm) {
         forceNext = true;
@@ -1210,6 +1271,8 @@
       forceNext = false;
       if (r.ok) {
         done = true;
+        liveCards.delete(tk.ccId);
+        if (retryBtn) retryBtn.disabled = true;
         state.targets = state.targets.filter((t) => t.ccId !== tk.ccId); // 应用成功 → 该目标自动移除
         renderTargetBar();
         const fmt = r.table === 'cells' ? tr('（按单元格级更新，表格样式保留）')
@@ -1227,14 +1290,14 @@
     };
     applyBtn.addEventListener('click', doApply);
     card.querySelector('.copy').addEventListener('click', (e) => copyText(replacement, e.target));
-    const retryBtn = card.querySelector('.retry');
     if (retryBtn) {
       retryBtn.addEventListener('click', () => {
-        if (state.streaming) return;
-        const lastUser = [...state.messages].reverse().find((m) => m.role === 'user');
-        if (lastUser) sendInstruction(lastUser.content, { isRetry: true });
+        if (state.streaming || done) return;
+        if (tk) retryCard([tk.ccId], instruction);
+        else if (instruction) sendInstruction(instruction, { isRetry: true });
       });
     }
+    if (tk && !multi) card.querySelector('.card-actions').insertBefore(clearTargetButton([tk.ccId], statusEl), statusEl);
     if (via) {
       const foot = document.createElement('div');
       foot.innerHTML = footHtml(via);
@@ -1589,19 +1652,25 @@
           d.textContent = tr`模型未输出目标 ${missing.join('、')} 的替换（视为无需改动）。`;
           aBubble.appendChild(d);
         }
-        if (applyFns.length > 1) {
+        if (multi) {
           const bar = document.createElement('div');
           bar.className = 'applyall';
-          const btn = document.createElement('button');
-          btn.className = 'btn btn-primary';
-          btn.textContent = tr`✅ 应用全部（${applyFns.length} 处）`;
-          btn.addEventListener('click', async () => {
-            btn.disabled = true;
-            let okCount = 0;
-            for (const fn of applyFns) { if (await fn()) okCount++; }
-            btn.textContent = tr`✅ 全部应用完成（成功 ${okCount}/${applyFns.length}）`;
-          });
-          bar.appendChild(btn);
+          if (applyFns.length > 1) {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-primary';
+            btn.textContent = tr`✅ 应用全部（${applyFns.length} 处）`;
+            btn.addEventListener('click', async () => {
+              btn.disabled = true;
+              let okCount = 0;
+              for (const fn of applyFns) { if (await fn()) okCount++; }
+              btn.textContent = tr`✅ 全部应用完成（成功 ${okCount}/${applyFns.length}）`;
+            });
+            bar.appendChild(btn);
+          }
+          const barStatus = document.createElement('span');
+          barStatus.className = 'card-status';
+          bar.appendChild(clearTargetButton(sentTargets.map((t) => t.ccId), barStatus));
+          bar.appendChild(barStatus);
           aBubble.appendChild(bar);
         }
         const foot = document.createElement('div');
@@ -1661,7 +1730,7 @@
     state.streaming = v;
     els.send.classList.toggle('hidden', v);
     els.stop.classList.toggle('hidden', !v);
-    for (const id of ['sel-language', 'sel-backend', 'sel-model', 'sel-effort', 'btn-reload', 'mode-edit', 'mode-ask', 'btn-capture', 'btn-clear', 'btn-new', 'btn-hist', 'att-local', 'btn-models']) {
+    for (const id of ['sel-language', 'sel-backend', 'sel-model', 'sel-effort', 'btn-reload', 'mode-edit', 'mode-ask', 'btn-capture', 'btn-clear', 'btn-clear-top', 'btn-new', 'btn-hist', 'att-local', 'btn-models']) {
       const el = $('#' + id); if (el) el.disabled = v;
     }
     els.messages.setAttribute('aria-busy', String(v));
@@ -1682,6 +1751,7 @@
     state.cliSession = { claude: null, codex: null }; // 清掉 CLI 会话：下一轮重新读全文、重建缓存
     state.sentAtts = { claude: [], codex: [] };
     els.messages.innerHTML = '';
+    await dropParked(); // 卡片都没了，停用的锚点随之解除
     clearHistory();
     renderWelcome();
     if (state.targets.length) {
@@ -1950,7 +2020,7 @@
       if (!state.messages.length) { $('.welcome')?.remove(); renderWelcome(); }
       $('#presets').querySelectorAll('.chip').forEach((chip) => { chip.textContent = tr(PRESETS[Number(chip.dataset.i)][0]); });
       // Existing conversation content stays in its original language. Only translate owned controls.
-      document.querySelectorAll('#messages .btn, .card .tab, .card-title, .card-status, .warnbox, .think summary').forEach((el) => {
+      document.querySelectorAll('#messages .btn, .card .tab, .card-title, .card-status, .diff-fold, .diffview > .muted, .warnbox, .think summary').forEach((el) => {
         if (el.children.length === 0) el.textContent = uiText(el.textContent);
         if (el.title) el.title = uiText(el.title);
       });
@@ -1966,6 +2036,11 @@
     $('#btn-diagnose').addEventListener('click', () => diagnose());
     $('#btn-capture').addEventListener('click', () => { if (state.wordReady && !state.streaming) addTarget(); else if (!state.wordReady) addNote(tr('请在 Word 加载项中选中文字，再添加目标。')); });
     $('#btn-clear').addEventListener('click', clearTargets);
+    $('#btn-clear-top').addEventListener('click', async () => {
+      if (state.streaming || !state.targets.length) return;
+      await clearTargets();
+      addNote(tr('已清除目标。在文档里选中下一段，点「＋ 添加选中」继续。'));
+    });
     $('#btn-new').addEventListener('click', newSession);
     $('#btn-hist').addEventListener('click', openHistView);
     $('#hist-close').addEventListener('click', () => { els.histView.classList.add('hidden'); $('#btn-hist').focus(); });

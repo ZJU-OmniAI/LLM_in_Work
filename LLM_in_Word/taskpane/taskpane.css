@@ -380,3 +380,10 @@ html[lang="en"] .card-head { flex-wrap:wrap; }
 .composer .eyebrow span { margin-left:0; }
 @media(max-height:690px) { .hdr { padding-top:8px; padding-bottom:6px; } .settings-pop .target-list { max-height:110px; } }
 @media (max-width:360px) { .brand-mark { display:none; } .hdr { gap:3px; padding-left:12px; padding-right:8px; } .hdr-btn { padding:5px 6px; } }
+/* 预览里折起来的长段未改动文字；「✕ 清除目标」（卡片上和顶部目标摘要旁） */
+.diff-fold { border:1px dashed #c9d6c6; background:#f4f7f2; color:#6b7f70; border-radius:6px; font:inherit; font-size:11px; padding:1px 7px; margin:2px 0; cursor:pointer; }
+.diff-fold:hover { color:var(--accent-dark); border-color:#93b48f; }
+.btn.clear-target:hover { border-color:#f0b4b4; color:#b42318; }
+.applyall { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.context-bar .context-clear { width:22px; height:22px; font-size:13px; color:#8a948e; }
+.context-bar .context-clear:hover { color:#b42318; background:#fbeaea; }

@@ -1,12 +1,12 @@
 {
   "name": "llm-in-excel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "LLM_in_Excel — Review and apply AI edits to cells in desktop Microsoft Excel with your local Claude Code or Codex CLI.",
   "scripts": {
     "server": "node server/server.js",
-    "test": "node --test tools/test-grid.js tools/test-book.js tools/test-i18n.js tools/test-ui.js tools/test-backend.js tools/test-platform.js tools/test-prompt.js",
+    "test": "node --test tools/test-diff.js tools/test-grid.js tools/test-book.js tools/test-i18n.js tools/test-ui.js tools/test-backend.js tools/test-platform.js tools/test-prompt.js",
     "test:live": "node tools/test-server.js",
     "test:live:codex": "node tools/test-server.js --codex",
     "preview": "node tools/platform.js preview",

@@ -23,6 +23,7 @@ The runtime has no external npm dependencies. Development tests use jsdom. Offic
 | `server/prompt.js` | Document context, target markers and follow-up prompts. |
 | `taskpane/taskpane.js` | Office.js integration, target anchoring, review/apply, formatting and local state. |
 | `taskpane/table-utils.js` | Table protocol, parsing and cell differences. |
+| `taskpane/diff-utils.js` | Text comparison for previews and write-back: sentences and lines first, then words (Chinese characters one by one), with long unchanged text folded. Identical copies in LLM_in_Word, LLM_in_PowerPoint and LLM_in_Excel; unit-tested in `tools/test-diff.js`. |
 | `install.ps1`, `tools/windows-*.{ps1,js}` | Windows installation, user Startup shortcut, supervisor and lifecycle controls. |
 | `install.sh` | macOS certificate trust, launchd service, runtime staging and Word manifest installation. |
 

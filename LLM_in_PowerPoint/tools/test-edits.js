@@ -49,7 +49,7 @@ test('unchanged words are never rewritten, so their formatting survives', () => 
 test('diffs do not split English words at the shared prefix or suffix', () => {
   const ops = T.diffOps('What we achieved this quarter', 'Breakout Quarter');
   const changed = plain(ops.filter(([t]) => t !== '=').map(([t, s]) => t + s));
-  assert.ok(changed.includes('-quarter') && changed.includes('+Quarter'), JSON.stringify(changed));
+  assert.ok(changed.some((c) => /^-.*\bquarter$/.test(c)) && changed.includes('+Quarter'), JSON.stringify(changed));
   for (let i = 1; i < ops.length; i++) assert.ok(!(/\w$/.test(ops[i - 1][1]) && /^\w/.test(ops[i][1]) && (ops[i - 1][0] === '=' || ops[i][0] === '=')), 'no word is split by an unchanged part');
   assert.deepEqual(plain(T.diffOps('grew 23%', 'grew 25%')), [['=', 'grew '], ['-', '23'], ['+', '25'], ['=', '%']]);
   assert.deepEqual(plain(T.diffOps('营收增长了', '营收增长')), [['=', '营收增长'], ['-', '了']]);
