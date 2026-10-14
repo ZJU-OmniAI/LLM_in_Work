@@ -286,13 +286,16 @@
   }
   const flatToText = (chars) => chars.map((c) => c.ch).join('');
   const canonText = (s) => normNL(s).replace(/\n+$/, '');
-  // Word 导出的 HTML 可能带排版性换行（元素间缩进/断行），三档尝试和纯文本对齐：
-  // 原样 → 文本节点里的换行删掉 → 换行当空格
+  // Word 导出的 HTML 带排版性换行：块元素之间有空行，文字在约 80 列处把空格换成换行
+  // （英文段落几乎都会被折行，中文没有空格就不折）。三档尝试和纯文本对齐：
+  // 原样 → 文本节点里的换行删掉 → 换行当空格；后两档都去掉块元素之间的空白。
   function dewrapTextNodes(root, mode) {
     const w = root.ownerDocument.createTreeWalker(root, 4 /* TEXT */);
     const nodes = [];
     while (w.nextNode()) nodes.push(w.currentNode);
     for (const n of nodes) {
+      const parent = n.parentNode;
+      if (/^\s*$/.test(n.data) && parent && [...parent.children].some((c) => BLOCK_RE.test(c.tagName))) { n.data = ''; continue; }
       n.data = mode === 'strip' ? n.data.replace(/\r?\n[ \t]*/g, '') : n.data.replace(/\r?\n[ \t]*/g, ' ');
     }
   }

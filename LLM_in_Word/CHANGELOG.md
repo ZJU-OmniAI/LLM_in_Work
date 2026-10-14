@@ -6,8 +6,9 @@
 - The same finer comparison is used when writing back, so formatting is kept word by word in long passages too. A newly inserted paragraph follows the paragraph before it.
 - **✕ Clear target** on the reply card (and a ✕ next to the target summary at the top) releases the target without applying, so you can select the next passage. The preview stays usable: its anchor is kept, hidden, until you apply it or start a new chat, and it still asks before overwriting text that was edited in the meantime.
 - **🔁 Retry** on a card regenerates that card's own passage with its own instruction, even after you moved on to another target.
+- **English paragraphs keep their formatting when applied.** Word's HTML export puts blank lines between paragraphs and wraps text at about 80 columns by turning a space into a line break, so even *The end.* comes out wrapped. The pane could not line that HTML up with the text and fell back to plain text, which drops bold, italic and other run formatting. Layout whitespace between blocks is now ignored and wrapped line breaks count as spaces. With HTML exported by real Word for a 10,562-character paragraph, the previous code fell back to plain text and the new code keeps the formatting. Chinese paragraphs, which Word does not wrap, were not affected.
 
-中文摘要：长段落的预览不再整段标红标绿：先按句、再按词（中文逐字）比较，和 LLM_in_Overleaf 0.9.2 一样；很长的未改动部分折叠起来，卡片标题显示几处改动。写回时也按这个更细的比较保留格式，新插入的段落沿用前一段的格式。回复卡片新增「✕ 清除目标」（顶部目标摘要旁也有 ✕），不应用也能放开目标去选下一段；这张预览之后仍可应用（锚点隐藏保留到应用或开新会话），中途被改过的文字仍会先请你确认。卡片上的「🔁 重试」按这张卡片自己的目标和指令重新生成。更新：在仓库目录运行 `npm run update`，然后在侧栏点 ⟳。
+中文摘要：长段落的预览不再整段标红标绿：先按句、再按词（中文逐字）比较，和 LLM_in_Overleaf 0.9.2 一样；很长的未改动部分折叠起来，卡片标题显示几处改动。写回时也按这个更细的比较保留格式，新插入的段落沿用前一段的格式。回复卡片新增「✕ 清除目标」（顶部目标摘要旁也有 ✕），不应用也能放开目标去选下一段；这张预览之后仍可应用（锚点隐藏保留到应用或开新会话），中途被改过的文字仍会先请你确认。卡片上的「🔁 重试」按这张卡片自己的目标和指令重新生成。修复英文段落应用时丢格式：Word 导出的 HTML 会在约 80 列处把空格折成换行、段与段之间还有空行，以前对不齐就退回纯文本写入（加粗、斜体会丢），现在能对齐、保留格式；中文段落不折行，原来就不受影响。更新：在仓库目录运行 `npm run update`，然后在侧栏点 ⟳。
 
 ## 0.7.2 — 2026-09-30
 

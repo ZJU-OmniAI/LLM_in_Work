@@ -4,8 +4,9 @@
 
 - The Office add-ins use the same comparison as LLM_in_Overleaf 0.9.2: sentence by sentence, then word by word (Chinese character by character), with long unchanged stretches folded and the number of changes in the card title. Long passages in Word and long text boxes in PowerPoint no longer show as one deletion plus one insertion, and writing back keeps formatting word by word.
 - Reply cards have **✕ Clear target** (plus a ✕ next to the target summary), so you can move to the next passage without applying. Earlier previews stay applicable; **🔁 Retry** on a card regenerates that card's own target.
+- Word: English paragraphs keep bold, italic and other formatting when applied. Word wraps its exported HTML at about 80 columns, which previously made the pane fall back to plain text.
 
-中文：Word、PowerPoint、Excel 跟上 Overleaf 0.9.2：长段落按句再按词（中文逐字）显示差异，未改动部分折叠；回复卡片新增「✕ 清除目标」，不应用也能去改下一段，之前的预览仍可应用，卡片上的重试只针对它自己的目标。
+中文：Word、PowerPoint、Excel 跟上 Overleaf 0.9.2：长段落按句再按词（中文逐字）显示差异，未改动部分折叠；回复卡片新增「✕ 清除目标」，不应用也能去改下一段，之前的预览仍可应用，卡片上的重试只针对它自己的目标。Word 英文段落应用后不再丢加粗、斜体等格式。
 
 ## 2026-10-14 — LLM_in_Overleaf 0.9.2 · Long-passage diff and Clear selection
 
