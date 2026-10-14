@@ -421,3 +421,10 @@ html[lang="en"] .card-head { flex-wrap:wrap; }
 .fmt-check { font-size: 12px; color: var(--muted, #6b6b6b); margin: 6px 0 2px; line-height: 1.45; word-break: break-word; }
 .fmt-all > summary { cursor: pointer; font-size: 12px; color: var(--muted, #6b6b6b); margin-bottom: 4px; }
 .fmt-all > .fmt-shape + .fmt-shape { margin-top: 10px; }
+/* 预览里折起来的长段未改动文字；「✕ 清除目标」（卡片上和顶部目标摘要旁） */
+.diff-fold { border:1px dashed #c9d6c6; background:#f4f7f2; color:#6b7f70; border-radius:6px; font:inherit; font-size:11px; padding:1px 7px; margin:2px 0; cursor:pointer; }
+.diff-fold:hover { color:var(--accent-dark); border-color:#93b48f; }
+.btn.clear-target:hover { border-color:#f0b4b4; color:#b42318; }
+.applyall { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.context-bar .context-clear { width:22px; height:22px; font-size:13px; color:#8a948e; }
+.context-bar .context-clear:hover { color:#b42318; background:#fbeaea; }

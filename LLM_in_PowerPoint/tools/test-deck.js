@@ -258,3 +258,79 @@ test('📍 locate selects the slide, the shape and the exact words', async () =>
     assert.equal(sel.text.length, 9);
   } finally { await t.close(); }
 });
+
+test('✕ Clear target lets the next passage be edited alone; the earlier preview still applies to its own words', async () => {
+  const A = 'Active users passed 1 million for the first time', B = 'Churn fell to 2.1%';
+  const replies = [fence('Active users passed 1 million in September'), fence('Churn fell to 2%'), fence('Active users topped 1 million')];
+  const t = await loadPane({ events: (p, n) => answer(replies[n - 1]) });
+  try {
+    const full = t.pp.text(...BODY);
+    const pick = (s) => t.pp.select({ slide: '257#0', shapes: ['3'], text: { shape: '3', start: full.indexOf(s), length: s.length } });
+    pick(A); await t.lp.addTarget();
+    await t.lp.sendInstruction('写得更具体');
+    const first = t.d.querySelector('.card');
+    assert.equal(first.querySelector('.card-title').firstChild.textContent, '替换预览 · 1 处改动');
+    const clear = first.querySelector('.clear-target');
+    assert.equal(clear.classList.contains('hidden'), false);
+    assert.equal(t.d.querySelector('#btn-clear-top').classList.contains('hidden'), false);
+    clear.click(); await settle();
+    assert.equal(t.lp.state.targets.length, 0);
+    assert.equal(clear.classList.contains('hidden'), true);
+    assert.equal(t.d.querySelector('#btn-clear-top').classList.contains('hidden'), true);
+    assert.equal(first.querySelector('.card-status').textContent, '已清除目标 · 这张预览仍可应用');
+    pick(B); await t.lp.addTarget();
+    await t.lp.sendInstruction('写成整数');
+    assert.equal(t.calls[1].doc.targets.length, 1, 'the cleared passage is not sent again');
+    assert.equal(t.calls[1].doc.targets[0].text, B);
+    await clickApply(t, 0);
+    assert.equal(t.pp.text(...BODY).split('\r')[1], 'Active users passed 1 million in September');
+    assert.equal(t.lp.state.targets.length, 1, 'the newer target stays');
+    assert.equal(t.lp.state.targets[0].text, B);
+    // 🔁 on the first card: its own passage and instruction, even though another target is current
+    t.d.querySelectorAll('.undo')[0].click(); await settle();
+    t.lp.state.targets = t.lp.state.targets.filter((x) => x.text === B); t.lp.renderTargetBar();
+    t.d.querySelectorAll('.card')[0].querySelector('.retry').click(); await settle(10);
+    assert.equal(t.calls.length, 3);
+    assert.equal(t.calls[2].messages.at(-1).content, '写得更具体');
+    assert.deepEqual(t.calls[2].doc.targets.map((x) => x.text), [A]);
+  } finally { await t.close(); }
+});
+
+test('a reply for several targets has one ✕ Clear target for all of them, and apply all still works', async () => {
+  const t = await loadPane({ events: answer('【目标1】\n' + fence('Revenue grew 23% YoY') + '\n【目标2】\n' + fence('Churn fell to 2%')) });
+  try {
+    const full = t.pp.text(...BODY);
+    for (const s of ['Revenue grew 23% year over year', 'Churn fell to 2.1%']) {
+      t.pp.select({ slide: '257#0', shapes: ['3'], text: { shape: '3', start: full.indexOf(s), length: s.length } });
+      await t.lp.addTarget();
+    }
+    await t.lp.sendInstruction('精简');
+    assert.equal(t.d.querySelectorAll('.card .clear-target').length, 0);
+    const bar = t.d.querySelector('.applyall');
+    bar.querySelector('.clear-target').click(); await settle();
+    assert.equal(t.lp.state.targets.length, 0);
+    bar.querySelector('.btn-primary').click(); await settle(12);
+    assert.match(t.pp.text(...BODY), /^Revenue grew 23% YoY\r.*\rChurn fell to 2%\r/);
+  } finally { await t.close(); }
+});
+
+test('a long text box shows a word-level diff with folded unchanged text and writes only the changed words', async () => {
+  const old = Array.from({ length: 120 }, (_, i) => `Point ${i}: the pilot have reduced costs for the partner sites.`).join(' ');
+  const neu = old.replace('Point 15: the pilot have', 'Point 15: the pilot has').replace('Point 105: the pilot have reduced costs for the partner', 'Point 105: the pilot have reduced costs for all partner');
+  const deck = { slides: [{ id: '300#0', shapes: [{ id: '2', name: 'TextBox 1', type: 'TextBox', top: 40, left: 40, text: old }] }] };
+  const t = await loadPane({ deck, events: answer(fence(neu)) });
+  try {
+    t.pp.select({ slide: '300#0', shapes: ['2'] });
+    await t.lp.addTarget();
+    await t.lp.sendInstruction('Fix grammar');
+    assert.equal(t.d.querySelector('.card-title').firstChild.textContent, '替换预览 · 2 处改动');
+    assert.deepEqual([...t.d.querySelectorAll('.diffview ins')].map((x) => x.textContent), ['has', 'all']);
+    const folds = t.d.querySelectorAll('.diffview .diff-fold');
+    assert.ok(folds.length >= 2);
+    folds[1].click();
+    assert.equal(t.d.querySelectorAll('.diffview .diff-fold').length, folds.length - 1);
+    await clickApply(t);
+    assert.equal(t.pp.text('300#0', '2'), neu);
+    assert.match(t.d.querySelector('.card-status').textContent, /只改了 2 处变化的文字/);
+  } finally { await t.close(); }
+});

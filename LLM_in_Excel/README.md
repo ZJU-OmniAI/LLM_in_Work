@@ -34,7 +34,7 @@ Select some cells, describe what to do, review the changed cells, and apply. Cle
 
 **1. Add targets and describe the change.** Select the cells to change and click **＋ Add selection**. Hold Cmd (Mac) or Ctrl (Windows) to select several ranges; each becomes its own target. An empty range works too, for a column you want filled. Then type one instruction, or click a preset such as **Clean up** or **Categorize**.
 
-**2. Preview each target.** The cell preview lists only the rows and columns that change. In the screenshot above, stray spaces and inconsistent capitalization in the *Customer* and *Region* columns are fixed; the workbook does not change until you apply.
+**2. Preview each target.** The cell preview lists only the rows and columns that change. In the screenshot above, stray spaces and inconsistent capitalization in the *Customer* and *Region* columns are fixed; the workbook does not change until you apply. To move on without applying, click **✕ Clear target** on the card and select the next range; the card can still be applied later.
 
 **3. Apply.** Click **Apply** on a card, or **Apply all** when there are several. Below, the *Category* column was filled from the feedback in column G: ten cells written, formatting untouched, and an **↩ Undo** button on the card.
 

@@ -27,10 +27,11 @@ function setup(responseEvents, { trailingNewline = true, hold = false, language 
   };
   w.eval(readFileSync(new URL('../taskpane/i18n.js', import.meta.url), 'utf8'));
   w.eval(table);
+  w.eval(readFileSync(new URL('../taskpane/diff-utils.js', import.meta.url), 'utf8'));
   w.eval(js.replace('  init();', `  init();
     getEditContext = () => window.__context;
     getWholeDoc = () => window.__context;
-    window.ui = { state, sendInstruction, renderTargetBar, fillModelOptions, stopStream, contextKey, refreshModelList, refreshStatusUI };
+    window.ui = { state, sendInstruction, renderTargetBar, fillModelOptions, stopStream, contextKey, refreshModelList, refreshStatusUI, newSession };
   `));
   w.ui.state.wordReady = true; w.ui.state.serverOk = true;
   w.ui.state.targets = [{ ccId: 1, text: '原文', kind: 'text' }];
@@ -139,7 +140,7 @@ test('live language switching preserves draft, attachments, targets, response te
     assert.equal(t.w.ui.state.messages.at(-1).content, before);
     assert.equal(t.w.document.querySelector('.apply'), apply);
     assert.equal(apply.textContent, '✅ Apply');
-    assert.equal(t.w.document.querySelector('.card-title').textContent, 'Replacement preview');
+    assert.equal(t.w.document.querySelector('.card-title').textContent, 'Replacement preview · 1 changes');
     select.value = 'zh-CN'; select.dispatchEvent(new t.w.Event('change'));
     assert.equal(t.w.document.documentElement.lang, 'zh-CN');
     assert.equal(apply.textContent, '✅ 应用');
@@ -243,5 +244,134 @@ test('Markdown tables in answers render as tables', async () => {
     assert.equal(rows.length, 2);
     assert.equal(t.w.document.querySelector('.md-table th').textContent, 'Metric');
     assert.equal(t.w.document.querySelector('.md-table strong').textContent, '83%');
+  } finally { await t.close(); }
+});
+
+// Minimal Word content controls: enough for clearing, parking, retrying and applying a target.
+function fakeWord(w, controls) {
+  const ccs = controls.map((c) => ({ ...c, deleted: false }));
+  const range = (cc) => ({
+    tables: { items: [], load() {} }, load() {}, get text() { return cc ? cc.text : ccs.filter((c) => !c.deleted).map((c) => c.text).join('\n'); },
+    getHtml: () => ({ value: '' }), compareLocationWith: () => ({ value: 'Unrelated' }),
+  });
+  const wrap = (c) => ({
+    get id() { return c.id; }, get text() { return c.text; },
+    set tag(v) { c.tag = v; }, get tag() { return c.tag; },
+    delete() { c.deleted = true; }, getRange: () => range(c),
+    insertText(text) { c.text = text; }, insertHtml() { throw new Error('not used'); },
+  });
+  const ctx = {
+    sync: async () => {},
+    document: {
+      contentControls: { getByTag: (tag) => ({ items: ccs.filter((c) => !c.deleted && c.tag === tag).map(wrap), load() {} }) },
+      body: { getRange: () => range(null) },
+    },
+  };
+  w.Word = { run: async (fn) => fn(ctx) };
+  return ccs;
+}
+const tick = () => new Promise((r) => setTimeout(r, 0));
+
+test('Clear target keeps the preview applicable, and the card applies to its own passage later', async () => {
+  const t = setup(good);
+  const ccs = fakeWord(t.w, [{ id: 1, tag: 'word_edit_target', text: '原文' }]);
+  try {
+    const d = t.w.document;
+    await t.w.ui.sendInstruction('润色');
+    const card = d.querySelector('.card');
+    assert.equal(card.querySelector('.card-title').textContent, '替换预览 · 1 处改动');
+    const clear = card.querySelector('.clear-target');
+    assert.equal(clear.textContent, '✕ 清除目标');
+    assert.equal(clear.classList.contains('hidden'), false);
+    assert.equal(d.querySelector('#btn-clear-top').classList.contains('hidden'), false);
+    clear.click(); await tick();
+    assert.equal(t.w.ui.state.targets.length, 0);
+    assert.equal(ccs[0].tag, 'word_edit_parked', 'the anchor stays in the document but is no longer a target');
+    assert.equal(ccs[0].deleted, false);
+    assert.equal(clear.classList.contains('hidden'), true);
+    assert.equal(d.querySelector('#btn-clear-top').classList.contains('hidden'), true);
+    assert.equal(card.querySelector('.card-status').textContent, '已清除目标 · 这张预览仍可应用');
+    assert.match(d.querySelector('.note:last-of-type').textContent, /选中下一段/);
+    card.querySelector('.apply').click(); await tick(); await tick();
+    assert.equal(ccs[0].text, '新文本');
+    assert.equal(ccs[0].deleted, true, 'applied: the anchor is released');
+    assert.match(card.querySelector('.card-status').textContent, /^✅ 已应用/);
+    assert.equal(card.querySelector('.retry').disabled, true);
+  } finally { await t.close(); }
+});
+
+test('an old preview asks before overwriting a passage edited after the preview was made', async () => {
+  const t = setup(good);
+  const ccs = fakeWord(t.w, [{ id: 1, tag: 'word_edit_target', text: '原文' }]);
+  try {
+    await t.w.ui.sendInstruction('润色');
+    const card = t.w.document.querySelector('.card');
+    card.querySelector('.clear-target').click(); await tick();
+    ccs[0].text = '手动改过';
+    card.querySelector('.apply').click(); await tick(); await tick();
+    assert.equal(ccs[0].text, '手动改过');
+    assert.match(card.querySelector('.card-status').textContent, /再点一次/);
+  } finally { await t.close(); }
+});
+
+test('top ✕ clears all targets; anchors without a preview are released, a new session drops parked ones', async () => {
+  const t = setup(good);
+  const ccs = fakeWord(t.w, [{ id: 1, tag: 'word_edit_target', text: '原文' }]);
+  try {
+    const d = t.w.document;
+    await t.w.ui.sendInstruction('润色');
+    ccs.push({ id: 2, tag: 'word_edit_target', text: '另一段', deleted: false });
+    t.w.ui.state.targets.push({ ccId: 2, text: '另一段', kind: 'text' });
+    t.w.ui.renderTargetBar();
+    d.querySelector('#btn-clear-top').click(); await tick();
+    assert.equal(t.w.ui.state.targets.length, 0);
+    assert.deepEqual(ccs.map((c) => [c.tag, c.deleted]), [['word_edit_parked', false], ['word_edit_target', true]]);
+    await t.w.ui.newSession();
+    assert.equal(ccs[0].deleted, true);
+  } finally { await t.close(); }
+});
+
+test('Retry on an earlier card regenerates its own passage with its own instruction', async () => {
+  const t = setup(good);
+  const ccs = fakeWord(t.w, [{ id: 1, tag: 'word_edit_target', text: '原文' }]);
+  try {
+    const d = t.w.document;
+    await t.w.ui.sendInstruction('第一段的要求');
+    const first = d.querySelector('.card');
+    first.querySelector('.clear-target').click(); await tick();
+    ccs.push({ id: 2, tag: 'word_edit_target', text: '第二段', deleted: false });
+    t.w.ui.state.targets = [{ ccId: 2, text: '第二段', kind: 'text' }];
+    t.w.__context = Promise.resolve({ ...context, ids: [2], targetTexts: ['第二段'] });
+    await t.w.ui.sendInstruction('第二段的要求');
+    assert.equal(first.querySelector('.clear-target').classList.contains('hidden'), true);
+    t.w.__context = Promise.resolve({ ...context });
+    first.querySelector('.retry').click();
+    for (let i = 0; i < 20 && t.calls.length < 3; i++) await tick();
+    assert.equal(t.calls.length, 3);
+    assert.equal(t.calls[2].messages.at(-1).content, '第一段的要求');
+    assert.equal(ccs[0].tag, 'word_edit_target', 'the first passage is a target again');
+    assert.deepEqual([ccs[1].tag, ccs[1].deleted], ['word_edit_parked', false], 'the second passage keeps its preview anchor');
+  } finally { await t.close(); }
+});
+
+test('a long passage shows a word-level diff with unchanged stretches folded', async () => {
+  const sentences = Array.from({ length: 150 }, (_, i) => `Result ${i} of the study have shown that the method works well on long documents.`);
+  const old = sentences.join(' ');
+  const neu = old.replace('Result 3 of the study have shown', 'Result 3 of the study has shown').replace('Result 140 of the study have shown that the method works well', 'Result 140 of the study have shown that the method works better');
+  const t = setup([{ type: 'delta', text: '```text\n' + neu + '\n```' }, { type: 'done', ok: true }]);
+  try {
+    t.w.__context = Promise.resolve({ ...context, targetTexts: [old], fullText: old, docChars: old.length });
+    t.w.ui.state.targets = [{ ccId: 1, text: old, kind: 'text' }];
+    await t.w.ui.sendInstruction('Fix grammar');
+    const d = t.w.document;
+    assert.equal(d.querySelector('.card-title').textContent, '替换预览 · 2 处改动');
+    assert.deepEqual([...d.querySelectorAll('.diffview ins')].map((x) => x.textContent), ['has', 'better']);
+    const folds = d.querySelectorAll('.diffview .diff-fold');
+    assert.ok(folds.length >= 2);
+    assert.match(folds[0].textContent, /未改动 \d+ 字符 · 展开/);
+    folds[0].click();
+    assert.equal(d.querySelectorAll('.diffview .diff-fold').length, folds.length - 1);
+    const shown = [...d.querySelector('.diffview').childNodes].filter((n) => !(n.classList && n.classList.contains('diff-fold'))).map((n) => n.textContent).join('');
+    assert.ok(shown.includes(sentences[60]));
   } finally { await t.close(); }
 });

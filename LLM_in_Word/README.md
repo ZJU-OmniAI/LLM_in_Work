@@ -44,7 +44,7 @@ The top of the pane is a single row: the mode (**Rewrite ▾**), a summary of yo
 
 **1. Add targets and describe the change.** Select a passage, click **＋ Add selection**, repeat for other passages, then type one instruction for all of them.
 
-**2. Preview each target.** Every target gets its own diff: red for deletions, green for additions. The document does not change until you apply.
+**2. Preview each target.** Every target gets its own diff: red for deletions, green for additions. The document does not change until you apply. Long passages are compared sentence by sentence and word by word, with long unchanged stretches folded; the card title says how many places changed. To move on without applying, click **✕ Clear target** on the card and select the next passage; the card can still be applied later.
 
 ![A diff for one of two targets in the side pane](docs/images/word-diff.jpg)
 

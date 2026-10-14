@@ -36,7 +36,7 @@ Select text, a text box, a table or a whole slide, describe the change, review t
 
 **1. Add targets and describe the change.** Select words, a text box or a table and click **＋ Add selection**. With nothing selected, **＋ Add selection** adds every text box on the current slide. Then type one instruction for all targets.
 
-**2. Preview each target.** Every target gets its own diff, labelled with its slide and role (title, body, text box, table). The slides do not change until you apply.
+**2. Preview each target.** Every target gets its own diff, labelled with its slide and role (title, body, text box, table). The slides do not change until you apply. Long text is compared sentence by sentence and word by word, with long unchanged stretches folded. To move on without applying, click **✕ Clear target** on the card and select the next text; the card can still be applied later.
 
 **3. Apply.** Click **Apply** on a card or **Apply all**. Only the changed words are written: in the example below the rewritten bullet keeps its bold figure, the second-level bullet keeps its indent, and the red bullet stays red.
 

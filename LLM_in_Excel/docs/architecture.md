@@ -21,6 +21,7 @@ The service is the LLM_in_Word service with spreadsheet prompts, its own port, d
 | `server/models.js`, `server/health.js` | Model discovery and CLI/login diagnostics without paid generation. |
 | `server/prompt.js` | Spreadsheet system prompts: how cells are written down, the reply format, and follow-up prompts. |
 | `taskpane/grid-utils.js` | A1 addresses, the coordinate table protocol, how a cell is shown, comparing old and new cells, and preparing values for writing. Pure functions, unit-tested in `tools/test-grid.js`. |
+| `taskpane/diff-utils.js` | Text comparison for previews and write-back: sentences and lines first, then words (Chinese characters one by one), with long unchanged text folded. Identical copies in LLM_in_Word, LLM_in_PowerPoint and LLM_in_Excel; unit-tested in `tools/test-diff.js`. |
 | `taskpane/taskpane.js` | Selections and targets, workbook context, cell preview, write-back with checks, undo, chat UI. |
 | `tools/fixtures/fake-excel.js` | In-memory Excel API stand-in used by the offline tests. It types values the way Excel does. |
 

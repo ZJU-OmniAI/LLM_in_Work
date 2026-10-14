@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPane, tick, fence, answer } from './pane-harness.js';
+import { sampleBook } from './fixtures/fake-excel.js';
 
 const plain = (x) => JSON.parse(JSON.stringify(x));
 async function settle(n = 6) { for (let i = 0; i < n; i++) await tick(2); }
@@ -241,3 +242,80 @@ test('older Excel without merged-cell checks still adds ranges', async () => {
     assert.equal(t.lx.state.targets.length, 1);
   } finally { await t.close(); }
 });
+
+test('✕ Clear target lets the next range be edited alone; the earlier preview still writes its own cells', async () => {
+  const replies = [
+    fence('| | B |\n|---|---|\n| 2 | Acme Corp |'),
+    fence('| | C |\n|---|---|\n| 2 | North |'),
+    fence('| | B |\n|---|---|\n| 2 | ACME |'),
+  ];
+  const t = await loadPane({ events: (p, n) => answer(replies[n - 1]) });
+  try {
+    t.xl.select('Orders', 'B2:B3');
+    await t.lx.addTarget();
+    await t.lx.sendInstruction('整理公司名');
+    const first = t.d.querySelector('.card');
+    const clear = first.querySelector('.clear-target');
+    assert.equal(clear.classList.contains('hidden'), false);
+    assert.equal(t.d.querySelector('#btn-clear-top').classList.contains('hidden'), false);
+    clear.click(); await settle();
+    assert.equal(t.lx.state.targets.length, 0);
+    assert.equal(clear.classList.contains('hidden'), true);
+    assert.equal(status(t), '已清除目标 · 这张预览仍可应用');
+    t.xl.select('Orders', 'C2:C3');
+    await t.lx.addTarget();
+    await t.lx.sendInstruction('首字母大写');
+    assert.deepEqual(t.calls[1].doc.targets.map((x) => x.where), ['Orders!C2:C3，2 行 × 1 列']);
+    await clickApply(t, 0);
+    assert.equal(t.xl.text('Orders', 'B2'), 'Acme Corp');
+    assert.equal(t.lx.state.targets.length, 1, 'the newer target stays');
+    assert.equal(t.lx.state.targets[0].address, 'C2:C3');
+    // 🔁 on the first card after undo: its own range and instruction
+    t.d.querySelectorAll('.undo')[0].click(); await settle();
+    t.lx.state.targets = t.lx.state.targets.filter((x) => x.address === 'C2:C3'); t.lx.renderTargetBar();
+    t.d.querySelectorAll('.card')[0].querySelector('.retry').click(); await settle(10);
+    assert.equal(t.calls.length, 3);
+    assert.equal(t.calls[2].messages.at(-1).content, '整理公司名');
+    assert.deepEqual(t.calls[2].doc.targets.map((x) => x.where), ['Orders!B2:B3，2 行 × 1 列']);
+  } finally { await t.close(); }
+});
+
+test('top ✕ clears every target', async () => {
+  const t = await loadPane({ events: answer(fence('| | B |\n|---|---|\n| 2 | Acme Corp |')) });
+  try {
+    t.xl.select('Orders', 'B2:B3');
+    await t.lx.addTarget();
+    const top = t.d.querySelector('#btn-clear-top');
+    assert.equal(top.classList.contains('hidden'), false);
+    top.click(); await settle();
+    assert.equal(t.lx.state.targets.length, 0);
+    assert.equal(top.classList.contains('hidden'), true);
+    assert.match(t.d.querySelector('.note:last-of-type').textContent, /选中下一块区域/);
+  } finally { await t.close(); }
+});
+
+test('a long text cell shows a word-level diff with the unchanged middle folded', async () => {
+  const book = sampleBookWithLongNote();
+  const neu = book.long.replace('Note 2 says the delivery have', 'Note 2 says the delivery has').replace('Note 58 says the delivery have', 'Note 58 says the delivery had');
+  const t = await loadPane({ book: book.book, events: answer(fence('| | G |\n|---|---|\n| 2 | ' + neu + ' |')) });
+  try {
+    t.xl.select('Orders', 'G2');
+    await t.lx.addTarget();
+    await t.lx.sendInstruction('Fix grammar');
+    const cell = t.d.querySelector('.gridprev td.cellchg');
+    assert.deepEqual([...cell.querySelectorAll('ins')].map((x) => x.textContent), ['has', 'had']);
+    const fold = cell.querySelector('.diff-fold');
+    assert.ok(fold);
+    fold.click();
+    assert.equal(cell.querySelector('.diff-fold'), null);
+    await clickApply(t);
+    assert.equal(t.xl.text('Orders', 'G2'), neu);
+  } finally { await t.close(); }
+});
+
+function sampleBookWithLongNote() {
+  const long = Array.from({ length: 60 }, (_, i) => `Note ${i} says the delivery have arrived on time.`).join(' ');
+  const book = sampleBook();
+  book.sheets[0].cells.G2 = long;
+  return { book, long };
+}

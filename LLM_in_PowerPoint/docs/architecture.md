@@ -23,6 +23,7 @@ The service is the LLM_in_Word service with PowerPoint prompts, its own port, da
 | `taskpane/taskpane.js` | Selection reading, target anchoring, deck context, minimal-edit write-back, undo, tables, slide images, chat UI. |
 | `taskpane/format-utils.js` | Format mode: formatting snapshot text, `format` plan parsing and validation, preview rows, table border plans. |
 | `taskpane/table-utils.js` | Markdown table protocol, row alignment and cell differences (shared with LLM_in_Word). |
+| `taskpane/diff-utils.js` | Text comparison for previews and write-back: sentences and lines first, then words (Chinese characters one by one), with long unchanged text folded. Identical copies in LLM_in_Word, LLM_in_PowerPoint and LLM_in_Excel; unit-tested in `tools/test-diff.js`. |
 | `tools/fixtures/fake-powerpoint.js` | In-memory PowerPoint API stand-in used by the offline tests. |
 
 ## Reading the deck

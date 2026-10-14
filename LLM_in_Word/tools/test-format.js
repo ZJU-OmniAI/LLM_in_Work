@@ -14,6 +14,7 @@ const paneJs = readFileSync(path.join(ROOT, 'taskpane', 'taskpane.js'), 'utf8');
 
 const dom = new JSDOM(pageHtml, { runScripts: 'outside-only', url: 'https://localhost:8377/taskpane.html' });
 dom.window.eval(readFileSync(path.join(ROOT, 'taskpane', 'i18n.js'), 'utf8'));
+dom.window.eval(readFileSync(path.join(ROOT, 'taskpane', 'diff-utils.js'), 'utf8'));
 dom.window.eval(paneJs);
 const T = dom.window.__we_test;
 if (!T) { console.error('❌ 测试钩子 __we_test 没暴露出来'); process.exit(1); }
@@ -120,6 +121,26 @@ section('段中纯行内片段');
   const out = T.buildFormattedReplacement(html, '这是片段文字', '这是好片段文字');
   check('构造成功', out != null, out);
   if (out) check('不包 <p>', !/<p[ >]/.test(out), out);
+}
+
+// ---------- 10b) Word 真实导出的样子：块之间有空行，英文在约 80 列处折行 ----------
+section('Word 折行的英文段落：格式照样保留');
+{
+  // 结构照抄 Word 16.10x getHtml() 的输出（body/div/p 之间的空行、文字里空格换成换行）
+  const word = (ps) => `<html><head><style>.MsoNormal{margin:0}</style></head><body lang=ZH-CN style='word-wrap:break-word'>\n\n<div class=WordSection1>\n\n${ps.join('\n\n')}\n\n</div>\n\n</body></html>`;
+  const one = word(['<p class=MsoNormal><span lang=EN-US>The quick brown fox jumps over the lazy dog and keeps\nrunning <b>far</b> away from the\nfarm.</span></p>']);
+  const out = T.buildFormattedReplacement(one, 'The quick brown fox jumps over the lazy dog and keeps running far away from the farm.', 'The fast brown fox jumps over the lazy dog and keeps running far away from the farm.');
+  check('折行的英文段落能保格式替换', out != null, out);
+  if (out) {
+    check('加粗保留', /<b>far<\/b>/.test(out), out);
+    check('改动写进去了', /The fast brown/.test(out), out);
+  }
+  const two = word(['<p class=MsoNormal><span lang=EN-US>First paragraph has\n<i>italic</i> words.</span></p>', '<p class=MsoNormal><span lang=EN-US>Second\none.</span></p>']);
+  const out2 = T.buildFormattedReplacement(two, 'First paragraph has italic words.\nSecond one.', 'First paragraph has italic words.\nSecond one, edited.');
+  check('两段：段间空行不算正文', out2 != null, out2);
+  if (out2) check('斜体保留', /<i>italic<\/i>/.test(out2), out2);
+  const cn = word(['<p class=MsoNormal><span\nstyle=\'font-family:"MS Mincho"\'>这个方法在实验中表现的很好。</span></p>']);
+  check('中文段落照旧', T.buildFormattedReplacement(cn, '这个方法在实验中表现的很好。', '这个方法在实验中表现得很好。') != null);
 }
 
 // ---------- 11) diffOps 基本性质：拼回原串 ----------
