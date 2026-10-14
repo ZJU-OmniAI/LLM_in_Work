@@ -9,8 +9,8 @@ const origin = process.argv[2] || 'https://www.overleaf.com';
 const lang = process.argv[3] === 'en' ? 'en' : 'zh-CN';
 // Language-specific UI text checked by this regression (the rest is behavior, not wording).
 const expect = lang === 'en'
-  ? { noSelection: /No selection found/, twoSelections: /2 selections/, overlap: /overlap/, sameFile: /same file/, switched: /selection has changed/, notUnique: 'cannot be located uniquely', sourceEditor: /source mode/ }
-  : { noSelection: /没有读取到选区/, twoSelections: /2 段/, overlap: /重叠/, sameFile: /同一文件/, switched: /选区已切换/, notUnique: '无法唯一定位', sourceEditor: /源码编辑/ };
+  ? { noSelection: /No selection found/, twoSelections: /2 selections/, overlap: /overlap/, sameFile: /same file/, cleared: /Selection cleared/, rewrite: '✦ Rewrite', notUnique: 'cannot be located uniquely', sourceEditor: /source mode/ }
+  : { noSelection: /没有读取到选区/, twoSelections: /2 段/, overlap: /重叠/, sameFile: /同一文件/, cleared: /已清除选段/, rewrite: '✦ 改这段', notUnique: '无法唯一定位', sourceEditor: /源码编辑/ };
 const outputDir = process.env.LLM_IN_OVERLEAF_TEST_OUTPUT || fs.mkdtempSync(path.join(os.tmpdir(), 'llm-in-overleaf-selection-'));
 fs.mkdirSync(outputDir, { recursive: true });
 
@@ -63,6 +63,7 @@ fs.mkdirSync(outputDir, { recursive: true });
     await page.addScriptTag({ content: fixture.outputFiles[0].text });
     await page.addScriptTag({ path: path.join(project, 'extension/content/bridge.js') });
     await page.addScriptTag({ path: path.join(project, 'extension/shared/i18n.js') });
+    await page.addScriptTag({ path: path.join(project, 'extension/shared/diff.js') });
     await page.addScriptTag({ path: path.join(project, 'extension/content/content.js') });
     assert.equal((await page.evaluate(() => rpc('status'))).ready, true, 'real CodeMirror must be found');
     await page.locator('#ole-launcher').waitFor({ state: 'visible' });

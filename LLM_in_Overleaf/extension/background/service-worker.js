@@ -43,7 +43,7 @@ async function openActivePanel(toggle = false, lang) {
   } catch { /* 新安装或重载后的已打开页面：按需注入。 */ }
   try {
     await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'MAIN', files: ['content/bridge.js'] });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'ISOLATED', files: ['shared/i18n.js', 'content/content.js'] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'ISOLATED', files: ['shared/i18n.js', 'shared/diff.js', 'content/content.js'] });
     return await chrome.tabs.sendMessage(tab.id, message) || { ok: false, error: text(lang, 'noResponse') };
   } catch (e) {
     return { ok: false, error: text(lang, 'cannotOpen') + String(e?.message || e) };

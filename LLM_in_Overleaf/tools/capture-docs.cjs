@@ -108,6 +108,7 @@ function nativeRequest(message, onEvent = () => {}) {
     await page.evaluate((text) => resetEditor(text), source);
     await page.addScriptTag({ path: path.join(project, 'extension/content/bridge.js') });
     await page.addScriptTag({ path: path.join(project, 'extension/shared/i18n.js') });
+    await page.addScriptTag({ path: path.join(project, 'extension/shared/diff.js') });
     await page.addScriptTag({ path: path.join(project, 'extension/content/content.js') });
     await page.evaluate(({ text, target }) => {
       const from = text.indexOf(target);
