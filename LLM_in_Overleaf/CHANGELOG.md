@@ -1,7 +1,17 @@
 # 更新记录
 
-## Unreleased
+## 0.9.2 — 2026-10-14
 
+- Long selections get a real diff. The old word-by-word comparison gave up at roughly 350 words and only offered the new text; the new comparison works sentence by sentence first and then word by word inside changed sentences, so a 20,000-character passage compares in milliseconds. Chinese and Japanese are compared character by character instead of as one block per paragraph, and LaTeX commands stay whole.
+- Long unchanged stretches in a diff are folded around the edits (click to expand), and the preview title shows how many places changed.
+- The reply card has a **✕ Clear selection** button, and the selection summary at the top has a **✕**. Clear the current passage without applying, then select the next one: the float button starts a new selection instead of adding to the old group.
+- Earlier previews stay usable after you clear or change the selection: **Apply** writes the passages that card was made for, after checking that their text is still unchanged in the editor. **Retry** regenerates that card's passages with its own instruction.
+
+中文摘要：长选段也能看到差异（旧版约 350 个英文词以上就只能看新文本）；先按句、再在改动的句子里按词比较，中文逐字比较，LaTeX 命令保持完整；长段未改动内容自动折叠，标题显示改动处数。回复卡片新增「✕ 清除选段」，顶部选段摘要旁也有 ✕：不应用也能放开当前选段去选下一段。清除或换选段后，之前的预览仍可应用（写入前核对原文未变），「重试」针对该卡片自己的选段和指令。
+
+## 0.9.1 — 2026-10-08
+
+- Chrome Web Store upload and companion packages (see the repository changelog).
 - Find the Codex CLI that newer Codex and ChatGPT desktop apps ship in `Contents/Resources/codex-cli/bin`, so Codex works without a separate install.
 
 中文摘要：能找到新版 Codex / ChatGPT 桌面应用自带的 Codex CLI，不单独安装也能用 Codex。

@@ -18,7 +18,7 @@ Select one or more passages in a `.tex` file, give an instruction, review a diff
 | --- | --- |
 | LaTeX rewriting | Polish academic prose, fix grammar, shorten, expand, translate, or tidy math, with one click or your own words. |
 | Multiple selections | Collect several non-adjacent passages from one source file and revise them with a single instruction. |
-| Diff before applying | See additions and deletions for every passage, or switch to the new text. Nothing is written until you apply. |
+| Diff before applying | See additions and deletions for every passage (word by word, character by character for Chinese; long passages included, with unchanged stretches folded), or switch to the new text. Nothing is written until you apply. |
 | Checked write-back | The file name and original text are checked again before writing, so stale or misplaced edits are rejected. A group is applied as one editor step that a single **Cmd/Ctrl+Z** reverts. |
 | Ask mode | Ask about the selection or the whole paper without replacing any text. |
 | Attachments | Add other project files (`.bib`, chapters, `.cls`, `.sty`) or local text, images and PDFs as context. |
@@ -83,7 +83,7 @@ Rerun the installer after moving this folder, reinstalling a CLI or changing pro
 5. Review the **Diff** (or **New text**). Send another message to refine it.
 6. Click **Apply** on one passage, or **Apply all selections**. **Cmd+Z** / **Ctrl+Z** undoes the whole group.
 
-After a successful apply, the selections are cleared and the conversation stays. To ask questions instead, click **Rewrite** at the top of the panel and choose **Ask**. **Read** enlarges the reply area; **Back** or Esc returns to your draft.
+After a successful apply, the selections are cleared and the conversation stays. To move on without applying, click **✕ Clear selection** on the reply card (or the **✕** next to the selection summary at the top) and select the next passage; earlier previews can still be applied later, after a check that their original text is unchanged. To ask questions instead, click **Rewrite** at the top of the panel and choose **Ask**. **Read** enlarges the reply area; **Back** or Esc returns to your draft.
 
 ## Context and attachments
 

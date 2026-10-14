@@ -45,7 +45,7 @@ test('all supported Overleaf domains allow both automatic injection and popup re
       assert.equal((await app.open()).ok, true, `${domain}: missing=${missing}`);
       assert.deepEqual(app.calls.map((c) => c.world || c.type), missing
         ? ['open_panel', 'MAIN', 'ISOLATED', 'open_panel'] : ['open_panel']);
-      if (missing) assert.deepEqual([...app.calls.find((c) => c.world === 'ISOLATED').files], ['shared/i18n.js', 'content/content.js'], 'UI strings load before the panel');
+      if (missing) assert.deepEqual([...app.calls.find((c) => c.world === 'ISOLATED').files], ['shared/i18n.js', 'shared/diff.js', 'content/content.js'], 'UI strings and diff load before the panel');
     }
   }
 });
@@ -74,8 +74,8 @@ test('failed injection returns actionable feedback', async () => {
   assert.match(result.error, /刷新/);
   assert.match((await setup({ missing: true, injectError: true }).open('en')).error, /Refresh the Overleaf project/);
 });
-test('manifest loads the translation table before the isolated panel script', () => {
+test('manifest loads the translation table and diff before the isolated panel script', () => {
   const isolated = manifest.content_scripts.find((script) => script.world !== 'MAIN');
-  assert.deepEqual(isolated.js, ['shared/i18n.js', 'content/content.js']);
+  assert.deepEqual(isolated.js, ['shared/i18n.js', 'shared/diff.js', 'content/content.js']);
   assert.equal(manifest.default_locale, 'en');
 });

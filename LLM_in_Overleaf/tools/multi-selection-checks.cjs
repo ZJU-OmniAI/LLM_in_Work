@@ -98,12 +98,12 @@ module.exports = async (page, outputDir, expect) => {
   assert.equal(await page.locator('.ole-diffview .ole-edit-part').count(), 2);
   await page.locator('#ole-panel').screenshot({ path: path.join(outputDir, 'multi-selection-diff.png') });
 
-  // Removing a target invalidates previews generated for the earlier group.
+  // Changing the selection hides the earlier card's Clear button; that card keeps its own two passages.
+  assert.equal(await page.locator('.ole-card').last().locator('.ole-clear').isVisible(), true);
   await page.locator('#ole-context-summary').click();
   await page.locator('.ole-range-remove').first().click();
   await page.locator('#ole-settings-toggle').click();
-  await page.locator('.ole-apply').last().click();
-  assert.match(await page.locator('.ole-card-status').last().innerText(), expect.switched);
+  assert.equal(await page.locator('.ole-card').last().locator('.ole-clear').isVisible(), false);
   await capture([first], 2);
   payload = await send('重新生成两段');
   await reply(validReply(payload));
@@ -123,6 +123,59 @@ module.exports = async (page, outputDir, expect) => {
   await waitCount(0);
   assert.equal(await page.evaluate(() => undoEditor()), true);
   assert.equal(await page.evaluate(() => editor.state.doc.toString()), source, 'one undo restores both edits and the exact untouched gap');
+
+  // Clear selection in the reply card: move on to the next passage without applying, then apply the earlier card.
+  await page.evaluate((text) => resetEditor(text), source);
+  await capture([first], 1);
+  payload = await send('润色第一段');
+  await reply('```latex\nFirst paragraph, polished.\n```');
+  const firstCard = page.locator('.ole-card').nth(await page.locator('.ole-card').count() - 1); // fixed, not 'last'
+  await firstCard.locator('.ole-clear').click();
+  await waitCount(0);
+  assert.equal(await firstCard.locator('.ole-clear').isVisible(), false);
+  assert.match(await firstCard.locator('.ole-card-status').innerText(), expect.cleared);
+  assert.equal(await page.locator('#ole-context-clear').isVisible(), false);
+  await choose([last]);
+  await page.locator('#ole-float-btn').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#ole-float-btn').innerText(), expect.rewrite, 'a cleared selection starts a new group instead of adding to the old one');
+  await page.locator('#ole-float-btn').click();
+  await waitCount(1);
+  assert.equal(await page.locator('#ole-context-clear').isVisible(), true);
+  payload = await send('润色最后一段');
+  assert.deepEqual(payload.doc.selections.map((r) => r.text), ['Last paragraph.']);
+  await reply('```latex\nLast paragraph, polished.\n```');
+  await firstCard.locator('.ole-apply').click();
+  await page.waitForFunction(() => editor.state.doc.toString().startsWith('First paragraph, polished.'));
+  assert.equal(await page.evaluate(() => editor.state.doc.toString()), source.replace('First paragraph.', 'First paragraph, polished.'));
+  await waitCount(1); // the current selection (last paragraph) is untouched
+  await page.locator('.ole-card').last().locator('.ole-apply').click();
+  await page.waitForFunction(() => editor.state.doc.toString().endsWith('Last paragraph, polished.'));
+  await waitCount(0);
+  // Top-bar ✕ clears too.
+  await capture([first], 1);
+  await page.locator('#ole-context-clear').click();
+  await waitCount(0);
+
+  // A long passage with a few edits still gets a word-level diff, folded around the changes, and applies exactly.
+  const sentence = (i) => `In experiment ${i}, the proposed method have achieved a accuracy of ${80 + i % 17}.${i % 10}% on the benchmark, which is better then the baseline.`;
+  const longOld = Array.from({ length: 150 }, (_, i) => sentence(i)).join(' ');
+  const longNew = longOld.replace('In experiment 3, the proposed method have', 'In experiment 3, the proposed method has').replace('better then the baseline. In experiment 140,', 'better than the baseline. In experiment 140,');
+  await page.evaluate((text) => resetEditor(`\\section{Results}\n${text}\n`), longOld);
+  const longRange = { from: '\\section{Results}\n'.length, to: '\\section{Results}\n'.length + longOld.length };
+  await capture([longRange], 1);
+  await send('修语法');
+  await reply('只改了两处语法。\n\n```latex\n' + longNew + '\n```');
+  const longCard = page.locator('.ole-card').last();
+  assert.equal(await longCard.locator('.ole-diffview del').count(), 2);
+  assert.deepEqual(await longCard.locator('.ole-diffview ins').allInnerTexts(), ['has', 'than']);
+  assert.match(await longCard.locator('.ole-card-title').innerText(), /2/);
+  assert.ok(await longCard.locator('.ole-fold').count() >= 2, 'long unchanged text is folded');
+  await page.locator('#ole-panel').screenshot({ path: path.join(outputDir, 'long-passage-diff.png') });
+  await longCard.locator('.ole-fold').first().click();
+  assert.equal(await longCard.locator('.ole-diffview').evaluate((el) => el.textContent.includes('In experiment 70,')), true);
+  await longCard.locator('.ole-apply').click();
+  await page.waitForFunction((text) => editor.state.doc.toString().includes(text), longNew);
+  assert.equal(await page.evaluate(() => editor.state.doc.toString()), `\\section{Results}\n${longNew}\n`);
 
   // Large documents include each distant selected range in the context excerpt.
   const longDoc = 'First selected.\n' + 'Unselected gap.\n'.repeat(1000) + '\nLast selected.';
@@ -145,5 +198,5 @@ module.exports = async (page, outputDir, expect) => {
   assert.equal(await page.evaluate(() => editor.state.doc.toString()), 'Repeat\nGap\nRepeat');
 
   await page.locator('#ole-close').click();
-  console.log('Multi-selection PASS: append, deduplicate, overlap/file rejection, remove, native ranges, ask/edit payload, strict IDs, stale previews, atomic apply, untouched gaps, one undo, distant context and ambiguous relocation.');
+  console.log('Multi-selection PASS: append, deduplicate, overlap/file rejection, remove, native ranges, ask/edit payload, strict IDs, independent previews, clear selection from the card, long-passage diff, atomic apply, untouched gaps, one undo, distant context and ambiguous relocation.');
 };

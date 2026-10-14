@@ -1,5 +1,12 @@
 # 更新记录 / Changelog
 
+## 2026-10-14 — LLM_in_Overleaf 0.9.2 · Long-passage diff and Clear selection
+
+- Long selections now get a word-level diff (Chinese character by character) instead of "too large to compare"; unchanged stretches are folded and the preview shows how many places changed.
+- The reply card has **✕ Clear selection** (and the selection summary has a ✕), so you can move to the next passage without applying first. Earlier previews remain applicable after a check that their original text is unchanged.
+
+中文：Overleaf 长选段也能看到逐词/逐字差异，未改动部分折叠；回复卡片新增「✕ 清除选段」，不应用也能去改下一段，之前的预览仍可应用。
+
 ## 2026-10-08 — LLM_in_PDF 0.9.2 · Interactive paper reading
 
 - Clarify the PDF introduction in the English/Chinese READMEs, store metadata, listing and popup: read local PDFs and papers from arXiv and other platforms in Chrome, interactively using a local Claude Code or Codex agent for questions about selected passages and figures.

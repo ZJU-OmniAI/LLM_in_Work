@@ -546,40 +546,38 @@
     };
   }
 
-  // ---------- 词级 diff（LCS，带规模保护）----------
+  // ---------- 差异预览（算法在 shared/diff.js：先按句/行，再按词/字）----------
+  const DIFF = globalThis.LLMOverleafDiff;
+  const FOLD_MIN = 700;  // 超过这么长的未改动文字折起来，只留两头
+  const FOLD_KEEP = 160;
+  // 折叠点挪到附近的空白处，且不切开代理对。
+  function foldCut(s, at, dir) {
+    for (let i = 0; i < 40; i++) {
+      const p = at + dir * i;
+      if (p <= 0 || p >= s.length) break;
+      if (/\s/.test(s[p - 1])) return p;
+    }
+    return /[\uDC00-\uDFFF]/.test(s[at] || '') ? at + 1 : at;
+  }
+  function foldEqual(s, isFirst, isLast) {
+    if (s.length < FOLD_MIN) return escapeHtml(s);
+    const head = isFirst ? 0 : foldCut(s, FOLD_KEEP, 1);
+    const tail = isLast ? s.length : foldCut(s, s.length - FOLD_KEEP, -1);
+    if (tail - head < FOLD_KEEP) return escapeHtml(s);
+    return escapeHtml(s.slice(0, head)) +
+      `<button type="button" class="ole-fold">${escapeHtml(I18N.t('… 未改动 {0} 字符 · 展开 …', tail - head))}</button>` +
+      `<span class="ole-fold-text hidden">${escapeHtml(s.slice(head, tail))}</span>` + escapeHtml(s.slice(tail));
+  }
   function diffHtml(aStr, bStr) {
-    const tok = (s) => s.split(/(\s+)/).filter((t) => t !== '');
-    const a = tok(aStr), b = tok(bStr);
-    const n = a.length, m = b.length;
-    if (n * m > 500000) return null; // 太大不硬算，退回"只看新文本"
-    const W = m + 1;
-    const dp = new Uint32Array((n + 1) * W);
-    for (let i = n - 1; i >= 0; i--) {
-      for (let j = m - 1; j >= 0; j--) {
-        dp[i * W + j] = a[i] === b[j] ? dp[(i + 1) * W + j + 1] + 1 : Math.max(dp[(i + 1) * W + j], dp[i * W + j + 1]);
-      }
-    }
-    const ops = []; // ['='|'-'|'+', text]
-    let i = 0, j = 0;
-    const push = (t, s) => {
-      if (ops.length && ops[ops.length - 1][0] === t) ops[ops.length - 1][1] += s;
-      else ops.push([t, s]);
-    };
-    while (i < n && j < m) {
-      if (a[i] === b[j]) { push('=', a[i]); i++; j++; }
-      else if (dp[(i + 1) * W + j] >= dp[i * W + j + 1]) { push('-', a[i]); i++; }
-      else { push('+', b[j]); j++; }
-    }
-    while (i < n) push('-', a[i++]);
-    while (j < m) push('+', b[j++]);
-    return ops
-      .map(([t, s]) => {
-        const e = escapeHtml(s);
-        if (t === '-') return `<del>${e}</del>`;
-        if (t === '+') return `<ins>${e}</ins>`;
-        return e;
-      })
-      .join('');
+    const ops = DIFF.diff(aStr, bStr);
+    const changes = DIFF.changeCount(ops);
+    if (!changes) return { html: `<i class="ole-muted">${escapeHtml(I18N.t('与原文相同，没有改动'))}</i>`, changes };
+    const html = ops.map(([t, s], i) => {
+      if (t === '-') return `<del>${escapeHtml(s)}</del>`;
+      if (t === '+') return `<ins>${escapeHtml(s)}</ins>`;
+      return foldEqual(s, i === 0, i === ops.length - 1);
+    }).join('');
+    return { html, changes };
   }
 
   // ---------- 构建 UI ----------
@@ -623,6 +621,7 @@
     targetList: $('#ole-target-list'),
     targetReveal: $('#ole-target-reveal'),
     targetClear: $('#ole-target-clear'),
+    contextClear: $('#ole-context-clear'),
     capture: $('#ole-capture'),
     selectionHint: $('#ole-selection-hint'),
     presets: $('#ole-presets'),
@@ -798,6 +797,8 @@
   function renderTargetBar() {
     const t = state.target;
     const tr = I18N.t;
+    syncCardClearButtons();
+    els.contextClear.classList.toggle('hidden', !t);
     const count = t?.ranges.length || 0;
     els.contextSummary.textContent = t
       ? `${t.fileName || tr('当前文件')} · ${count > 1 ? tr('{0} 段', count) : linesLabel(t.line1, t.line2)}`
@@ -890,19 +891,33 @@
   }
 
   // ---------- 替换卡片（diff 预览 + 应用）----------
+  // 每张卡片记住自己生成时的选段：清除或换了选段后，旧卡片照样能应用（写入前桥会按原文逐段校验）。
+  const cardTargets = new WeakMap();
+  // 「清除选段」只在卡片的选段仍是当前选段时显示。
+  function syncCardClearButtons() {
+    els.messages.querySelectorAll('.ole-card').forEach((card) => {
+      const btn = card.querySelector('.ole-clear');
+      if (btn) btn.classList.toggle('hidden', !state.target || cardTargets.get(card) !== state.target);
+    });
+  }
   function attachReplacementCard(bubble, replacements, via) {
     const t = state.target;
+    const instruction = [...state.messages].reverse().find((m) => m.role === 'user')?.content || '';
     const card = document.createElement('div');
     card.className = 'ole-card';
+    cardTargets.set(card, t);
+    let changes = 0;
     const parts = t.ranges.map((r, i) => {
       const replacement = replacements.find((e) => e.id === r.id).text;
       const diff = diffHtml(r.text, replacement);
+      changes += diff.changes;
       const heading = t.ranges.length > 1 ? `<span class="ole-edit-heading">${escapeHtml(I18N.t('选段 {0} · {1}', i + 1, linesLabel(r.line1, r.line2)))}</span>` : '';
-      return { text: replacement, diff: `<div class="ole-edit-part">${heading}${diff ?? `<i class="ole-muted">${escapeHtml(I18N.t('内容较大，请切到新文本查看'))}</i>`}</div>`, next: `<div class="ole-edit-part">${heading}${escapeHtml(replacement)}</div>` };
+      return { text: replacement, diff: `<div class="ole-edit-part">${heading}${diff.html}</div>`, next: `<div class="ole-edit-part">${heading}${escapeHtml(replacement)}</div>` };
     });
+    const title = parts.length > 1 ? I18N.t('替换预览 · {0} 段 · {1} 处改动', parts.length, changes) : I18N.t('替换预览 · {0} 处改动', changes);
     card.innerHTML =
       `<div class="ole-card-head">` +
-      `<span class="ole-card-title">${escapeHtml(parts.length > 1 ? I18N.t('替换预览 · {0} 段', parts.length) : I18N.t('替换预览'))}</span>` +
+      `<span class="ole-card-title">${escapeHtml(title)}</span>` +
       `<span class="ole-tabs"><button class="ole-tab active" data-tab="diff">${escapeHtml(I18N.t('对比'))}</button><button class="ole-tab" data-tab="new">${escapeHtml(I18N.t('新文本'))}</button></span>` +
       `</div>` +
       `<div class="ole-card-body ole-diffview">${parts.map((p) => p.diff).join('')}</div>` +
@@ -911,6 +926,7 @@
       `<button class="ole-btn ole-apply">✅ ${escapeHtml(parts.length > 1 ? I18N.t('应用全部选段') : I18N.t('应用替换'))}</button>` +
       `<button class="ole-btn ole-copy">${escapeHtml(I18N.t('📋 复制'))}</button>` +
       `<button class="ole-btn ole-retry" title="${escapeHtml(I18N.t('用同样的指令重新生成'))}">${escapeHtml(I18N.t('🔁 重试'))}</button>` +
+      `<button class="ole-btn ole-clear" title="${escapeHtml(I18N.t('先不应用：放开当前选段，去编辑器里选下一段。这张预览之后仍可应用。'))}">${escapeHtml(I18N.t('✕ 清除选段'))}</button>` +
       `<span class="ole-card-status"></span>` +
       `</div>`;
     bubble.appendChild(card);
@@ -926,42 +942,64 @@
         newView.classList.toggle('hidden', isDiff);
       });
     });
+    diffView.addEventListener('click', (e) => {
+      const fold = e.target.closest('.ole-fold');
+      if (!fold) return;
+      fold.nextElementSibling.classList.remove('hidden');
+      fold.remove();
+    });
 
     const statusEl = card.querySelector('.ole-card-status');
     const applyBtn = card.querySelector('.ole-apply');
+    const clearBtn = card.querySelector('.ole-clear');
+    const retryBtn = card.querySelector('.ole-retry');
     applyBtn.addEventListener('click', async () => {
-      if (state.streaming || state.preparing || state.applying || state.capturing) return;
-      const tgt = state.target;
-      if (!tgt) { statusEl.textContent = I18N.t('目标已清除，请重新选中'); return; }
-      if (tgt !== t) { statusEl.textContent = I18N.t('选区已切换。这张预览属于之前的段落，请为当前选区重新生成。'); return; }
+      if (targetBusy()) return;
       state.applying = true;
       try {
       applyBtn.disabled = true;
       statusEl.textContent = I18N.t('应用中…');
       // 防呆：当前打开的文件和选中时不一样就先别写
       const st = await bridge('status', {}, 2500);
-      if (st.ok && st.fileName && tgt.fileName && st.fileName !== tgt.fileName) {
-        statusEl.textContent = I18N.t('⚠️ 当前打开的是 {0}，请切回 {1} 再应用', st.fileName, tgt.fileName);
+      if (st.ok && st.fileName && t.fileName && st.fileName !== t.fileName) {
+        statusEl.textContent = I18N.t('⚠️ 当前打开的是 {0}，请切回 {1} 再应用', st.fileName, t.fileName);
         applyBtn.disabled = false;
         return;
       }
-      const r = await bridge('apply_edits', { fileName: tgt.fileName, edits: tgt.ranges.map((r) => ({ id: r.id, from: r.from, to: r.to, oldText: r.text, newText: replacements.find((e) => e.id === r.id).text })) }, 8000);
+      const r = await bridge('apply_edits', { fileName: t.fileName, edits: t.ranges.map((r) => ({ id: r.id, from: r.from, to: r.to, oldText: r.text, newText: replacements.find((e) => e.id === r.id).text })) }, 8000);
       if (r.ok) {
-        // 应用成功即完成该目标：自动移除，下一处改动让用户重新选中（与 word_edit 行为一致）
-        if (state.target === tgt) { state.target = null; renderTargetBar(); }
-        statusEl.textContent = I18N.t('✅ 已应用（Cmd+Z 可撤销）· 该目标已完成移除，要改下一处请重新选中');
+        // 写过的选段就完成了：从当前选段里去掉，下一处改动让用户重新选中（与 word_edit 行为一致）
+        const done = new Set(t.ranges.map((x) => x.id));
+        const cur = state.target;
+        const wasCurrent = !!cur && cur.ranges.some((x) => done.has(x.id));
+        if (wasCurrent) {
+          const rest = cur.ranges.filter((x) => !done.has(x.id));
+          state.target = rest.length ? makeTarget(rest, cur.fileName, cur.docChars) : null;
+          renderTargetBar();
+        }
+        clearBtn.classList.add('hidden');
+        retryBtn.disabled = true; // 原文已改，不能再按原选段重试
+        statusEl.textContent = wasCurrent ? I18N.t('✅ 已应用（Cmd+Z 可撤销）· 该目标已完成移除，要改下一处请重新选中') : I18N.t('✅ 已应用（Cmd+Z 可撤销）');
       } else {
         statusEl.textContent = '⚠️ ' + (r.error || I18N.t('应用失败'));
         applyBtn.disabled = false;
       }
       } finally { state.applying = false; }
     });
-    card.querySelector('.ole-copy').addEventListener('click', (e) => copyText(parts.map((p) => p.text).join('\n\n'), e.target));
-    card.querySelector('.ole-retry').addEventListener('click', () => {
-      if (state.streaming) return;
-      const lastUser = [...state.messages].reverse().find((m) => m.role === 'user');
-      if (lastUser) sendInstruction(lastUser.content, { isRetry: true });
+    clearBtn.addEventListener('click', () => {
+      if (targetBusy() || state.target !== t) return;
+      clearTarget();
+      els.selectionHint.textContent = I18N.t('已清除选段。在编辑器里选中下一段，点「✦ 改这段」继续。');
+      statusEl.textContent = I18N.t('已清除选段 · 这张预览仍可应用');
     });
+    card.querySelector('.ole-copy').addEventListener('click', (e) => copyText(parts.map((p) => p.text).join('\n\n'), e.target));
+    // 重试针对这张卡片自己的选段和指令，即使之后清除或换过选段。
+    retryBtn.addEventListener('click', () => {
+      if (targetBusy() || !instruction || retryBtn.disabled) return;
+      if (state.target !== t) { state.target = t; renderTargetBar(); }
+      sendInstruction(instruction, { isRetry: true });
+    });
+    syncCardClearButtons();
     if (via) {
       const foot = document.createElement('div');
       foot.innerHTML = footHtml(via);
@@ -979,7 +1017,7 @@
   async function sendInstruction(text, options = {}) {
     if (state.streaming || state.preparing || state.applying || state.capturing) return;
     state.preparing = true;
-    for (const el of [els.backend, els.model, els.effort, els.modeEdit, els.modeAsk, els.targetClear, els.capture, els.newBtn, els.histBtn]) el.disabled = true;
+    for (const el of [els.backend, els.model, els.effort, els.modeEdit, els.modeAsk, els.targetClear, els.contextClear, els.capture, els.newBtn, els.histBtn]) el.disabled = true;
     els.send.disabled = true;
     try { await performSend(text, options); }
     catch (e) {
@@ -1197,7 +1235,7 @@
     state.streaming = v;
     els.send.classList.toggle('hidden', v);
     els.stop.classList.toggle('hidden', !v);
-    for (const el of [els.backend, els.model, els.effort, els.modeEdit, els.modeAsk, els.targetClear, els.capture, els.newBtn, els.histBtn]) el.disabled = v;
+    for (const el of [els.backend, els.model, els.effort, els.modeEdit, els.modeAsk, els.targetClear, els.contextClear, els.capture, els.newBtn, els.histBtn]) el.disabled = v;
     els.panel.setAttribute('aria-busy', String(v));
     els.panel.classList.toggle('streaming', v);
     els.targetList.querySelectorAll('button').forEach((b) => { b.disabled = v; });
@@ -1526,6 +1564,8 @@
     els.send.addEventListener('click', send);
     els.stop.addEventListener('click', stopStream);
     els.targetClear.addEventListener('click', () => { clearTarget(); showSettings(false); });
+    els.contextClear.addEventListener('mousedown', (e) => e.preventDefault()); // 别让点击清掉编辑器里的新选区
+    els.contextClear.addEventListener('click', clearTarget);
     els.targetReveal.addEventListener('click', () => { if (state.target) revealRange(state.target.ranges[0]); });
 
     els.language.value = I18N.language;
@@ -1662,7 +1702,7 @@
     els.capture.textContent = t('＋ 添加选段');
     const welcome = els.messages.querySelector('.ole-welcome');
     if (welcome) { welcome.remove(); renderWelcome(); }
-    shadow.querySelectorAll('.ole-card .ole-tab, .ole-card .ole-btn, .ole-card-title, .ole-card-status, .ole-warnbox, .ole-think summary, .ole-edit-heading, #ole-messages > .ole-msg .ole-bubble > .ole-btn').forEach((el) => {
+    shadow.querySelectorAll('.ole-card .ole-tab, .ole-card .ole-btn, .ole-fold, .ole-card-title, .ole-card-status, .ole-warnbox, .ole-think summary, .ole-edit-heading, #ole-messages > .ole-msg .ole-bubble > .ole-btn').forEach((el) => {
       if (el.children.length === 0) {
         const text = el.textContent, direct = known(text);
         el.textContent = direct !== text || !text.startsWith('✅ ') ? direct : '✅ ' + known(text.slice(2));
@@ -1753,6 +1793,7 @@
         <div id="ole-selection-actions">
           <button id="ole-mode-summary" data-i18n-title="切换改写或问答模式">改写 ▾</button>
           <button id="ole-context-summary" data-i18n-title="查看上下文与选区设置">未选择段落</button>
+          <button id="ole-context-clear" class="hidden" type="button" data-i18n-title="清除选段" data-i18n-aria-label="清除选段">✕</button>
           <button id="ole-capture" type="button" data-i18n="＋ 添加选段">＋ 添加选段</button>
         </div>
         <div id="ole-selection-hint" role="status" data-i18n="支持拖选、双击或 Shift + 方向键选择源码。">支持拖选、双击或 Shift + 方向键选择源码。</div>
@@ -1952,6 +1993,12 @@
       }
       .ole-diffview del { background: #ffebe9; color: #b42318; text-decoration: line-through; border-radius: 2px; }
       .ole-diffview ins { background: #dcfce4; color: #166534; text-decoration: none; border-radius: 2px; }
+      .ole-fold {
+        border: 1px dashed #c5dbd1; background: #f1f6f2; color: #55607a; border-radius: 6px; padding: 1px 8px; margin: 2px 0;
+        font: 11px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; cursor: pointer;
+      }
+      .ole-fold:hover { border-color: #217566; color: #217566; }
+      .ole-card .ole-clear:hover { border-color: #b42318; color: #b42318; }
       .ole-card-actions { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border-top: 1px solid #eef0f5; flex-wrap: wrap; }
       .ole-btn {
         border: 1px solid #dfe2ec; background: #fff; border-radius: 7px; padding: 4px 10px;
@@ -2084,6 +2131,8 @@
       #ole-mode-summary { color: #217566; white-space: nowrap; }
       #ole-context-summary { flex: 1; min-width: 0; color: #76817b; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
       #ole-mode-summary:hover, #ole-context-summary:hover { color: #18594e; }
+      #ole-context-clear { flex: 0 0 auto; border: 0; background: transparent; color: #76817b; font-size: 11px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+      #ole-context-clear:hover { background: #fff2ec; color: #b42318; }
       #ole-capture { padding: 5px 8px; font-size: 11px; white-space: nowrap; }
       #ole-selection-hint:not(.error) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
       #ole-selection-hint.error { margin: 0; padding: 6px 12px; color: #8a5c16; background: #fff7e6; max-height: 72px; overflow-y: auto; flex-shrink: 0; }

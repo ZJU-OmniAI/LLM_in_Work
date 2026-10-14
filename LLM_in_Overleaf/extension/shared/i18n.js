@@ -127,9 +127,10 @@
 
     // Replacement card
     '选段 {0} · {1}': 'Selection {0} · {1}',
-    '内容较大，请切到新文本查看': 'Too large to compare. View the new text instead.',
-    '替换预览': 'Replacement preview',
-    '替换预览 · {0} 段': 'Replacement preview · {0} selections',
+    '替换预览 · {0} 处改动': 'Replacement preview · {0} changes',
+    '替换预览 · {0} 段 · {1} 处改动': 'Replacement preview · {0} selections · {1} changes',
+    '… 未改动 {0} 字符 · 展开 …': '… {0} unchanged characters · show …',
+    '与原文相同，没有改动': 'Same as the original; nothing changed',
     '对比': 'Diff',
     '新文本': 'New text',
     '应用全部选段': 'Apply all selections',
@@ -137,11 +138,15 @@
     '📋 复制': '📋 Copy',
     '🔁 重试': '🔁 Retry',
     '用同样的指令重新生成': 'Generate again with the same instruction',
-    '目标已清除，请重新选中': 'The selection was cleared. Select the text again.',
-    '选区已切换。这张预览属于之前的段落，请为当前选区重新生成。': 'The selection has changed. This preview belongs to an earlier selection; generate again for the current one.',
+    '✕ 清除选段': '✕ Clear selection',
+    '先不应用：放开当前选段，去编辑器里选下一段。这张预览之后仍可应用。': 'Release the selection without applying, so you can select the next passage. This preview can still be applied later.',
+    '已清除选段 · 这张预览仍可应用': 'Selection cleared · this preview can still be applied',
+    '已清除选段。在编辑器里选中下一段，点「✦ 改这段」继续。': 'Selection cleared. Select the next passage in the editor and click ✦ Rewrite.',
+    '清除选段': 'Clear selection',
     '应用中…': 'Applying…',
     '⚠️ 当前打开的是 {0}，请切回 {1} 再应用': '⚠️ {0} is open. Switch back to {1} to apply.',
     '✅ 已应用（Cmd+Z 可撤销）· 该目标已完成移除，要改下一处请重新选中': '✅ Applied (undo with ⌘Z / Ctrl+Z). The selection is cleared; select the next passage to continue.',
+    '✅ 已应用（Cmd+Z 可撤销）': '✅ Applied (undo with ⌘Z / Ctrl+Z)',
     '应用失败': 'Could not apply the change',
 
     // Sending and streaming

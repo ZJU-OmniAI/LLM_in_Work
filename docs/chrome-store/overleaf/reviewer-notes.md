@@ -1,4 +1,4 @@
-# Reviewer test instructions — LLM_in_Overleaf 0.9.1
+# Reviewer test instructions — LLM_in_Overleaf 0.9.2
 
 Purpose: connect a locally installed Claude Code or Codex agent to selected LaTeX editing and questions inside Overleaf. This is an independent integration, not an official Overleaf/Anthropic/OpenAI product.
 
