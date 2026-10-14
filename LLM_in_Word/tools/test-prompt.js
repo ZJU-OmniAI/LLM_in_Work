@@ -15,3 +15,11 @@ test('explanations follow the instruction language, falling back to the interfac
   }
   assert.match(buildPrompt({ mode: 'ask', uiLanguage: 'en', doc, messages: [{ role: 'user', content: 'Summarize' }] }), /使用用户本轮提问所用的语言回答；难以判断时使用英文/);
 });
+
+test('edit prompts require the whole replacement, even for a long passage with one change', () => {
+  const multi = { ...doc, targets: [{ k: 1, text: 'A', kind: 'text' }, { k: 2, text: 'B', kind: 'text' }] };
+  assert.match(buildPrompt({ mode: 'edit', uiLanguage: 'zh-CN', doc, messages: [{ role: 'user', content: '改语法' }] }), /必须写出整段完整的替换文本[^\n]*不能只列出改了哪几处/);
+  assert.match(buildPrompt({ mode: 'edit', uiLanguage: 'zh-CN', doc: multi, messages: [{ role: 'user', content: '改语法' }] }), /每个围栏都写出该目标完整的替换文本/);
+  assert.match(buildTurnPrompt({ mode: 'edit', uiLanguage: 'zh-CN', doc, instruction: '改语法' }), /整段完整写出、不能只列改动/);
+  assert.match(buildTurnPrompt({ mode: 'edit', uiLanguage: 'zh-CN', doc: multi, instruction: '改语法' }), /放该目标完整的纯文本[^\n]*不能只列改动/);
+});

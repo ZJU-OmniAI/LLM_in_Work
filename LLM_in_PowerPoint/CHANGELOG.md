@@ -5,8 +5,9 @@
 - **Long text gets a precise preview.** Rewrite previews compare sentence by sentence and then word by word (Chinese character by character), the same method as LLM_in_Overleaf 0.9.2, instead of showing a long text box as deleted and re-inserted. Long unchanged stretches are folded (click to show them) and the card title says how many places changed. Writing back uses the same comparison, so only the changed words are rewritten and a new bullet follows the bullet before it.
 - **✕ Clear target** on the reply card (and a ✕ next to the target summary at the top) releases the target without applying, so you can select the next text. The earlier preview still applies to its own words, found by their original text.
 - **🔁 Retry** on a card regenerates that card's own target with its own instruction, even after you moved on.
+- The edit prompt now says the reply must contain the whole replacement even when long text needs only one or two changes, the same rule as LLM_in_Word 0.7.3.
 
-中文摘要：改写预览先按句、再按词（中文逐字）比较，长文本框不再整段标红标绿；很长的未改动部分折叠，卡片标题显示几处改动；写回时也只改变化的词，新加的要点沿用前一条的层级。回复卡片新增「✕ 清除目标」（顶部目标摘要旁也有 ✕），不应用也能去选下一处，之前的预览仍按原文找到位置后应用。卡片上的「🔁 重试」按这张卡片自己的目标和指令重新生成。更新：在仓库目录运行 `npm run update`。
+中文摘要：改写预览先按句、再按词（中文逐字）比较，长文本框不再整段标红标绿；很长的未改动部分折叠，卡片标题显示几处改动；写回时也只改变化的词，新加的要点沿用前一条的层级。回复卡片新增「✕ 清除目标」（顶部目标摘要旁也有 ✕），不应用也能去选下一处，之前的预览仍按原文找到位置后应用。卡片上的「🔁 重试」按这张卡片自己的目标和指令重新生成。提示词明确要求长文本哪怕只改一两处也给出完整文本。更新：在仓库目录运行 `npm run update`。
 
 ## 0.3.0 — 2026-10-02
 

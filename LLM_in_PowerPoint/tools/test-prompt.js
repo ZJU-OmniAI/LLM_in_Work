@@ -80,3 +80,11 @@ test('the self-check prompt shows the result, the geometry problems and asks for
   assert.match(p, /没问题就说"通过"/);
   assert.doesNotMatch(p, /【先判断要做多大的改动】/, 'the design brief is not repeated');
 });
+
+test('edit prompts require the whole replacement, even for long text with one change', () => {
+  const multi = { ...doc, targets: [{ k: 1, text: 'A', where: '第 1 页' }, { k: 2, text: 'B', where: '第 2 页' }] };
+  assert.match(buildPrompt({ mode: 'edit', uiLanguage: 'zh-CN', doc, messages: [{ role: 'user', content: '改语法' }] }), /必须写出整段完整的替换文本[^\n]*不能只列出改了哪几处/);
+  assert.match(buildPrompt({ mode: 'edit', uiLanguage: 'zh-CN', doc: multi, messages: [{ role: 'user', content: '改语法' }] }), /每个围栏都写出该目标完整的替换文本/);
+  assert.match(buildTurnPrompt({ mode: 'edit', uiLanguage: 'zh-CN', doc, instruction: '改语法' }), /整段完整写出、不能只列改动/);
+  assert.match(buildTurnPrompt({ mode: 'edit', uiLanguage: 'zh-CN', doc: multi, instruction: '改语法' }), /放该目标完整的纯文本[^\n]*不能只列改动/);
+});

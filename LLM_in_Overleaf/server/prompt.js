@@ -14,6 +14,7 @@ const EDIT_SYSTEM = `你是嵌入 Overleaf 网页编辑器的 LaTeX 修改助手
 1. 把替换后的内容放在一个 \`\`\`latex 围栏代码块里；整个回复只允许出现这一个代码块。
 2. 代码块里的内容会被"原样整体替换"进编辑器，所以：
    - 只写替换选中段的内容本身：不要重复选区外的前后文，不要把全文其他部分抄进来，不要自作主张加 \\documentclass、\\begin{document} 之类（除非选中片段本身就含这些）；
+   - 必须写出整段完整的替换文本，哪怕选中段很长、只改了一两处：不能只列出改了哪几处，也不能用"……""其余不变"之类代替没改的部分——系统会自动对比新旧文本、标出改动；
    - 必须是能通过编译的合法 LaTeX；只用导言区已有的宏包和命令，确需新宏包时在代码块外用一句话说明；
    - 保留原有的 \\label、\\cite、\\ref、\\eqref 等键名不动，除非用户明确要求改；
    - 公式、表格、图片等环境的结构不要无故改变；
@@ -25,6 +26,7 @@ const MULTI_EDIT_SYSTEM = `你是 Overleaf 的 LaTeX 修改助手。用户选中
 - 每段只输出替换该片段的文本；不要合并片段，不要包含两段之间未选中的内容，也不要改动选区外的内容。
 - 保留 LaTeX 结构、缩进和换行；保持标签、引用等键名不变，只使用已有宏包和命令，除非用户明确要求修改。
 - 每个 ID 都必须输出一段替换稿；无需改动的片段原样返回。各片段使用各自带 ID 的 latex 围栏。
+- 每段都写出完整的替换内容，哪怕只改了一两处：不能只列出改动，也不能用"……""其余不变"代替没改的部分。
 - 围栏外可用一两句说明（语言见【回复语言】）。无法执行时只说明原因，不输出替换代码块。`;
 
 function hasMultipleSelections(doc) { return Array.isArray(doc.selections) && doc.selections.length > 1; }
@@ -103,7 +105,7 @@ export function buildTurnPrompt({ mode, backend = 'claude', uiLanguage = 'zh-CN'
   pushBinFilesSection(parts, files, backend);
   parts.push(`\n用户本轮的指令：\n${instruction}`);
   parts.push(isEdit
-    ? (hasMultipleSelections(doc) ? multiFormat(doc) : '\n本轮为单段改写，覆盖之前的多段格式：唯一一个 ```latex 围栏放替换内容（整体替换本轮选中段，保持合法可编译、标签引用不动），围栏外最多一两句说明；无法执行就不出围栏、直接说明原因。')
+    ? (hasMultipleSelections(doc) ? multiFormat(doc) : '\n本轮为单段改写，覆盖之前的多段格式：唯一一个 ```latex 围栏放替换内容（整体替换本轮选中段，要整段完整写出、不能只列改动；保持合法可编译、标签引用不动），围栏外最多一两句说明；无法执行就不出围栏、直接说明原因。')
     : '\n请直接用 Markdown 回答。');
   parts.push(languageRule(mode === 'edit' ? 'edit' : 'ask', uiLanguage));
   return parts.join('\n');
