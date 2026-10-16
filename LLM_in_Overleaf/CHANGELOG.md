@@ -1,5 +1,12 @@
 # 更新记录
 
+## 0.9.3 — 2026-10-16
+
+- **Applying changes only the changed words.** The editor used to receive each selection as one replacement. Now only the changed spans are written and the rest of the passage is left alone, so Overleaf's track changes, if you use it, receives these edits instead of the whole passage deleted and re-inserted. The bridge checks that the spans rebuild the reply exactly and otherwise replaces the selection as before. Undo is still one step.
+- **Changed citation keys are flagged.** When a reply removes or adds keys in `\cite`, `\ref`, `\label` and similar commands, the card names them so you can check before applying. It is a warning, not a block, because adding a citation can be intended.
+
+中文摘要：应用时只把改动的片段交给编辑器，没改的文字不再整段重写；用 Overleaf 修订时，记录的是这些改动，而不是整段删除再插入。桥会核对这些片段拼起来正好是替换稿，对不上就照旧整段替换；撤销仍是一步。改写去掉或新增了 `\cite`、`\ref`、`\label` 等命令里的键名时，卡片会列出来提醒你确认（只提醒、不拦，因为有时就是要加引用）。
+
 ## 0.9.2 — 2026-10-14
 
 - Long selections get a real diff. The old word-by-word comparison gave up at roughly 350 words and only offered the new text; the new comparison works sentence by sentence first and then word by word inside changed sentences, so a 20,000-character passage compares in milliseconds. Chinese and Japanese are compared character by character instead of as one block per paragraph, and LaTeX commands stay whole.

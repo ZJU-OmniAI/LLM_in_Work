@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const context = {};
 context.globalThis = context;
 vm.runInNewContext(readFileSync(new URL('../extension/shared/diff.js', import.meta.url), 'utf8'), context);
-const { diff, changeCount } = context.LLMOverleafDiff;
+const { diff, changeCount, edits, keyChanges } = context.LLMOverleafDiff;
 const side = (ops, keep) => ops.filter(([t]) => t === '=' || t === keep).map(([, x]) => x).join('');
 function check(a, b) {
   const ops = diff(a, b);
@@ -75,4 +75,32 @@ test('random edits always rebuild both sides', () => {
     const b = rand(2) ? text(rand(80)) : a.slice(0, 10) + text(rand(6)) + a.slice(14);
     check(a, b);
   }
+});
+
+test('edits for writing change only the changed spans and rebuild the new text', () => {
+  const apply = (a, list) => [...list].reverse().reduce((s, e) => s.slice(0, e.at) + e.ins + s.slice(e.at + e.del), a);
+  const a = 'Deep learning have revolutionized many field \\cite{lecun2015}. We study a new method.';
+  const b = 'Deep learning has revolutionized many fields \\cite{lecun2015}. We study a new method.';
+  const list = plain(edits(a, b));
+  assert.deepEqual(list, [{ at: 14, del: 4, ins: 'has' }, { at: 39, del: 5, ins: 'fields' }]);
+  assert.equal(apply(a, list), b);
+  assert.deepEqual(plain(edits('same', 'same')), []);
+  let seed = 3;
+  const rand = (n) => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed % n; };
+  const alphabet = ['a', 'b', ' ', '中', '。', '.', '\n', '\\cite{x}', '😀'];
+  const text = (n) => Array.from({ length: n }, () => alphabet[rand(alphabet.length)]).join('');
+  for (let k = 0; k < 800; k++) {
+    const x = text(rand(60)), y = rand(2) ? text(rand(60)) : x.slice(0, 7) + text(rand(5)) + x.slice(11);
+    const list2 = edits(x, y);
+    assert.equal(apply(x, list2), y);
+    for (let i = 1; i < list2.length; i++) assert.ok(list2[i].at >= list2[i - 1].at + list2[i - 1].del, 'ordered, not overlapping');
+  }
+});
+
+test('changed citation and reference keys are reported', () => {
+  const a = 'As shown \\citep[see][p.~3]{smith2020, wang2021} and in Fig.~\\ref{fig:a}. \\label{sec:x}';
+  assert.deepEqual(plain(keyChanges(a, a)), { removed: [], added: [] });
+  assert.deepEqual(plain(keyChanges(a, a.replace('wang2021', 'li2022'))), { removed: ['wang2021'], added: ['li2022'] });
+  assert.deepEqual(plain(keyChanges(a, 'As shown before.')), { removed: ['smith2020', 'wang2021', 'fig:a', 'sec:x'], added: [] });
+  assert.deepEqual(plain(keyChanges('\\href{https://a.org}{site}', '\\href{https://b.org}{site}')), { removed: [], added: [] }, 'links are not citations');
 });

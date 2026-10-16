@@ -1,5 +1,11 @@
 # 更新记录 / Changelog
 
+## 2026-10-16 — Overleaf 0.9.3 · Write only the changed words
+
+- Overleaf now applies only the changed spans, like the Word, PowerPoint and Excel add-ins, instead of rewriting the whole selection. Replies that change `\cite`/`\ref`/`\label` keys are flagged on the card.
+
+中文：Overleaf 也只写入改动的片段（和 Word、PowerPoint、Excel 一致），不再整段重写；改写动了 `\cite`、`\ref`、`\label` 键名时卡片提醒。
+
 ## 2026-10-16 — Word 0.7.4 · Citations and tables
 
 - Zotero/EndNote citation codes are no longer read as text, so manuscripts with many citations are not truncated. Applying a rewrite changes only the changed words and keeps citation fields; replies that change citations are not applied.

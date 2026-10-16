@@ -915,6 +915,17 @@
       return { text: replacement, diff: `<div class="ole-edit-part">${heading}${diff.html}</div>`, next: `<div class="ole-edit-part">${heading}${escapeHtml(replacement)}</div>` };
     });
     const title = parts.length > 1 ? I18N.t('替换预览 · {0} 段 · {1} 处改动', parts.length, changes) : I18N.t('替换预览 · {0} 处改动', changes);
+    // 改写动了 \cite / \ref / \label 的键名：提醒一下（有时就是要加引用，所以不拦）
+    const keys = { removed: new Set(), added: new Set() };
+    t.ranges.forEach((r, i) => {
+      const k = DIFF.keyChanges(r.text, parts[i].text);
+      k.removed.forEach((x) => keys.removed.add(x));
+      k.added.forEach((x) => keys.added.add(x));
+    });
+    const keyNote = [
+      keys.removed.size ? I18N.t('去掉了 {0}', [...keys.removed].join(', ')) : '',
+      keys.added.size ? I18N.t('新增了 {0}', [...keys.added].join(', ')) : '',
+    ].filter(Boolean).join(I18N.t('；'));
     card.innerHTML =
       `<div class="ole-card-head">` +
       `<span class="ole-card-title">${escapeHtml(title)}</span>` +
@@ -922,6 +933,7 @@
       `</div>` +
       `<div class="ole-card-body ole-diffview">${parts.map((p) => p.diff).join('')}</div>` +
       `<div class="ole-card-body ole-newview hidden">${parts.map((p) => p.next).join('')}</div>` +
+      (keyNote ? `<div class="ole-warnbox ole-keys">${escapeHtml(I18N.t('⚠️ 这次改写改动了引用或交叉引用的键名：{0}。应用前请确认这是你要的。', keyNote))}</div>` : '') +
       `<div class="ole-card-actions">` +
       `<button class="ole-btn ole-apply">✅ ${escapeHtml(parts.length > 1 ? I18N.t('应用全部选段') : I18N.t('应用替换'))}</button>` +
       `<button class="ole-btn ole-copy">${escapeHtml(I18N.t('📋 复制'))}</button>` +
@@ -966,7 +978,11 @@
         applyBtn.disabled = false;
         return;
       }
-      const r = await bridge('apply_edits', { fileName: t.fileName, edits: t.ranges.map((r) => ({ id: r.id, from: r.from, to: r.to, oldText: r.text, newText: replacements.find((e) => e.id === r.id).text })) }, 8000);
+      // 只把变化的片段交给编辑器（parts），没改的文字不动：开着 Overleaf 修订时也只标出改动的词
+      const r = await bridge('apply_edits', { fileName: t.fileName, edits: t.ranges.map((r) => {
+        const newText = replacements.find((e) => e.id === r.id).text;
+        return { id: r.id, from: r.from, to: r.to, oldText: r.text, newText, parts: DIFF.edits(r.text, newText) };
+      }) }, 8000);
       if (r.ok) {
         // 写过的选段就完成了：从当前选段里去掉，下一处改动让用户重新选中（与 word_edit 行为一致）
         const done = new Set(t.ranges.map((x) => x.id));
