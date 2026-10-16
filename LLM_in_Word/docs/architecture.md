@@ -24,6 +24,7 @@ The runtime has no external npm dependencies. Development tests use jsdom. Offic
 | `taskpane/taskpane.js` | Office.js integration, target anchoring, review/apply, formatting and local state. |
 | `taskpane/table-utils.js` | Table protocol, parsing and cell differences. |
 | `taskpane/diff-utils.js` | Text comparison for previews and write-back: sentences and lines first, then words (Chinese characters one by one), with long unchanged text folded. Identical copies in LLM_in_Word, LLM_in_PowerPoint and LLM_in_Excel; unit-tested in `tools/test-diff.js`. |
+| `taskpane/word-edits.js` | Word write-back by changed words: drops field codes from `getReviewedText`, plans one Word search per change (never across a citation field), and refuses replies that change a field. Unit-tested in `tools/test-word-edits.js`. |
 | `install.ps1`, `tools/windows-*.{ps1,js}` | Windows installation, user Startup shortcut, supervisor and lifecycle controls. |
 | `install.sh` | macOS certificate trust, launchd service, runtime staging and Word manifest installation. |
 

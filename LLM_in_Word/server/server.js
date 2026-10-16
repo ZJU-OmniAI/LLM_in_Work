@@ -23,7 +23,7 @@ import { getModels } from './models.js';
 import { getHealth } from './health.js';
 import { classifyError } from './process.js';
 
-const VERSION = '0.7.3';
+const VERSION = '0.7.4';
 const activeRequests = new Set();
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url))); // 项目根目录
 

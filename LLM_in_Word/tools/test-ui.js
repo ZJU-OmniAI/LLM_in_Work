@@ -28,6 +28,7 @@ function setup(responseEvents, { trailingNewline = true, hold = false, language 
   w.eval(readFileSync(new URL('../taskpane/i18n.js', import.meta.url), 'utf8'));
   w.eval(table);
   w.eval(readFileSync(new URL('../taskpane/diff-utils.js', import.meta.url), 'utf8'));
+  w.eval(readFileSync(new URL('../taskpane/word-edits.js', import.meta.url), 'utf8'));
   w.eval(js.replace('  init();', `  init();
     getEditContext = () => window.__context;
     getWholeDoc = () => window.__context;
@@ -373,5 +374,30 @@ test('a long passage shows a word-level diff with unchanged stretches folded', a
     assert.equal(d.querySelectorAll('.diffview .diff-fold').length, folds.length - 1);
     const shown = [...d.querySelector('.diffview').childNodes].filter((n) => !(n.classList && n.classList.contains('diff-fold'))).map((n) => n.textContent).join('');
     assert.ok(shown.includes(sentences[60]));
+  } finally { await t.close(); }
+});
+
+test('a reply that changes a citation field is shown but cannot be applied; the prompt asks to keep citations', async () => {
+  const t = setup([{ type: 'delta', text: '```text\n研究表明（见文献）效果很好。\n```' }, { type: 'done', ok: true }]);
+  try {
+    t.w.__context = Promise.resolve({ ...context, targetTexts: ['研究表明(12)效果很好。'], targetFields: [[[4, 8]]], fullText: '研究表明(12)效果很好。' });
+    t.w.ui.state.targets = [{ ccId: 1, text: '研究表明(12)效果很好。', kind: 'text', fields: [[4, 8]] }];
+    await t.w.ui.sendInstruction('润色');
+    assert.equal(t.calls[0].doc.targets[0].fields, 1);
+    const card = t.w.document.querySelector('.card');
+    assert.equal(card.querySelector('.apply').disabled, true);
+    assert.match(card.querySelector('.warnbox').textContent, /改动了 1 处文献引用/);
+  } finally { await t.close(); }
+});
+
+test('a reply that keeps the citation can be applied', async () => {
+  const t = setup([{ type: 'delta', text: '```text\n研究表明(12)效果显著。\n```' }, { type: 'done', ok: true }]);
+  try {
+    t.w.__context = Promise.resolve({ ...context, targetTexts: ['研究表明(12)效果很好。'], targetFields: [[[4, 8]]], fullText: '研究表明(12)效果很好。' });
+    t.w.ui.state.targets = [{ ccId: 1, text: '研究表明(12)效果很好。', kind: 'text', fields: [[4, 8]] }];
+    await t.w.ui.sendInstruction('润色');
+    const card = t.w.document.querySelector('.card');
+    assert.equal(card.querySelector('.apply').disabled, false);
+    assert.equal(card.querySelector('.warnbox'), null);
   } finally { await t.close(); }
 });

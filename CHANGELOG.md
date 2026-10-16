@@ -1,5 +1,12 @@
 # 更新记录 / Changelog
 
+## 2026-10-16 — Word 0.7.4 · Citations and tables
+
+- Zotero/EndNote citation codes are no longer read as text, so manuscripts with many citations are not truncated. Applying a rewrite changes only the changed words and keeps citation fields; replies that change citations are not applied.
+- A selection that includes tables is split into body-text and table targets instead of being refused.
+
+中文：Word 读文字时去掉 Zotero/EndNote 引用的域代码，带大量引用的稿子不再被截断；应用改写只改变化的词、引用域保持完好，改动了引用的回复不能一键应用。选区里带表格时自动拆成正文和表格目标，不再报错。
+
 ## 2026-10-15 — Word 0.7.3 · PowerPoint 0.3.1 · Excel 0.1.1 · Long-passage diff and Clear target
 
 - The Office add-ins use the same comparison as LLM_in_Overleaf 0.9.2: sentence by sentence, then word by word (Chinese character by character), with long unchanged stretches folded and the number of changes in the card title. Long passages in Word and long text boxes in PowerPoint no longer show as one deletion plus one insertion, and writing back keeps formatting word by word.

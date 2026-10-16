@@ -15,3 +15,12 @@ test('explanations follow the instruction language, falling back to the interfac
   }
   assert.match(buildPrompt({ mode: 'ask', uiLanguage: 'en', doc, messages: [{ role: 'user', content: 'Summarize' }] }), /使用用户本轮提问所用的语言回答；难以判断时使用英文/);
 });
+
+test('targets with citation fields ask the model to keep the citations exactly', () => {
+  const withFields = { ...doc, targets: [{ k: 1, text: 'Adoption grew (1).', kind: 'text', fields: 1 }, { k: 2, text: 'Grids were weak (2)(3).', kind: 'text', fields: 2 }] };
+  for (const p of [buildPrompt({ mode: 'edit', uiLanguage: 'zh-CN', doc: withFields, messages: [{ role: 'user', content: '润色' }] }), buildTurnPrompt({ mode: 'edit', uiLanguage: 'zh-CN', doc: withFields, instruction: '润色' })]) {
+    assert.match(p, /【文献引用】选中内容里有 3 处文献引用/);
+  }
+  assert.doesNotMatch(buildPrompt({ mode: 'edit', uiLanguage: 'zh-CN', doc, messages: [{ role: 'user', content: '润色' }] }), /【文献引用】/);
+  assert.doesNotMatch(buildPrompt({ mode: 'ask', uiLanguage: 'zh-CN', doc: withFields, messages: [{ role: 'user', content: '总结' }] }), /【文献引用】/);
+});
