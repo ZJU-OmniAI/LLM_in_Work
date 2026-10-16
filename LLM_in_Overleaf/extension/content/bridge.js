@@ -214,7 +214,22 @@
       if (!v) return { ok: false, error: NO_EDITOR() };
       const found = resolveRanges(v, edits, fileName);
       if (found.some((r) => typeof r.newText !== 'string')) return { ok: false, error: L('替换内容不完整。', 'The replacement is incomplete.') };
-      const changes = found.map((r) => ({ from: r.from, to: r.to, insert: r.newText }));
+      // 有 parts（旧文本里的 { at, del, ins }）且拼起来正好是新文本，就只改这些片段；否则整段替换
+      const changes = found.flatMap((r) => {
+        if (Array.isArray(r.parts) && !r.parts.length && r.text === r.newText) return [];
+        if (Array.isArray(r.parts) && r.parts.length) {
+          let s = r.text, ok = true, prev = 0;
+          for (const p of r.parts) {
+            if (!p || !Number.isInteger(p.at) || !Number.isInteger(p.del) || typeof p.ins !== 'string' || p.at < prev || p.at + p.del > r.text.length) { ok = false; break; }
+            prev = p.at + p.del;
+          }
+          if (ok) {
+            for (const p of [...r.parts].reverse()) s = s.slice(0, p.at) + p.ins + s.slice(p.at + p.del);
+            if (s === r.newText) return r.parts.map((p) => ({ from: r.from + p.at, to: r.from + p.at + p.del, insert: p.ins }));
+          }
+        }
+        return [{ from: r.from, to: r.to, insert: r.newText }];
+      });
       const shift = found.slice(0, -1).reduce((n, r) => n + r.newText.length - (r.to - r.from), 0);
       const last = found.at(-1);
       v.dispatch({ changes, selection: { anchor: last.from + shift + last.newText.length }, scrollIntoView: true, userEvent: 'input' });

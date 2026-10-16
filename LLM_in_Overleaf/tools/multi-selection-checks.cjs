@@ -173,9 +173,24 @@ module.exports = async (page, outputDir, expect) => {
   await page.locator('#ole-panel').screenshot({ path: path.join(outputDir, 'long-passage-diff.png') });
   await longCard.locator('.ole-fold').first().click();
   assert.equal(await longCard.locator('.ole-diffview').evaluate((el) => el.textContent.includes('In experiment 70,')), true);
+  // Only the two changed words reach the editor, so the rest of the passage is not rewritten (Overleaf track changes
+  // marks just these words).
+  await page.evaluate(() => { const orig = editor.dispatch.bind(editor); window.dispatched = []; editor.dispatch = (...a) => { window.dispatched.push(a[0]); return orig(...a); }; });
   await longCard.locator('.ole-apply').click();
   await page.waitForFunction((text) => editor.state.doc.toString().includes(text), longNew);
   assert.equal(await page.evaluate(() => editor.state.doc.toString()), `\\section{Results}\n${longNew}\n`);
+  assert.deepEqual(await page.evaluate(() => window.dispatched.filter((d) => d.changes).map((d) => d.changes.map((c) => c.insert))), [['has', 'than']]);
+  await page.evaluate(() => { delete editor.dispatch; });
+
+  // A rewrite that drops a citation key is flagged on the card.
+  const citeOld = 'Deep models \\cite{lecun2015,goodfellow2016} work well.';
+  await page.evaluate((text) => resetEditor(`\\section{Intro}\n${text}\n`), citeOld);
+  await capture([{ from: '\\section{Intro}\n'.length, to: '\\section{Intro}\n'.length + citeOld.length }], 1);
+  await send('精简');
+  await reply('```latex\nDeep models \\cite{lecun2015} work well.\n```');
+  const citeCard = page.locator('.ole-card').last();
+  assert.match(await citeCard.locator('.ole-keys').innerText(), /(去掉了|removed) goodfellow2016/);
+  assert.equal(await citeCard.locator('.ole-apply').isDisabled(), false, 'adding or removing citations can be intended, so it is only a warning');
 
   // Large documents include each distant selected range in the context excerpt.
   const longDoc = 'First selected.\n' + 'Unselected gap.\n'.repeat(1000) + '\nLast selected.';

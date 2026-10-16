@@ -12,7 +12,7 @@
 
 | 文件 | 用途 |
 | --- | --- |
-| `LLM_in_Overleaf-0.9.2-chrome.zip` | 上传 Overleaf 的 Chrome 商店条目 |
+| `LLM_in_Overleaf-0.9.3-chrome.zip` | 上传 Overleaf 的 Chrome 商店条目 |
 | `LLM_in_PDF-0.9.2-chrome.zip` | 上传 PDF 的 Chrome 商店条目 |
 | `*-companion.zip` | 给用户下载的本机桥及完整运行源码；不要上传到商店的扩展包栏 |
 | `package-report.json`、`SHA256SUMS.txt` | 包内容、权限、资源引用及 SHA-256 校验 |

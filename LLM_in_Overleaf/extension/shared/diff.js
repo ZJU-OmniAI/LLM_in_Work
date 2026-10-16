@@ -87,8 +87,9 @@
     return out;
   }
 
-  // 夹在两处改动之间的很短的相同片段（空白、一两个字）并进改动，读起来是整句/整词的替换，而不是碎片。
-  function tidy(ops) {
+  // 每段连续的改动整理成「先删后增」。absorb 为真时，夹在两处改动之间的很短的相同片段（空白、一两个字）
+  // 也并进改动，读起来是整句/整词的替换而不是碎片——只用于预览，写回编辑器用精确的序列。
+  function tidy(ops, absorb = true) {
     const out = [];
     let del = '', ins = '', open = false;
     const flush = () => {
@@ -100,14 +101,14 @@
       const [t, x] = ops[i];
       if (t === '-') { del += x; open = true; }
       else if (t === '+') { ins += x; open = true; }
-      else if (open && i + 1 < ops.length && (/^\s+$/.test(x) || x.trim().length <= 2) && !/\n/.test(x)) { del += x; ins += x; }
+      else if (absorb && open && i + 1 < ops.length && (/^\s+$/.test(x) || x.trim().length <= 2) && !/\n/.test(x)) { del += x; ins += x; }
       else { flush(); out.push(['=', x]); }
     }
     flush();
     return out;
   }
 
-  function diff(oldText, newText) {
+  function raw(oldText, newText) {
     if (oldText === newText) return oldText ? [['=', oldText]] : [];
     const coarse = seqDiff(units(oldText), units(newText), UNIT_EDITS) || [['-', oldText], ['+', newText]];
     const out = [];
@@ -125,7 +126,23 @@
       i--;
       for (const [t, x] of changedBlock(del, ins)) push(t, x);
     }
-    return tidy(out);
+    return out;
+  }
+  const diff = (oldText, newText) => tidy(raw(oldText, newText));
+
+  // 写回用：旧文本里第 at 个字起删 del 个字、插入 ins，按位置排好、互不重叠。
+  function edits(oldText, newText) {
+    const out = [];
+    let at = 0;
+    for (const [t, x] of tidy(raw(oldText, newText), false)) {
+      if (t === '=') { at += x.length; continue; }
+      const last = out[out.length - 1];
+      if (last && last.at + last.del === at) {
+        if (t === '-') last.del += x.length; else last.ins += x;
+      } else out.push(t === '-' ? { at, del: x.length, ins: '' } : { at, del: 0, ins: x });
+      if (t === '-') at += x.length;
+    }
+    return out;
   }
 
   // 一块改动：先整块按词比；改得太多时，若前后句数相同（逐句润色常见），就逐句按词比；否则整块删/增。
@@ -141,5 +158,17 @@
   // 改动处数：连续的删/增算一处。
   const changeCount = (ops) => ops.filter(([t], i) => t !== '=' && (i === 0 || ops[i - 1][0] === '=')).length;
 
-  globalThis.LLMOverleafDiff = { diff, changeCount, units, tokens };
+  // LaTeX 引用和交叉引用的键名（\cite{a,b}、\ref{x}、\label{y} 等），用来提醒改写动了它们
+  const KEY_RE = /\\(?:[A-Za-z]*cite[A-Za-z]*|ref|eqref|autoref|cref|Cref|pageref|nameref|vref|label)\*?(?:\[[^\]]*\]){0,2}\{([^}]*)\}/g;
+  function citeKeys(s) {
+    const keys = new Set();
+    for (const m of String(s).matchAll(KEY_RE)) for (const k of m[1].split(',')) if (k.trim()) keys.add(k.trim());
+    return keys;
+  }
+  function keyChanges(oldText, newText) {
+    const a = citeKeys(oldText), b = citeKeys(newText);
+    return { removed: [...a].filter((k) => !b.has(k)), added: [...b].filter((k) => !a.has(k)) };
+  }
+
+  globalThis.LLMOverleafDiff = { diff, edits, changeCount, units, tokens, keyChanges };
 })();

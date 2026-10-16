@@ -37,7 +37,7 @@ Works on `overleaf.com` and `cn.overleaf.com` in the **Code Editor** (not the Vi
 
 ![A separate diff for each of two LaTeX selections](docs/images/overleaf-diff.jpg)
 
-**3. Apply them together.** The extension checks the original text, writes both passages into the editor, and confirms. One undo reverts the whole group.
+**3. Apply them together.** The extension checks the original text, writes only the changed words of both passages into the editor, and confirms. One undo reverts the whole group. If a reply adds or removes `\cite`, `\ref` or `\label` keys, the card lists them first.
 
 ![The editor after applying both passages](docs/images/overleaf-applied.jpg)
 
