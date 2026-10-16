@@ -143,6 +143,16 @@ section('Word 折行的英文段落：格式照样保留');
   check('中文段落照旧', T.buildFormattedReplacement(cn, '这个方法在实验中表现的很好。', '这个方法在实验中表现得很好。') != null);
 }
 
+// ---------- 10c) 选区跨表格：段落按表格嵌套层级分组 ----------
+section('选区跨表格时的分组 segmentsOf');
+{
+  const g = (levels) => JSON.stringify(T.segmentsOf(levels).map((s) => [s.kind, s.first, s.last]));
+  check('正文-表格-正文', g([0, 0, 1, 1, 1, 0]) === '[["text",0,1],["table",2,4],["text",5,5]]', g([0, 0, 1, 1, 1, 0]));
+  check('从表格里开始', g([1, 2, 1, 0, 0]) === '[["table",0,2],["text",3,4]]', g([1, 2, 1, 0, 0]));
+  check('两张表中间隔一段', g([0, 1, 0, 1]) === '[["text",0,0],["table",1,1],["text",2,2],["table",3,3]]', g([0, 1, 0, 1]));
+  check('没有表格', g([0, 0, 0]) === '[["text",0,2]]', g([0, 0, 0]));
+}
+
 // ---------- 11) diffOps 基本性质：拼回原串 ----------
 section('diffOps 自洽');
 {

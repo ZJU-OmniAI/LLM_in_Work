@@ -1,5 +1,14 @@
 # 更新记录
 
+## 0.7.4 — 2026-10-16
+
+- **Documents with Zotero, EndNote or other citation fields are no longer truncated.** Word's reviewed-text API returns each field's code together with its result, so every Zotero citation added about a thousand characters of JSON to what the pane read. A manuscript with 52,000 characters of text and 50 citations read as roughly 190,000 characters, went over the 110,000-character limit and was cut. The pane now drops field codes and keeps what the citation shows, such as *(12)*.
+- **Applying a rewrite keeps citations.** The pane used to replace the whole passage. With citation fields inside, that path wrote the field code JSON into the document as visible text and the citations stopped being fields. Applying now locates each changed word with Word's search and changes only those words, so citations, comments and formatting in the rest of the passage stay as they are. With track changes on, only the changed words are marked. If a change cannot be located exactly, nothing is written in a passage with citations. Passages without fields fall back to the previous whole-passage replacement.
+- A reply that changes, removes or moves a citation can't be applied; the card says so. When the targets contain citations, the prompt asks the model to keep them exactly.
+- **A selection that includes tables is split instead of refused.** Body text and each table become separate targets in document order. Previously the pane said "Add tables separately". Tables are added whole; remove one from the target list to leave it alone.
+
+中文摘要：带 Zotero、EndNote 等文献引用的文档不再被截断：Word 读文字的接口会把每条引用背后约一千字的域代码一起读出来，5.2 万字正文加 50 条引用会变成约 19 万字、超过 11 万字的上限。现在只保留引用显示的文字（如「(12)」）。应用改写时不再整段替换（那样会把域代码当成正文写进文档、引用也不再是域），而是用 Word 搜索找到每个改动的词、只改这些词，引用、批注和其余格式原样不动；开着修订时只标出改动的词；定位不准时，带引用的段落一个字都不写。模型改动、删除或挪动引用的回复不能一键应用，卡片上会说明；有引用时提示词要求模型原样保留。选区里带表格时不再报错，而是按文档顺序拆成正文和表格各自的目标（表格整张加入，不想改可以在目标列表里 ✕ 掉）。更新：在仓库目录运行 `npm run update`，然后在侧栏点 ⟳。
+
 ## 0.7.3 — 2026-10-15
 
 - **Long passages get a precise preview.** The comparison now works sentence by sentence and then word by word (Chinese character by character), using the same method as LLM_in_Overleaf 0.9.2. Previously, once the changed part was longer than roughly 1,400 words or Chinese characters, the preview gave up and showed the whole passage as deleted and re-inserted. Long unchanged stretches are folded (click to show them), and the card title says how many places changed.

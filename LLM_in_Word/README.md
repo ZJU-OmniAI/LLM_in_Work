@@ -48,7 +48,7 @@ The top of the pane is a single row: the mode (**Rewrite ▾**), a summary of yo
 
 ![A diff for one of two targets in the side pane](docs/images/word-diff.jpg)
 
-**3. Apply as tracked changes.** Click **Apply** on a card or **Apply all**. The edits go into Word as tracked changes; accept or reject each one in the **Review** tab. When a passage contains structures that cannot be mapped cell by cell or run by run, the pane says it used the plain-text fallback, so you know to check the formatting.
+**3. Apply as tracked changes.** Click **Apply** on a card or **Apply all**. The edits go into Word as tracked changes; accept or reject each one in the **Review** tab. Only the changed words are written, so Zotero or EndNote citations, comments and formatting in the rest of the passage stay as they are; a reply that changes a citation can't be applied. When a change can't be located exactly in a passage without citations, the pane replaces the passage and says if it had to use plain text, so you know to check the formatting.
 
 ![Applied edits as tracked changes, with Word's Review tab](docs/images/word-tracked-changes.jpg)
 
@@ -234,7 +234,7 @@ See [architecture](docs/architecture.md), [contributing](CONTRIBUTING.md) and th
 
 ## Limitations
 
-- Formatting preservation is best effort. Complex structures, images and unsupported HTML can fall back to plain-text replacement; review formatting before accepting edits.
+- Formatting preservation is best effort. Changed words take the formatting of the text they replace. When a passage without citations is replaced as a whole, complex structures, images and unsupported HTML can fall back to plain text; review formatting before accepting edits.
 - The model can make mistakes. Check facts, formulas, tables and citations yourself.
 - Word's API support and organization policy vary. Windows desktop support is implemented, but interactive Windows Word acceptance testing is still outstanding.
 - This is a local single-user tool, not a server for shared network or internet deployment.

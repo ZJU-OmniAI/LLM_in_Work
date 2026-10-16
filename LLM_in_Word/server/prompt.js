@@ -38,6 +38,12 @@ const EDIT_SYSTEM_MULTI = (n) => `你是嵌入 Microsoft Word 的写作助手。
    - 没必要改动的词句请逐字保留原样：系统会逐字对比迁移格式，改动越少格式保留越完整。
 4. 如果指令无法执行，就不要输出围栏，直接说明原因（语言见【回复语言】）。`;
 
+// 选中内容里有文献引用域（Zotero、EndNote 等插入的）时附加：写回只改变化的文字，改到引用的回复写不回去
+function citationRule(targets) {
+  const n = targets.reduce((sum, t) => sum + (Number(t.fields) > 0 ? Number(t.fields) : 0), 0);
+  return n ? `\n【文献引用】选中内容里有 ${n} 处文献引用（如 (1)、[12]、(Smith et al., 2020) 这类标注），是 Zotero 等文献管理软件插入的引用域。替换文本里请把它们逐字原样保留，不要改写、删除、合并或调换位置；调整句子时让每个引用仍跟在原来那句话里。改动了引用的回复没法写回文档。` : '';
+}
+
 // 表格协议（edit 模式统一附加）：表格目标用 ```table 围栏放 Markdown 表格
 const TABLE_RULES = `
 【表格目标】标注为"表格"的目标，其当前内容以 Markdown 表格给出（第一行为表头行，第二行是 |---| 分隔线）。要修改它时：
@@ -113,6 +119,7 @@ export function buildTurnPrompt({ mode, backend = 'claude', uiLanguage = 'zh-CN'
     }
   }
   pushBinFilesSection(parts, files, backend);
+  if (isEdit && citationRule(targets)) parts.push(citationRule(targets));
   parts.push(`\n用户本轮的指令：\n${instruction}`);
   const hasTable = targets.some((t) => t.kind === 'table');
   parts.push(isEdit
@@ -182,6 +189,8 @@ export function buildPrompt({ mode, backend = 'claude', uiLanguage = 'zh-CN', do
     }
     parts.push('==== 选中内容结束 ====');
   }
+
+  if (isEdit && citationRule(targets)) parts.push(citationRule(targets));
 
   // 用户附加的文本文件（本地 txt/md/csv 参考材料）
   if (Array.isArray(doc.extraFiles) && doc.extraFiles.length) {

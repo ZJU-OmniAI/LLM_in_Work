@@ -480,14 +480,23 @@
     });
   }
   // 读一段 Range 的文本：有 WordApi 1.4 就用 getReviewedText('Current')
-  // （= 假设所有修订都被接受后的样子，避免把待接受的删除线文字读进来），否则退回 .text
+  // （= 假设所有修订都被接受后的样子，避免把待接受的删除线文字读进来），否则退回 .text。
+  // getReviewedText 会连域代码一起读出来（Zotero 每条引用背后是上千字的 JSON），这里去掉代码、只留引用显示的文字。
   function queueText(range) {
+    const info = queueTextInfo(range);
+    return () => info().text;
+  }
+  // 同上，另外给出各个域（引用等）的显示文字在 text 里的位置 [起, 止)
+  function queueTextInfo(range) {
     if (state.has14) {
       const r = range.getReviewedText('Current');
-      return () => r.value;
+      return () => {
+        const { text, fields } = window.WordEdits.stripFields(String(r.value == null ? '' : r.value).replace(/\r\n/g, '\r'));
+        return { text: normNL(text), fields };
+      };
     }
     range.load('text');
-    return () => range.text;
+    return () => ({ text: normNL(range.text), fields: [] });
   }
   function getTargetCC(ctx) {
     const ccs = ctx.document.contentControls.getByTag(TAG);
@@ -525,7 +534,7 @@
         const whole = cc.getRange('Content');
         const tabs = whole.tables;
         tabs.load('items');
-        return { id: cc.id, get: queueText(whole), tabs };
+        return { id: cc.id, get: queueTextInfo(whole), tabs };
       });
       await ctx.sync();
       for (const e of entries) {
@@ -540,7 +549,8 @@
             const vals = e.table.values || [];
             return { id: e.id, kind: 'table', values: vals, text: TableUtils.toMarkdown(vals) };
           }
-          return { id: e.id, kind: 'text', values: null, text: normNL(e.get()) };
+          const info = e.get();
+          return { id: e.id, kind: 'text', values: null, text: info.text, fields: info.fields };
         }),
       };
     });
@@ -548,7 +558,7 @@
       const oldById = new Map(state.targets.map((t) => [t.ccId, t]));
       state.targets = r.list
         .filter((t) => t.text.trim())
-        .map((t) => ({ ccId: t.id, kind: t.kind, values: t.values, text: t.text, applied: oldById.get(t.id)?.applied || false }));
+        .map((t) => ({ ccId: t.id, kind: t.kind, values: t.values, text: t.text, fields: t.fields || [], applied: oldById.get(t.id)?.applied || false }));
       state.docChars = r.docChars;
       renderTargetBar();
     } else if (!quiet) {
@@ -559,66 +569,122 @@
 
   // 🎯 把当前选中添加为一个目标段（可多次，多段分散）。
   // 表格支持：光标/选区在表格里 → 整张表作为一个"表格目标"（内容按 Markdown 表格喂给模型）。
+  // 段落的表格嵌套层级 → 连续的正文段落、连续的表格段落各成一组：[{ kind: 'text'|'table', first, last }]（下标）
+  function segmentsOf(levels) {
+    const out = [];
+    levels.forEach((lv, i) => {
+      const kind = lv > 0 ? 'table' : 'text';
+      const last = out[out.length - 1];
+      if (last && last.kind === kind) last.last = i;
+      else out.push({ kind, first: i, last: i });
+    });
+    return out;
+  }
+  // 选区跨表格时拆开：连续的正文段落合成一个文字目标（裁到选区以内），每张表格（最外层那张）整张一个目标。
+  // 返回 [{ range, isTable, rows, cols }] 和跳过的表格说明。
+  async function splitSelection(ctx, sel, paras) {
+    const segs = segmentsOf(paras.items.map((p) => p.tableNestingLevel)).map((g) => ({ kind: g.kind, first: paras.items[g.first], last: paras.items[g.last] }));
+    for (const sg of segs) {
+      if (sg.kind === 'text') {
+        sg.range = sg.first.getRange('Whole').expandTo(sg.last.getRange('Whole')).intersectWithOrNullObject(sel);
+        sg.range.load('isNullObject');
+      } else {
+        sg.table = sg.first.parentTableOrNullObject;
+        sg.table.load('isNullObject,nestingLevel');
+      }
+    }
+    await ctx.sync();
+    for (const sg of segs) {
+      while (sg.table && !sg.table.isNullObject && sg.table.nestingLevel > 1) { // 嵌套表格 → 取最外层
+        sg.table = sg.table.parentTableOrNullObject;
+        sg.table.load('isNullObject,nestingLevel');
+        await ctx.sync();
+      }
+      if (sg.kind === 'text' && !sg.range.isNullObject) sg.get = queueText(sg.range);
+      if (sg.table && !sg.table.isNullObject) sg.table.load('values');
+    }
+    await ctx.sync();
+    const pieces = [], skipped = [];
+    for (const sg of segs) {
+      if (sg.kind === 'text') {
+        if (sg.get && normNL(sg.get()).trim()) pieces.push({ range: sg.range, isTable: false });
+        continue;
+      }
+      if (!sg.table || sg.table.isNullObject) continue;
+      const values = sg.table.values || [];
+      const cols = values[0] ? values[0].length : 0;
+      if (!values.length || !cols || values.some((row) => row.length !== cols)) { skipped.push(values.length); continue; }
+      pieces.push({ range: sg.table.getRange('Whole'), isTable: true, rows: values.length, cols });
+    }
+    return { pieces, skipped: skipped.length };
+  }
+
   async function addTarget() {
-    if (state.targets.length >= MAX_TARGETS) { addNote(tr`⚠️ 目标最多 ${MAX_TARGETS} 段`); return; }
+    const free = MAX_TARGETS - state.targets.length;
+    if (free <= 0) { addNote(tr`⚠️ 目标最多 ${MAX_TARGETS} 段`); return; }
     const r = await wordRun(async (ctx) => {
       const sel = ctx.document.getSelection();
       const getSel = queueText(sel);
       const pt = sel.parentTableOrNullObject;
       pt.load('isNullObject');
-      const selTabs = sel.tables;
-      selTabs.load('items');
+      const paras = sel.paragraphs;
+      paras.load('items/tableNestingLevel');
       const ccs = getTargetCC(ctx);
       const parked = getParkedCC(ctx);
       await ctx.sync();
 
-      let targetRange = sel;
-      let isTable = false, rows = 0, cols = 0;
+      let pieces, skipped = 0, split = false;
       if (!pt.isNullObject) {
         // 在表格里 → 整张表作为目标
         pt.load('values');
         await ctx.sync();
         const values = pt.values || [];
-        cols = values[0] ? values[0].length : 0;
-        rows = values.length;
+        const cols = values[0] ? values[0].length : 0;
+        const rows = values.length;
         if (!rows || !cols) return { ok: false, error: tr('这张表格读不到内容') };
         if (values.some((row) => row.length !== cols)) {
           return { ok: false, error: tr('这张表格含合并单元格，暂不支持作为目标（可先取消合并）') };
         }
-        targetRange = pt.getRange('Whole');
-        isTable = true;
+        pieces = [{ range: pt.getRange('Whole'), isTable: true, rows, cols }];
       } else {
         const text = normNL(getSel());
         if (!text.trim()) return { ok: false, error: 'empty' };
-        if (selTabs.items.length) {
-          return { ok: false, error: tr('选区里混着表格：表格请单独添加（点表格内任意位置再点「＋ 添加选中」），正文和表格分开作为目标') };
+        if (paras.items.some((p) => p.tableNestingLevel > 0)) {
+          // 选区里有表格：正文和表格拆成各自的目标
+          ({ pieces, skipped } = await splitSelection(ctx, sel, paras));
+          split = true;
+          if (!pieces.length) return { ok: false, error: tr('这张表格含合并单元格，暂不支持作为目标（可先取消合并）') };
+          if (pieces.length > free) {
+            return { ok: false, error: tr`这段选区含表格，拆开后是 ${pieces.length} 个目标（正文和每张表格各一个），超过剩余的 ${free} 个名额（最多 ${MAX_TARGETS} 个）。请缩小选区，或先清除一些目标` };
+          }
+        } else {
+          pieces = [{ range: sel, isTable: false }];
         }
       }
+      const apart = (v) => ['Before', 'After', 'AdjacentBefore', 'AdjacentAfter', 'Unrelated'].includes(v);
       // 和已有目标重叠的选区不收（嵌套锚点会乱）
       if (ccs.items.length) {
-        const rels = ccs.items.map((cc) => targetRange.compareLocationWith(cc.getRange('Whole')));
+        const rels = pieces.flatMap((pc) => ccs.items.map((cc) => pc.range.compareLocationWith(cc.getRange('Whole'))));
         await ctx.sync();
-        for (const rel of rels) {
-          const v = rel.value;
-          if (v !== 'Before' && v !== 'After' && v !== 'AdjacentBefore' && v !== 'AdjacentAfter' && v !== 'Unrelated') {
-            return { ok: false, error: tr('这段选区和已有目标重叠，先 ✕ 掉那个目标，或换一段') };
-          }
-        }
+        if (rels.some((rel) => !apart(rel.value))) return { ok: false, error: tr('这段选区和已有目标重叠，先 ✕ 掉那个目标，或换一段') };
       }
       // 和停用锚点重叠：那张旧卡片的这段已被重新选中，解除它的锚点（旧卡片应用时会提示找不到）
       if (parked.items.length) {
-        const rels = parked.items.map((cc) => targetRange.compareLocationWith(cc.getRange('Whole')));
+        const rels = parked.items.map((cc) => pieces.map((pc) => pc.range.compareLocationWith(cc.getRange('Whole'))));
         await ctx.sync();
         parked.items.forEach((cc, i) => {
-          if (!['Before', 'After', 'AdjacentBefore', 'AdjacentAfter', 'Unrelated'].includes(rels[i].value)) { cc.delete(true); liveCards.delete(cc.id); }
+          if (rels[i].some((rel) => !apart(rel.value))) { cc.delete(true); liveCards.delete(cc.id); }
         });
       }
-      const cc = targetRange.insertContentControl();
-      cc.tag = TAG;
-      cc.title = tr('LLM_in_Word 改写目标');
-      cc.appearance = 'Hidden';
+      for (const pc of pieces) {
+        const cc = pc.range.insertContentControl();
+        cc.tag = TAG;
+        cc.title = tr('LLM_in_Word 改写目标');
+        cc.appearance = 'Hidden';
+      }
       await ctx.sync();
-      return { ok: true, isTable, rows, cols };
+      const tables = pieces.filter((pc) => pc.isTable);
+      return { ok: true, split, skipped, texts: pieces.length - tables.length, tables: tables.length, rows: tables[0]?.rows, cols: tables[0]?.cols };
     });
     if (!r.ok) {
       if (r.error === 'empty') addNote(tr('⚠️ 文档里还没有选中内容。先在正文里<b>拖选一段文字</b>（或点进表格）再点「＋ 添加选中」。'));
@@ -627,9 +693,14 @@
     }
     await refreshTargets();
     const n = state.targets.length;
-    addNote(r.isTable
-      ? tr`📊 已把整张表格（${r.rows}×${r.cols}）添加为目标（当前共 ${n} 段）。可以下指令改单元格内容、增删行等。`
-      : tr`🎯 已添加目标（当前共 ${n} 段${n > 1 ? tr('，按文档顺序编号') : ''}）。可继续选中别处再点「＋ 添加选中」，或直接下指令。`);
+    if (r.split) {
+      addNote(tr`🎯 选区里有表格，已拆成 ${r.texts + r.tables} 个目标：正文 ${r.texts} 段、表格 ${r.tables} 张（当前共 ${n} 段，按文档顺序编号）。表格按整张处理；不想让它改表格，可以在设置的目标列表里 ✕ 掉那张表。` +
+        (r.skipped ? tr` ⚠️ 另有 ${r.skipped} 张表格含合并单元格，没有加入。` : ''));
+    } else {
+      addNote(r.tables
+        ? tr`📊 已把整张表格（${r.rows}×${r.cols}）添加为目标（当前共 ${n} 段）。可以下指令改单元格内容、增删行等。`
+        : tr`🎯 已添加目标（当前共 ${n} 段${n > 1 ? tr('，按文档顺序编号') : ''}）。可继续选中别处再点「＋ 添加选中」，或直接下指令。`);
+    }
     els.input.focus();
   }
 
@@ -719,7 +790,7 @@
       for (const cc of ccs.items) {
         const whole = cc.getRange('Whole');
         gaps.push(queueText(prevEnd.expandTo(whole.getRange('Start'))));
-        tgts.push(queueText(cc.getRange('Content')));
+        tgts.push(queueTextInfo(cc.getRange('Content')));
         const tabs = whole.tables;
         tabs.load('items');
         tabsList.push(tabs);
@@ -732,11 +803,13 @@
       await ctx.sync();
       const kinds = tableObjs.map((t) => (t ? 'table' : 'text'));
       const valuesList = tableObjs.map((t) => (t ? (t.values || []) : null));
-      const targetTexts = tgts.map((g, i) => (kinds[i] === 'table' ? TableUtils.toMarkdown(valuesList[i]) : normNL(g())));
+      const infos = tgts.map((g) => g());
+      const targetTexts = infos.map((x, i) => (kinds[i] === 'table' ? TableUtils.toMarkdown(valuesList[i]) : x.text));
+      const targetFields = infos.map((x, i) => (kinds[i] === 'table' ? [] : x.fields));
       if (targetTexts.every((t) => !t.trim())) return { ok: false, error: tr('目标段现在都是空的，请重新选中并添加目标') };
       const gapTexts = gaps.map((g) => normNL(g()));
       const ids = ccs.items.map((cc) => cc.id);
-      return { ok: true, ids, targetTexts, kinds, valuesList, ...markFullText(gapTexts, targetTexts) };
+      return { ok: true, ids, targetTexts, targetFields, kinds, valuesList, ...markFullText(gapTexts, targetTexts) };
     });
   }
   function markFullText(gaps, targets) {
@@ -779,6 +852,39 @@
     });
   }
 
+  // 按 WordEdits.plan 的步骤在 range 里逐处改：先把每一处都在 Word 里搜到（必须正好一处），全部找到才动手，
+  // 从后往前写。找不全就一个字都不写，返回 false。
+  async function applySteps(ctx, range, steps) {
+    const opts = { matchCase: true };
+    const esc = window.WordEdits.escapeSearch;
+    const found = steps.map((st) => {
+      const keys = st.mode === 'Span' ? [st.head, st.tail] : st.window ? [st.window] : [];
+      return keys.map((k) => { const r = range.search(esc(k), opts); r.load('items'); return r; });
+    });
+    await ctx.sync();
+    if (found.some((rs) => rs.some((r) => r.items.length !== 1))) return false;
+    const parts = steps.map((st, i) => {
+      if (!st.part) return null;
+      const r = found[i][0].items[0].search(esc(st.part), opts);
+      r.load('items');
+      return r;
+    });
+    await ctx.sync();
+    const at = steps.map((st, i) => (st.mode === 'Span' ? found[i][0].items[0].expandTo(found[i][1].items[0])
+      : st.mode === 'Start' || st.mode === 'End' ? range
+        : parts[i].items[st.index] || null));
+    if (at.some((r) => !r)) return false;
+    for (let i = steps.length - 1; i >= 0; i--) {
+      const st = steps[i], ins = toWordText(st.ins);
+      if (st.mode === 'After' || st.mode === 'Start' || st.mode === 'End') at[i].insertText(ins, st.mode);
+      else if (st.mode === 'Before') at[i].insertText(ins, 'Before');
+      else if (ins) at[i].insertText(ins, 'Replace');
+      else at[i].delete();
+    }
+    await ctx.sync();
+    return true;
+  }
+
   // ✅ 应用替换：写回指定目标的内容控件；开着"以修订写入"就临时打开 Word 修订。
   // 文本目标：先尝试"保格式替换"（HTML 逐字格式迁移），构造不出来就退回纯文本。
   // 表格（opts.tableVals = 新值矩阵）：
@@ -798,6 +904,7 @@
       const ccTabs = cc.getRange('Whole').tables;
       ccTabs.load('items');
       const g = queueText(cc.getRange('Content'));
+      const graw = state.has14 ? cc.getRange('Content').getReviewedText('Current') : null; // 含域代码，逐处定位用
       const gh = cc.getRange('Content').getHtml();
       await ctx.sync();
       const table = ccTabs.items.length ? ccTabs.items[0] : null;
@@ -907,10 +1014,32 @@
         return { ok: true, tracked: trackedFlag, table: 'insert' };
       }
 
-      // —— 文本目标 + 文本输出（原有路径：保格式替换 → 纯文本兜底）——
+      // —— 文本目标 + 文本输出：先逐处只改变化的文字（引用域、批注、格式都不动）；
+      //    定位不了再走整段保格式替换 → 纯文本兜底。段落里有引用域时不走整段替换，那会把引用变成普通文字。——
       const curText = normNL(g());
       if (!force && tk && normNL(tk.text) !== curText) {
         return { ok: false, needConfirm: true };
+      }
+      const pl = graw ? window.WordEdits.plan(graw.value, newText) : null;
+      if (pl && !pl.ok && pl.reason === 'fields') {
+        return { ok: false, error: tr`这次改写改动了 ${pl.touched} 处文献引用（Zotero 等插入的引用域）。为免把引用变成普通文字，没有写入。可以让模型保留引用原样后重试，或复制后手动修改` };
+      }
+      if (pl && pl.ok) {
+        if (!pl.steps.length) { cc.delete(true); await ctx.sync(); return { ok: true, unchanged: true }; }
+        await trackOn();
+        if (await applySteps(ctx, cc.getRange('Content'), pl.steps)) {
+          if (trackTemp) { doc.changeTrackingMode = 'Off'; }
+          const back = queueText(cc.getRange('Content'));
+          await ctx.sync();
+          const verified = back().replace(/\n+$/, '') === pl.newText;
+          cc.delete(true);
+          await ctx.sync();
+          return { ok: true, tracked: trackedFlag, minimal: pl.steps.length, verified };
+        }
+        if (trackTemp) { doc.changeTrackingMode = 'Off'; await ctx.sync(); }
+      }
+      if (pl && pl.fields) {
+        return { ok: false, error: tr`这段里有 ${pl.fields} 处文献引用（Zotero 等插入的引用域），没能在文档里逐处找准要改的位置；为免把引用变成普通文字，没有写入。可以缩小目标后重试，或复制后手动修改` };
       }
       let html = null;
       try {
@@ -1255,12 +1384,22 @@
     const applyBtn = card.querySelector('.apply');
     const retryBtn = card.querySelector('.retry');
     if (tk && tk.kind === 'table' && !tableVals) applyBtn.disabled = true; // 表格目标没解析出表格 → 不能应用
+    // 改到了文献引用（Zotero 等插入的域）：写进去引用就成了普通文字，不让一键应用
+    const touched = tk && !tableVals && tk.fields && tk.fields.length ? window.WordEdits.touchedFields(tk.text, replacement, tk.fields) : 0;
+    if (touched) {
+      applyBtn.disabled = true;
+      const w = document.createElement('div');
+      w.className = 'warnbox';
+      w.textContent = tr`⚠️ 这次改写改动了 ${touched} 处文献引用（Zotero 等插入的引用域）。直接写入会把引用变成普通文字，所以不能一键应用。可以让模型保留引用原样后重试，或复制后手动修改。`;
+      card.insertBefore(w, card.querySelector('.card-actions'));
+    }
     let done = false;
     let forceNext = false; // 二次点击确认覆盖（Word 的 WebView 会吞 window.confirm，不能用弹窗）
     const doApply = async () => {
       if (state.streaming || done) return done;
       if (!tk) { statusEl.textContent = tr('⚠️ 没有对应目标，无法应用'); return false; }
       if (tk.kind === 'table' && !tableVals) { statusEl.textContent = tr('⚠️ 未解析出表格，无法应用'); return false; }
+      if (touched) { statusEl.textContent = tr('⚠️ 这次改写改动了文献引用，不能一键应用'); return false; }
       applyBtn.disabled = true;
       statusEl.textContent = tr('应用中…');
       const opts = tableVals ? { tableVals, expect: tk.text } : { expect: tk.text };
@@ -1278,13 +1417,19 @@
         if (retryBtn) retryBtn.disabled = true;
         state.targets = state.targets.filter((t) => t.ccId !== tk.ccId); // 应用成功 → 该目标自动移除
         renderTargetBar();
-        const fmt = r.table === 'cells' ? tr('（按单元格级更新，表格样式保留）')
+        if (r.unchanged) {
+          statusEl.textContent = tr('内容与文档现状一致，没有需要写入的改动。');
+          return true;
+        }
+        const fmt = r.minimal ? tr`（只改了 ${r.minimal} 处变化的文字，其余文字、格式和引用原样保留）`
+          : r.table === 'cells' ? tr('（按单元格级更新，表格样式保留）')
           : r.table === 'rebuild' ? tr('（列数有变，整表已重建；表格样式被重置，可用格式刷补）')
           : r.table === 'insert' ? tr('（该段文字已替换为表格）')
           : r.kept ? tr('，原格式已保留') : tr('（此段结构复杂，按纯文本写入，局部格式或需手补）');
         statusEl.textContent = r.tracked
           ? tr`✅ 已以修订写入${fmt}，该目标已自动移除。审阅→接受可定稿`
           : tr`✅ 已应用${fmt}，该目标已自动移除。Cmd+Z 可撤销`;
+        if (r.verified === false) statusEl.textContent += tr(' ⚠️ 写入后回读与预期不完全一致，请在文档里检查这一段。');
         return true;
       }
       statusEl.textContent = '⚠️ ' + (r.error || tr('应用失败'));
@@ -1386,11 +1531,12 @@
             kind: (ctx.kinds && ctx.kinds[i]) || 'text',
             values: (ctx.valuesList && ctx.valuesList[i]) || null,
             text: ctx.targetTexts[i],
+            fields: (ctx.targetFields && ctx.targetFields[i]) || [],
             applied: oldById.get(id)?.applied || false,
           }));
           state.docChars = ctx.docChars;
           renderTargetBar();
-          sentTargets = state.targets.map((t, i) => ({ k: i + 1, ccId: t.ccId, kind: t.kind, values: t.values, text: t.text }));
+          sentTargets = state.targets.map((t, i) => ({ k: i + 1, ccId: t.ccId, kind: t.kind, values: t.values, text: t.text, fields: t.fields || [] }));
           Object.assign(doc, {
             targets: sentTargets.map((t) => ({
               k: t.k,
@@ -1398,6 +1544,7 @@
               kind: t.kind,
               rows: t.values ? t.values.length : 0,
               cols: t.values && t.values[0] ? t.values[0].length : 0,
+              fields: t.fields.length,
             })),
             fullText: ctx.fullText,
             truncated: ctx.truncated,
@@ -2186,6 +2333,6 @@
 
   // 测试钩子：让 tools/test-format.js 能在 jsdom 里直接测这些纯函数
   try {
-    window.__we_test = { diffOps, diffHtml, buildFormattedReplacement, flattenHtmlBody, flatToText, canonText, normNL, toWordText, parseReplacements, stripFences, markFullText };
+    window.__we_test = { segmentsOf, diffOps, diffHtml, buildFormattedReplacement, flattenHtmlBody, flatToText, canonText, normNL, toWordText, parseReplacements, stripFences, markFullText };
   } catch {}
 })();
