@@ -590,7 +590,10 @@
   "这个版本的 PowerPoint 不能通过插件改背景，已忽略": "This version of PowerPoint does not let add-ins change the background; ignored",
   "这个版本的 PowerPoint 不能通过插件改表格格式（需要 PowerPointApi 1.9），已忽略": "This version of PowerPoint does not let add-ins format tables (needs PowerPointApi 1.9); ignored",
   "这个版本的 PowerPoint 不能通过插件旋转形状，已忽略": "This version of PowerPoint does not let add-ins rotate shapes; ignored",
-  "这个版本的 PowerPoint 不能通过插件调整层次，已忽略": "This version of PowerPoint does not let add-ins change the order; ignored"
+  "这个版本的 PowerPoint 不能通过插件调整层次，已忽略": "This version of PowerPoint does not let add-ins change the order; ignored",
+  "字号": "Text size",
+  "缩小字号": "Smaller text",
+  "放大字号": "Larger text"
 };
   const normalize = (value) => /^zh(?:-|$)/i.test(value || '') ? 'zh-CN' : 'en';
   let saved;

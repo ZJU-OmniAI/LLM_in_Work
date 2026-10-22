@@ -265,3 +265,22 @@ test('outside Excel the pane explains where to use it', async () => {
     assert.match(t.d.querySelector('#banner').textContent, /LLM_in_Excel/);
   } finally { await t.close(); }
 });
+
+test('A− / A+ scale the pane text in steps and remember the choice', async () => {
+  const t = await loadPane({ storage: { 'lx:cfg': JSON.stringify({ fontScale: 1.3 }) } });
+  try {
+    await tick(5);
+    const value = () => t.d.querySelector('#font-size-value').textContent;
+    assert.equal(value(), '130%');
+    assert.ok([...t.d.querySelectorAll('#app > :not(.hdr)')].every((el) => el.style.zoom === '1.3'));
+    t.d.querySelector('#btn-font-down').click();
+    assert.equal(value(), '120%');
+    assert.equal(JSON.parse(t.w.localStorage.getItem('lx:cfg')).fontScale, 1.2);
+    for (let i = 0; i < 10; i++) t.d.querySelector('#btn-font-up').click();
+    assert.equal(value(), '160%');
+    assert.equal(t.d.querySelector('#btn-font-up').disabled, true);
+    for (let i = 0; i < 6; i++) t.d.querySelector('#btn-font-down').click();
+    assert.equal(value(), '100%');
+    assert.ok([...t.d.querySelectorAll('#app > :not(.hdr)')].every((el) => el.style.zoom === ''));
+  } finally { await t.close(); }
+});

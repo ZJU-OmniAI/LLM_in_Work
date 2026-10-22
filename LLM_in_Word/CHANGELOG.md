@@ -1,5 +1,11 @@
 # 更新记录
 
+## 0.7.5 — 2026-10-22
+
+- **Text size.** Settings has **A− / A+** next to the language menu. Text in the pane scales from 80% to 160% in 10% steps and the choice is remembered. The header stays the same size so its buttons fit narrow panes.
+
+中文摘要：设置里语言菜单旁新增「A− / A+」字号调节，面板文字可在 80%–160% 之间按 10% 调整，选择会记住；顶部标题栏保持原大小，窄面板里按钮不会被挤出去。
+
 ## 0.7.4 — 2026-10-16
 
 - **Documents with Zotero, EndNote or other citation fields are no longer truncated.** Word's reviewed-text API returns each field's code together with its result, so every Zotero citation added about a thousand characters of JSON to what the pane read. A manuscript with 52,000 characters of text and 50 citations read as roughly 190,000 characters, went over the 110,000-character limit and was cut. The pane now drops field codes and keeps what the citation shows, such as *(12)*.

@@ -255,6 +255,18 @@ fs.mkdirSync(outputDir, { recursive: true });
   assert.ok(await en.evaluate(() => window.storageSets.some((value) => value.uiLanguage === 'zh-CN')), 'language choice is persisted');
   await en.locator('#ole-language').selectOption('en');
   assert.equal(await en.locator('.ole-apply').innerText(), '✅ Apply');
+  // Text size: A+ enlarges panel content without widening the panel and is persisted.
+  assert.equal(await en.locator('#ole-font-up').getAttribute('aria-label'), 'Larger text');
+  const panelWidth = (await en.locator('#ole-panel').boundingBox()).width;
+  await en.locator('#ole-font-up').click(); await en.locator('#ole-font-up').click();
+  assert.equal(await en.locator('#ole-font-value').innerText(), '120%');
+  assert.equal(await en.locator('#ole-messages').evaluate((el) => getComputedStyle(el).zoom), '1.2');
+  assert.equal(Math.round((await en.locator('#ole-panel').boundingBox()).width), Math.round(panelWidth));
+  assert.ok(await en.locator('#ole-panel').evaluate((el) => el.scrollWidth <= el.clientWidth + 1));
+  assert.ok(await en.evaluate(() => window.storageSets.some((value) => value.fontScale === 1.2)), 'text size is persisted');
+  await en.screenshot({ path: path.join(outputDir, 'panel-text-120.png') });
+  await en.locator('#ole-font-down').click(); await en.locator('#ole-font-down').click();
+  assert.equal(await en.locator('#ole-font-value').innerText(), '100%');
   await en.close();
 
   const popupEn = await browser.newPage({ viewport: { width: 328, height: 720 } });
@@ -272,7 +284,7 @@ fs.mkdirSync(outputDir, { recursive: true });
   await popupEn.screenshot({ path: path.join(outputDir, 'popup-english.png') });
   if (errors.length) console.error('Browser errors:', errors);
   assert.deepEqual(errors, []);
-  console.log('UI PASS: draft preservation, IME, duplicate send, streaming controls, final diff, failed partial reply, narrow viewport, context errors, clear selection from the card, earlier previews, cancellation, scroll retention, popup, English interface, translated host errors and live language switching; no browser exceptions.');
+  console.log('UI PASS: draft preservation, IME, duplicate send, streaming controls, final diff, failed partial reply, narrow viewport, context errors, clear selection from the card, earlier previews, cancellation, scroll retention, popup, English interface, translated host errors, live language switching and text size; no browser exceptions.');
   console.log('Screenshots:', outputDir);
   await browser.close();
 })().catch(e => { console.error(e); process.exit(1); });

@@ -121,6 +121,21 @@ try {
   assert.equal(await page.locator('.pr-pre .katex').count(), 0);
   assert.ok(await page.locator('.pr-table-scroll').evaluate((el) => el.scrollWidth > el.clientWidth));
   assert.ok(await page.locator('#pr-panel').evaluate((el) => el.scrollWidth <= el.clientWidth + 1));
+  // Text size: A+ enlarges panel content without widening the panel and is remembered.
+  const panelWidth = await page.locator('#pr-panel').evaluate((el) => el.getBoundingClientRect().width);
+  const bubbleFont = () => page.locator('#pr-messages .pr-bubble').last().evaluate((el) => el.getBoundingClientRect().height);
+  const before = await bubbleFont();
+  await page.locator('#pr-font-up').click(); await page.locator('#pr-font-up').click();
+  assert.equal(await page.locator('#pr-messages').evaluate((el) => getComputedStyle(el).zoom), '1.2');
+  assert.ok(await bubbleFont() > before * 1.1);
+  assert.equal(Math.round(await page.locator('#pr-panel').evaluate((el) => el.getBoundingClientRect().width)), Math.round(panelWidth));
+  assert.ok(await page.locator('#pr-panel').evaluate((el) => el.scrollWidth <= el.clientWidth + 1));
+  assert.equal(await worker.evaluate(async () => (await chrome.storage.local.get('fontScale')).fontScale), 1.2);
+  await page.screenshot({ path: '/tmp/paper-read-font-120.png' });
+  for (let i = 0; i < 9; i++) await page.locator('#pr-font-down').click({ force: true });
+  assert.ok(await page.locator('#pr-font-down').isDisabled());
+  for (let i = 0; i < 2; i++) await page.locator('#pr-font-up').click();
+  assert.equal(await worker.evaluate(async () => (await chrome.storage.local.get('fontScale')).fontScale), 1);
   await page.locator('#pr-copy').click();
   const copied = await page.evaluate(() => window.testCopies.at(-1));
   assert.match(copied, /Explain this passage/);
@@ -254,7 +269,7 @@ try {
   await bad.goto(`chrome-extension://${id}/reader/reader.html?id=../../private`);
   await bad.locator('#reader-status.error').waitFor();
   assert.match(await bad.locator('#reader-status').textContent(), /无效/);
-  console.log('PASS: PDF redirect, text selection, full text, quoted chat, dynamic models/effort, zoom, paging, full history, Markdown tables/math/charts/Mermaid (reader and arXiv page), copying, image cropping/pixels/cancellation/persistence/follow-up and invalid-ID handling.');
+  console.log('PASS: PDF redirect, text selection, full text, quoted chat, dynamic models/effort, zoom, paging, full history, Markdown tables/math/charts/Mermaid (reader and arXiv page), text size, copying, image cropping/pixels/cancellation/persistence/follow-up and invalid-ID handling.');
 } finally {
   await context?.close();
   await new Promise((resolve) => server.close(resolve));

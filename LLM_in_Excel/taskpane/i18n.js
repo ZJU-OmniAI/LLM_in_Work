@@ -314,7 +314,10 @@
   "🆕 新会话已开启（旧会话在历史里）。{0} 个目标仍有效，下一轮会重新读取工作簿。": "🆕 New chat started; the previous chat is in History. Targets still active: {0}. The next request reloads the workbook.",
   "🆕 新会话已开启（旧会话在历史里）。原目标所在的工作表不在了，请重新选中添加。": "🆕 New chat started; the previous chat is in History. The targets' worksheets are gone; select and add ranges again.",
   "Opus · 自动版本": "Opus · Auto version",
-  "Sonnet · 自动版本": "Sonnet · Auto version"
+  "Sonnet · 自动版本": "Sonnet · Auto version",
+  "字号": "Text size",
+  "缩小字号": "Smaller text",
+  "放大字号": "Larger text"
 };
   const normalize = (value) => /^zh(?:-|$)/i.test(value || '') ? 'zh-CN' : 'en';
   let saved;
