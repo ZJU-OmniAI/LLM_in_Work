@@ -46,3 +46,35 @@ test('untrusted Markdown cannot create active HTML or dangerous links', () => {
   assert.match(html, /rel="noopener noreferrer"/);
   assert.match(html, /target="_blank"/);
 });
+
+test('chart blocks render escaped SVG bar and line charts', () => {
+  const spec = { type: 'bar', title: 'UniVTAC <mean>', labels: ['π0.5', 'N0-VTLA', 'PhysWord'], datasets: [{ label: 'SR', data: [49.6, 83.1, 90.3] }], yAxisTitle: '%' };
+  const html = render('```chart\n' + JSON.stringify(spec) + '\n```');
+  assert.match(html, /<figure class="pr-chart"><svg /);
+  assert.equal((html.match(/<rect /g) || []).length, 3);
+  assert.match(html, /UniVTAC &lt;mean&gt;/);
+  assert.match(html, />90\.3</);
+  assert.doesNotMatch(html, /pr-pre/);
+  const grouped = render('```chart\n{"labels":["A","B"],"datasets":[{"label":"x","points":[1,2]},{"label":"y","data":[3,null]}]}\n```');
+  assert.equal((grouped.match(/<rect x="\d/g) || []).length, 2 + 3); // two legend swatches + three bars
+  const line = render('```chart\n{"type":"line","labels":["1","2","4"],"datasets":[{"label":"s","data":[91,93,92]}]}\n```');
+  assert.match(line, /<path d="M[\d.,]+L[\d.,]+L[\d.,]+"/);
+  assert.equal((line.match(/<circle /g) || []).length, 3);
+});
+
+test('invalid or unfinished chart JSON stays a code block', () => {
+  for (const body of ['{"labels":["A"],"datasets":[{"data":[', '{"labels":[],"datasets":[]}', '{"labels":["A"],"datasets":[{"data":["x"]}]}', '<svg onload=alert(1)>']) {
+    const html = render('```chart\n' + body + '\n```');
+    assert.match(html, /<pre class="pr-pre">/);
+    assert.doesNotMatch(html, /<svg/);
+  }
+});
+
+test('mermaid blocks keep their source as code and are drawn only once closed', () => {
+  const source = 'flowchart LR\n  A[输入] --> B["<b>x</b>"]';
+  const done = render('```mermaid\n' + source + '\n```\n\n后文');
+  assert.match(done, /<div class="pr-mermaid" data-source="flowchart LR\n  A\[输入\] --&gt; B\[&quot;&lt;b&gt;x&lt;\/b&gt;&quot;\]\n" data-ready="1">/);
+  assert.match(done, /<pre class="pr-pre"><code class="language-mermaid">/);
+  assert.doesNotMatch(render('```mermaid\n' + source), /data-ready/);
+  assert.match(render('```mermaid\n' + source + '\n```'), /data-ready="1"/);
+});

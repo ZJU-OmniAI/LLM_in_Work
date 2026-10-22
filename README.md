@@ -58,7 +58,7 @@ https://github.com/user-attachments/assets/b44d0ada-1b19-463f-98a0-4123b95bac15
 | Works in | Microsoft Word desktop | Overleaf's Code Editor (`overleaf.com`, `cn.overleaf.com`) | PDFs and paper webpages in Chrome / Chromium | Microsoft PowerPoint desktop | Microsoft Excel desktop |
 | Review | Text and table diffs, applied as Word tracked changes | A LaTeX diff for every selection, applied as one undoable step | Read-only Q&A; preserves the original PDF | A diff per target; only changed words are written, with one-click Undo | A cell preview per range; only changed cells are written, with one-click Undo |
 | Edit together | Up to 8 paragraphs or tables | Several non-adjacent selections in one `.tex` file | Select text or attach up to 4 recent figure crops | Up to 16 text boxes, tables or whole slides, across slides | Up to 8 ranges (4,000 cells), including empty columns to fill |
-| Formatting | — | — | PDF.js layout, Markdown tables and KaTeX formulas | Format mode: borders, fills, fonts, alignment, tables, background, and whole-slide redesign with cards; one-click Undo | — |
+| Formatting | — | — | PDF.js layout, Markdown tables, KaTeX formulas, charts and Mermaid flowcharts | Format mode: borders, fills, fonts, alignment, tables, background, and whole-slide redesign with cards; one-click Undo | — |
 | Ask questions | Document Q&A about the whole document | Ask mode with the `.tex` file and attached project files | Full text, selected passages and actual figure pixels | Presentation Q&A, optionally with an image of the slide | Workbook Q&A with cell addresses |
 | Runs on | Windows and macOS | Chrome, Edge, Brave and other Chromium browsers on Windows, macOS and Linux | macOS/Linux native bridge; Windows HTTP fallback | Windows and macOS | Windows and macOS |
 | Connection | Office add-in → local HTTPS service (`127.0.0.1:8377`) → CLI | Extension → Native Messaging (no port) → CLI | Extension → Native Messaging; optional loopback HTTP (`8765`) | Office add-in → local HTTPS service (`127.0.0.1:8387`) → CLI | Office add-in → local HTTPS service (`127.0.0.1:8397`) → CLI |
@@ -180,7 +180,7 @@ LLM_in_Work/
 └── CONTRIBUTING.md    Tests and CI for all projects
 ```
 
-All bridges use Node built-ins. LLM_in_PDF bundles PDF.js, Markdown-it and KaTeX with their licenses. Offline tests use mock CLIs and synthetic documents, and [CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions) runs them on Linux, macOS and Windows. See [Contributing](CONTRIBUTING.md) and the [changelog](CHANGELOG.md).
+All bridges use Node built-ins. LLM_in_PDF bundles PDF.js, Markdown-it, KaTeX and Mermaid with their licenses. Offline tests use mock CLIs and synthetic documents, and [CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions) runs them on Linux, macOS and Windows. See [Contributing](CONTRIBUTING.md) and the [changelog](CHANGELOG.md).
 
 For maintainers: the [Chrome Web Store package and submission guide](docs/chrome-store/README.zh-CN.md) includes Overleaf 0.9.1 / PDF 0.9.2 bundles, bilingual listings, images, permission explanations and the [privacy policy](docs/chrome-store/PRIVACY.md). Store approval is still pending submission; the Quick start above loads unpacked development extensions.
 

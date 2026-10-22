@@ -4,13 +4,14 @@
 // 返回结果明确区分完成、错误、取消和超时，不把部分文本当成成功。
 // 参考 LLM_in_Work 的有界进程生命周期。Claude 使用纯问答工具集；Codex 使用只读沙箱。
 
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { codexEffort } from './config.js';
 import { getCliRuntime } from './runtime.js';
 import { runProcess, classifyError } from './process.js';
 import { validateImages, claudeImageInput, writeImages } from './images.js';
+import { SYSTEM } from './prompt.js';
 
 function eventCollector(onEvent) {
   let sawText = false;
@@ -46,7 +47,7 @@ export async function runClaude({ prompt, model, effort, signal, images = [] }, 
     const args = ['-p', '--output-format', 'stream-json', '--include-partial-messages', '--verbose',
       '--effort', effort || 'medium', '--no-session-persistence',
       '--permission-mode', 'dontAsk', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}',
-      '--disable-slash-commands', '--tools', ''];
+      '--disable-slash-commands', '--tools', '', '--system-prompt', SYSTEM];
     if (model && !['(default)', 'default'].includes(model)) args.push('--model', model);
     if (attachments.length) args.push('--input-format', 'stream-json');
     let finalResult = '', resultError = false;
@@ -90,6 +91,11 @@ export async function runCodex({ prompt, model, effort, signal, images = [] }, o
     args.push('--skip-git-repo-check', '-c', 'sandbox_mode="read-only"', '-c', 'approval_policy="never"',
       '-c', `model_reasoning_effort="${codexEffort(effort)}"`, '-o', output);
     if (model && !['(default)', 'default'].includes(model)) args.push('-m', model);
+    // 用论文助手提示词替换 codex 自带的"编程协作代理"基础指令。老版本 codex 不认这个键时会忽略，
+    // 所以 prompt 开头仍保留一份 SYSTEM（见 buildPrompt 的 includeSystem），两边都在也不冲突。
+    const instructions = path.join(workdir, 'instructions.md');
+    await writeFile(instructions, SYSTEM);
+    args.push('-c', `model_instructions_file=${JSON.stringify(instructions)}`);
     for (const filename of await writeImages(attachments, workdir)) args.push('-i', filename);
     args.push('-');
     const emitted = new Map();

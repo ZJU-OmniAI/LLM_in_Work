@@ -1,5 +1,14 @@
 # 更新记录 / Changelog
 
+## 2026-10-22 — LLM_in_PDF 0.10.0 · Paper analysis like alphaXiv, charts and flowcharts
+
+- The paper-reading prompt was rebuilt after comparing answers with alphaXiv's assistant on the same model and papers. Full explanations follow the argument rather than the paper's section order, put the experiment that best tests the main claim up front, check claims against the tables, open the critique with strengths and keep it to about a quarter of the answer, and cite page numbers from the reader's page-marked text. Follow-ups such as "I don't get it" get a plainer walk-through with an analogy and an example.
+- Answers can draw bar and line charts (```chart JSON blocks, drawn locally as SVG) and Mermaid flowcharts (```mermaid). Mermaid 12.2.0 is bundled and loaded only when an answer contains a diagram; a diagram that fails to parse stays as code.
+- An optional research profile (`~/.llm_in_pdf/profile.md`) lets a full explanation end with a sentence on how the paper relates to your own work.
+- Claude runs with `--system-prompt` and Codex with `model_instructions_file`, replacing the coding-agent instructions. The Word, PowerPoint, Excel and Overleaf assistants also replace Claude Code's default system prompt with a short assistant role.
+
+中文：按 alphaXiv 助手的做法重写读论文提示词（同模型、同论文对比验证）：按论证顺序讲、核心实验前置、对照表格核实主张、先讲亮点再讲要打折扣的地方、标注页码；"没看懂"时用类比和例子换个讲法。回答可以画柱状图、折线图和 Mermaid 流程图（Mermaid 随扩展打包、用到时才加载，画不出来时显示为代码）。可选的个人研究档案 `~/.llm_in_pdf/profile.md` 用于在结尾点出与你工作的关系。Claude/Codex 改用替换式系统提示词，Word、PowerPoint、Excel、Overleaf 助手也不再加载 Claude Code 的默认提示词。
+
 ## 2026-10-16 — Overleaf 0.9.3 · Write only the changed words
 
 - Overleaf now applies only the changed spans, like the Word, PowerPoint and Excel add-ins, instead of rewriting the whole selection. Replies that change `\cite`/`\ref`/`\label` keys are flagged on the card.

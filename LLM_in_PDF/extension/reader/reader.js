@@ -138,10 +138,12 @@ async function loadPdf({ info, data }) {
     const content = await page.getTextContent();
     parts.push(content.items.map((item) => typeof item.str === 'string' ? item.str + (item.hasEOL ? '\n' : ' ') : '').join(''));
   }
-  const text = parts.join('\n\n');
+  const hasText = parts.some((part) => part.trim());
+  // 每页包一层 <page num="N">，模型才能像 alphaXiv 那样把论断标到具体页码（p.N）。
+  const text = parts.map((part, index) => `<page num="${index + 1}">\n${part.trim()}\n</page>`).join('\n');
   const truncated = text.length > 600000;
-  status.textContent = `${pdf.numPages} 页 · ${text.trim() ? '选字提问，或点「框选图片」分析图表' : '无文字层，可点「框选图片」读取扫描内容'}${truncated ? ' · 超长正文已截断' : ''}`;
-  return { id: info.id, title, text: text.trim() ? text.slice(0, 600000) : '（此 PDF 没有可提取的文字层，请依据用户提供的截图回答。）', source: info.source, chars: text.length, truncated };
+  status.textContent = `${pdf.numPages} 页 · ${hasText ? '选字提问，或点「框选图片」分析图表' : '无文字层，可点「框选图片」读取扫描内容'}${truncated ? ' · 超长正文已截断' : ''}`;
+  return { id: info.id, title, text: hasText ? text.slice(0, 600000) : '（此 PDF 没有可提取的文字层，请依据用户提供的截图回答。）', source: info.source, chars: text.length, truncated };
 }
 function showError(error) {
   status.classList.add('error');
