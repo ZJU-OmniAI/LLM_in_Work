@@ -1,5 +1,11 @@
 # 更新记录
 
+## 0.9.4 — 2026-10-22
+
+- **Text size.** Settings has **A− / A+** next to the language menu. The panel's text scales from 80% to 160% in 10% steps without changing the panel width or Overleaf's layout, and the choice is remembered.
+
+中文摘要：设置里语言菜单旁新增「A− / A+」字号调节，面板文字可在 80%–160% 之间按 10% 调整，面板宽度和 Overleaf 排版不变，选择会记住。
+
 ## 0.9.3 — 2026-10-16
 
 - **Applying changes only the changed words.** The editor used to receive each selection as one replacement. Now only the changed spans are written and the rest of the passage is left alone, so Overleaf's track changes, if you use it, receives these edits instead of the whole passage deleted and re-inserted. The bridge checks that the spans rebuild the reply exactly and otherwise replaces the selection as before. Undo is still one step.

@@ -80,7 +80,7 @@
   // ---------- 配置读写（popup 里改了会经 storage.onChanged 同步过来）----------
   async function loadCfg() {
     try {
-      const saved = await chrome.storage.local.get(['backend', 'model_claude', 'model_codex', 'effort', 'width', 'mode', 'layout', 'modelList', I18N.STORAGE_KEY]);
+      const saved = await chrome.storage.local.get(['backend', 'model_claude', 'model_codex', 'effort', 'width', 'mode', 'layout', 'fontScale', 'modelList', I18N.STORAGE_KEY]);
       const { modelList: m, [I18N.STORAGE_KEY]: lang, ...rest } = saved;
       if (lang) I18N.setLanguage(lang);
       Object.assign(state.cfg, Object.fromEntries(Object.entries(rest).filter(([, v]) => v != null)));
@@ -630,6 +630,9 @@
     send: $('#ole-send'),
     stop: $('#ole-stop'),
     layoutBtn: $('#ole-layout'),
+    fontDown: $('#ole-font-down'),
+    fontUp: $('#ole-font-up'),
+    fontValue: $('#ole-font-value'),
     newBtn: $('#ole-new'),
     histBtn: $('#ole-hist'),
     close: $('#ole-close'),
@@ -719,6 +722,23 @@
     // 踢一脚 resize 让 Overleaf 重新排版；拖拽改宽时做节流，免得 PDF 反复重绘
     clearTimeout(resizeKick);
     resizeKick = setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch {} }, 120);
+  }
+  // ---------- 字号：A− / A+ 缩放面板内容（80%–160%），随设置保存 ----------
+  const FONT_STEPS = [0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6];
+  function applyFontScale() {
+    const scale = FONT_STEPS.includes(state.cfg.fontScale) ? state.cfg.fontScale : 1;
+    // 缩放面板里的各块内容，不缩放面板本身，面板宽度和 Overleaf 的排版不变；
+    // 顶部标题栏只有按钮，不放大，免得窄面板里按钮被挤出去。
+    for (const el of els.panel.children) if (el.id !== 'ole-resizer' && el.id !== 'ole-header') el.style.zoom = scale === 1 ? '' : String(scale);
+    els.fontValue.textContent = `${Math.round(scale * 100)}%`;
+    els.fontDown.disabled = scale <= FONT_STEPS[0];
+    els.fontUp.disabled = scale >= FONT_STEPS[FONT_STEPS.length - 1];
+  }
+  function stepFontScale(direction) {
+    const index = Math.max(0, FONT_STEPS.indexOf(FONT_STEPS.includes(state.cfg.fontScale) ? state.cfg.fontScale : 1));
+    state.cfg.fontScale = FONT_STEPS[Math.max(0, Math.min(FONT_STEPS.length - 1, index + direction))];
+    applyFontScale();
+    saveCfg();
   }
   function updateLayoutBtn() {
     const push = state.cfg.layout !== 'overlay';
@@ -1555,6 +1575,8 @@
     els.capture.addEventListener('mousedown', (e) => e.preventDefault());
     els.capture.addEventListener('click', () => captureTarget());
     els.close.addEventListener('click', closePanel);
+    els.fontDown.addEventListener('click', () => stepFontScale(-1));
+    els.fontUp.addEventListener('click', () => stepFontScale(1));
     els.layoutBtn.addEventListener('click', () => {
       state.cfg.layout = state.cfg.layout === 'overlay' ? 'push' : 'overlay';
       updateLayoutBtn();
@@ -1741,6 +1763,7 @@
     setMode(state.cfg.mode === 'ask' ? 'ask' : 'edit');
     updateLayoutBtn();
     applyWidth();
+    applyFontScale();
     renderTargetBar();
     if (state.messages.length) {
       renderHistoryMsgs();
@@ -1778,7 +1801,7 @@
           </div>
         </header>
         <div id="ole-settings" class="hidden" role="region" data-i18n-aria-label="写作设置">
-          <div class="ole-settings-heading"><b data-i18n="写作设置">写作设置</b><span class="ole-settings-tools"><select id="ole-language" data-i18n-title="界面语言"><option value="en">English</option><option value="zh-CN">中文</option></select><button id="ole-layout" data-i18n-title="切换面板布局：推挤页面 / 悬浮覆盖">📌</button></span></div>
+          <div class="ole-settings-heading"><b data-i18n="写作设置">写作设置</b><span class="ole-settings-tools"><span class="ole-font-size" role="group" data-i18n-aria-label="字号"><button id="ole-font-down" class="ole-font-btn" data-i18n-title="缩小字号" data-i18n-aria-label="缩小字号">A−</button><span id="ole-font-value" class="ole-font-value" aria-live="polite">100%</span><button id="ole-font-up" class="ole-font-btn" data-i18n-title="放大字号" data-i18n-aria-label="放大字号">A+</button></span><select id="ole-language" data-i18n-title="界面语言"><option value="en">English</option><option value="zh-CN">中文</option></select><button id="ole-layout" data-i18n-title="切换面板布局：推挤页面 / 悬浮覆盖">📌</button></span></div>
           <div class="ole-statusline" role="status"><span id="ole-status-text" data-i18n="检查中…">检查中…</span></div>
           <div class="ole-controls">
             <select id="ole-backend" data-i18n-title="后端">
@@ -2132,6 +2155,11 @@
       .ole-settings-heading { display: flex; justify-content: space-between; align-items: center; color: #365e51; font-size: 13px; }
       #ole-layout { padding: 4px 8px; border: 1px solid #d7e5dc; border-radius: 6px; background: #f1f6f2; cursor: pointer; }
       .ole-settings-tools { display: flex; align-items: center; gap: 6px; }
+      .ole-font-size { display: inline-flex; align-items: center; border: 1px solid #d7e5dc; border-radius: 6px; overflow: hidden; background: #f1f6f2; }
+      .ole-font-btn { border: 0; background: transparent; padding: 3px 7px; font-size: 12px; line-height: 18px; cursor: pointer; color: #25352f; }
+      .ole-font-btn:hover:not(:disabled) { background: #e2ede5; }
+      .ole-font-btn:disabled { color: #a9b7ae; cursor: default; }
+      .ole-font-value { min-width: 38px; text-align: center; font-size: 11px; color: #4d6157; font-variant-numeric: tabular-nums; }
       #ole-language { font-size: 11px; padding: 4px 6px; border: 1px solid #d7e5dc; border-radius: 6px; background: #fff; color: #25352f; cursor: pointer; }
       .ole-statusline { margin: 8px 0 12px; font-size: 11px; }
       .ole-controls { display: grid; grid-template-columns: 70px minmax(70px,1fr) 70px 28px; gap: 5px; margin: 0 0 12px; }

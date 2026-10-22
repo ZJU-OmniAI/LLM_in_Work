@@ -401,3 +401,20 @@ test('a reply that keeps the citation can be applied', async () => {
     assert.equal(card.querySelector('.warnbox'), null);
   } finally { await t.close(); }
 });
+
+test('A− / A+ scale the pane text in steps and remember the choice', async () => {
+  const t = setup([]);
+  try {
+    const d = t.w.document, value = () => d.querySelector('#font-size-value').textContent;
+    assert.equal(value(), '100%');
+    d.querySelector('#btn-font-up').click(); d.querySelector('#btn-font-up').click();
+    assert.equal(value(), '120%');
+    assert.ok([...d.querySelectorAll('#app > :not(.hdr)')].every((el) => el.style.zoom === '1.2'));
+    assert.equal(JSON.parse(t.w.localStorage.getItem('we:cfg')).fontScale, 1.2);
+    for (let i = 0; i < 10; i++) d.querySelector('#btn-font-down').click();
+    assert.equal(value(), '80%');
+    assert.equal(d.querySelector('#btn-font-down').disabled, true);
+    t.w.WordI18n.setLanguage('en'); t.w.WordI18n.applyStatic(d);
+    assert.equal(d.querySelector('#btn-font-up').getAttribute('aria-label'), 'Larger text');
+  } finally { await t.close(); }
+});

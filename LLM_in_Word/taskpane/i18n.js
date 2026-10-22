@@ -320,7 +320,10 @@
   "本轮未完成，已保留输出供查看。请重试后再应用改写。": "This response did not complete. Partial output is kept for review. Retry before applying changes.",
   "未能把回复解析成替换文本{0}，无法一键应用。可以「🔁 重试」或换个说法。": "Could not parse replacement text{0}. Changes cannot be applied automatically. Select 🔁 Retry or rephrase your instruction.",
   "生成改写 ↑": "Rewrite ↑",
-  "发送提问 ↑": "Ask ↑"
+  "发送提问 ↑": "Ask ↑",
+  "字号": "Text size",
+  "缩小字号": "Smaller text",
+  "放大字号": "Larger text"
 };
 
   const normalize = (value) => /^zh(?:-|$)/i.test(value || '') ? 'zh-CN' : 'en';

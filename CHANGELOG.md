@@ -1,5 +1,11 @@
 # 更新记录 / Changelog
 
+## 2026-10-22 — Text size in every assistant · PDF 0.10.1 · Overleaf 0.9.4 · Word 0.7.5 · PowerPoint 0.3.2 · Excel 0.1.2
+
+- Every panel has **A− / A+** to make its text larger or smaller (80%–160%, 10% steps). The choice is remembered. Only the panel content scales: the panel width, the page or document layout, and the header buttons stay the same. In LLM_in_PDF the buttons are in the panel header; in Overleaf, Word, PowerPoint and Excel they are in Settings next to the language menu.
+
+中文：所有助手面板新增「A− / A+」字号调节（80%–160%，每档 10%），选择会记住。只放大面板里的内容，面板宽度、网页或文档排版、顶部按钮都不变。LLM_in_PDF 的按钮在面板顶部，Overleaf、Word、PowerPoint、Excel 在设置里语言菜单旁边。
+
 ## 2026-10-22 — LLM_in_PDF 0.10.0 · Paper analysis like alphaXiv, charts and flowcharts
 
 - The paper-reading prompt was rebuilt after comparing answers with alphaXiv's assistant on the same model and papers. Full explanations follow the argument rather than the paper's section order, put the experiment that best tests the main claim up front, check claims against the tables, open the critique with strengths and keep it to about a quarter of the answer, and cite page numbers from the reader's page-marked text. Follow-ups such as "I don't get it" get a plainer walk-through with an analogy and an example.

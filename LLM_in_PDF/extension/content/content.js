@@ -49,12 +49,31 @@
   // ---------- 读取/保存配置 ----------
   async function loadCfg() {
     try {
-      const saved = await chrome.storage.local.get(['backend', 'model_claude', 'model_codex', 'effort', 'width']);
+      const saved = await chrome.storage.local.get(['backend', 'model_claude', 'model_codex', 'effort', 'width', 'fontScale']);
       Object.assign(state.cfg, Object.fromEntries(Object.entries(saved).filter(([, v]) => v != null)));
     } catch {}
   }
   function saveCfg() {
     try { chrome.storage.local.set(state.cfg); } catch {}
+  }
+
+  // ---------- 字号：A− / A+ 缩放面板内容（80%–160%），随设置保存 ----------
+  // 缩放面板里的各块内容，不缩放面板本身，面板宽度和页面排版不变；顶部标题栏和按钮保持原样，
+  // 免得窄面板里按钮被挤出去。
+  const FONT_STEPS = [0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6];
+  function applyFontScale() {
+    const scale = FONT_STEPS.includes(state.cfg.fontScale) ? state.cfg.fontScale : 1;
+    for (const el of els.panel.children) if (el.id !== 'pr-resizer' && el.id !== 'pr-header') el.style.zoom = scale === 1 ? '' : String(scale);
+    els.fontDown.disabled = scale <= FONT_STEPS[0];
+    els.fontUp.disabled = scale >= FONT_STEPS[FONT_STEPS.length - 1];
+    els.fontDown.title = `缩小字号（当前 ${Math.round(scale * 100)}%）`;
+    els.fontUp.title = `放大字号（当前 ${Math.round(scale * 100)}%）`;
+  }
+  function stepFontScale(direction) {
+    const index = Math.max(0, FONT_STEPS.indexOf(FONT_STEPS.includes(state.cfg.fontScale) ? state.cfg.fontScale : 1));
+    state.cfg.fontScale = FONT_STEPS[Math.max(0, Math.min(FONT_STEPS.length - 1, index + direction))];
+    applyFontScale();
+    saveCfg();
   }
 
   // ---------- 每篇论文的历史对话（持久化到 chrome.storage.local）----------
@@ -216,6 +235,8 @@
   const els = {
     launcher: $('#pr-launcher'),
     panel: $('#pr-panel'),
+    fontDown: $('#pr-font-down'),
+    fontUp: $('#pr-font-up'),
     title: $('#pr-title'),
     paperMeta: $('#pr-paper-meta'),
     backend: $('#pr-backend'),
@@ -713,6 +734,8 @@
     els.launcher.addEventListener('click', openPanel);
     els.close.addEventListener('click', closePanel);
     els.clear.addEventListener('click', newChat);
+    els.fontDown.addEventListener('click', () => stepFontScale(-1));
+    els.fontUp.addEventListener('click', () => stepFontScale(1));
     els.histBtn.addEventListener('click', openHistView);
     els.histClose.addEventListener('click', () => els.histView.classList.add('hidden'));
     els.copyBtn.addEventListener('click', () => copyConversation(els.copyBtn));
@@ -793,6 +816,7 @@
     bindEvents();
     refreshModels();
     applyWidth();
+    applyFontScale();
     if (state.messages.length) renderHistory();
     else renderWelcome();
     if (IS_PDF) {
@@ -813,6 +837,8 @@
           <div class="pr-head-top">
             <div class="pr-brand">📄 LLM_in_PDF</div>
             <div class="pr-head-btns">
+              <button id="pr-font-down" class="pr-font-btn" title="缩小字号" aria-label="缩小字号">A−</button>
+              <button id="pr-font-up" class="pr-font-btn" title="放大字号" aria-label="放大字号">A+</button>
               <button id="pr-history-btn" title="历史对话">🕘</button>
               <button id="pr-reload" title="重新读取论文">↻</button>
               <button id="pr-clear" title="开新对话（旧对话自动归档到 🕘）">🧹</button>
@@ -896,6 +922,8 @@
         padding: 4px 6px; border-radius: 6px;
       }
       .pr-head-btns button:hover { background: #eef0f5; color: #1f2330; }
+      .pr-head-btns .pr-font-btn { font-size: 12.5px; font-weight: 600; padding: 4px 5px; }
+      .pr-head-btns .pr-font-btn:disabled { color: #c3c7d2; cursor: default; background: transparent; }
       .pr-title { font-weight: 600; font-size: 13.5px; line-height: 1.35; margin: 6px 0 2px; }
       .pr-meta { font-size: 11.5px; color: #8a90a2; margin-bottom: 8px; }
       #pr-pdf-tip {

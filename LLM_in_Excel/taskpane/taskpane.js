@@ -277,6 +277,23 @@
   function saveCfg() {
     try { localStorage.setItem('lx:cfg', JSON.stringify(state.cfg)); } catch {}
   }
+
+  // ---------- 字号：A− / A+ 缩放面板内容（80%–160%），随设置保存 ----------
+  const FONT_STEPS = [0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6];
+  function applyFontScale() {
+    const scale = FONT_STEPS.includes(state.cfg.fontScale) ? state.cfg.fontScale : 1;
+    // 缩放加在 #app 的子元素上：#app 本身用 100dvh 撑满面板，直接缩放它会让高度溢出。
+    // 顶部标题栏只有按钮，不放大，免得窄面板里按钮被挤出去。
+    for (const el of $('#app').children) if (!el.classList.contains('hdr')) el.style.zoom = scale === 1 ? '' : String(scale);
+    $('#font-size-value').textContent = `${Math.round(scale * 100)}%`;
+    $('#btn-font-down').disabled = scale <= FONT_STEPS[0];
+    $('#btn-font-up').disabled = scale >= FONT_STEPS[FONT_STEPS.length - 1];
+  }
+  function stepFontScale(direction) {
+    const index = Math.max(0, FONT_STEPS.indexOf(FONT_STEPS.includes(state.cfg.fontScale) ? state.cfg.fontScale : 1));
+    state.cfg.fontScale = FONT_STEPS[Math.max(0, Math.min(FONT_STEPS.length - 1, index + direction))];
+    saveCfg(); applyFontScale();
+  }
   const HIST_KEY = () => 'lx:hist:' + docKey;
   const ARCH_KEY = () => 'lx:arch:' + docKey;
   const TGT_KEY = () => 'lx:targets:' + docKey;
@@ -1800,6 +1817,9 @@
     els.input.style.height = Math.min(140, els.input.scrollHeight) + 'px';
   }
   function bindEvents() {
+    applyFontScale();
+    $('#btn-font-down').addEventListener('click', () => stepFontScale(-1));
+    $('#btn-font-up').addEventListener('click', () => stepFontScale(1));
     $('#sel-language').value = I18N.language;
     $('#sel-language').addEventListener('change', () => {
       if (state.streaming) { $('#sel-language').value = I18N.language; return; }

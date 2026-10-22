@@ -1,5 +1,11 @@
 # 更新记录
 
+## 0.1.2 — 2026-10-22
+
+- **Text size.** Settings has **A− / A+** next to the language menu. Text in the pane scales from 80% to 160% in 10% steps and the choice is remembered. The header stays the same size so its buttons fit narrow panes.
+
+中文摘要：设置里语言菜单旁新增「A− / A+」字号调节，面板文字可在 80%–160% 之间按 10% 调整，选择会记住；顶部标题栏保持原大小，窄面板里按钮不会被挤出去。
+
 ## 0.1.1 — 2026-10-15
 
 - **✕ Clear target** on the reply card (and a ✕ next to the target summary at the top) releases the range without applying, so you can select the next one. The earlier preview still writes its own cells, after the same check that they were not edited in the meantime.
