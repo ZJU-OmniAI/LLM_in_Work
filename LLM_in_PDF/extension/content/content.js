@@ -351,7 +351,7 @@
   function renderHistory() {
     for (const m of state.messages) {
       const b = addMessageEl(m.role === 'assistant' ? 'assistant' : 'user');
-      if (m.role === 'assistant') b.innerHTML = renderMarkdown(m.content) + footHtml(m.via);
+      if (m.role === 'assistant') { b.innerHTML = renderMarkdown(m.content) + footHtml(m.via); window.paperReadDiagrams?.(b); }
       else renderUserBubble(b, m.content, '', m.images);
     }
   }
@@ -404,6 +404,7 @@
         html += renderMarkdown(raw) || '<span class="pr-typing">思考中<span>.</span><span>.</span><span>.</span></span>';
         if (final) html += footHtml(via);
         aBubble.innerHTML = html;
+        window.paperReadDiagrams?.(aBubble);
         els.messages.scrollTop = els.messages.scrollHeight;
       });
     };
@@ -955,6 +956,9 @@
       .pr-table-scroll tbody tr:nth-child(even) { background: #f7f8fc; }
       .pr-table-scroll td .pr-code { white-space: nowrap; }
       .pr-code { background: #e9ebf3; padding: 1px 5px; border-radius: 4px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+      .pr-chart, .pr-mermaid-done { margin: 10px 0; padding: 8px; border: 1px solid #d9ddea; border-radius: 7px; background: #fff; color: #1f2330; overflow-x: auto; }
+      .pr-chart svg { display: block; width: 100%; height: auto; font-family: inherit; }
+      .pr-mermaid-done svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
       .pr-pre { background: #1f2330; color: #e6e8ef; padding: 10px 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
       .pr-pre code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: pre; }
       .pr-quote { border-left: 3px solid rgba(255,255,255,.6); padding-left: 8px; margin-bottom: 6px; font-size: 12px; opacity: .92; }

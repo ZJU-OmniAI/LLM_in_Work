@@ -16,8 +16,11 @@ const markdownReply = [
   '| **Alpha** | 42 | $x^2$ | `code` | ~~旧版~~ |',
   '| Beta | 35 | $y$ | 很长的表格内容用于验证横向滚动 | 正常 |', '',
   '1. 第一项', '   - 嵌套内容', '2. 第二项', '',
-  '> 引用说明', '', '```js', 'const value = "$not_math$";', '```',
+  '> 引用说明', '', '```js', 'const value = "$not_math$";', '```', '',
+  '```chart', '{"type":"bar","title":"平均成功率","labels":["π0.5","PhysWord"],"datasets":[{"label":"SR","data":[49.6,90.3]}]}', '```', '',
+  '```mermaid', 'flowchart LR', '  A[输入] --> B[推理分支] --> C[动作]', '```',
 ].join('\n');
+const diagramReply = ['流程图测试', '', '```mermaid', 'flowchart TD', '  A[观测] --> B[物理词]', '```'].join('\n');
 const catalog = { ok: true, claude: [['(default)', 'CLI default'], ['future-claude', 'Future Claude']], codex: [['(default)', 'CLI default'], ['future-model', 'Future Model']], efforts: { codex: { 'future-model': ['low', 'max', 'ultra'] } }, sources: { claude: 'cli', codex: 'cli' }, runtimes: { claude: { version: '9.9.9', bin: 'fixture' }, codex: { version: '9.9.9', bin: 'fixture' } } };
 const server = createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -28,6 +31,7 @@ const server = createServer(async (req, res) => {
     let body = ''; for await (const chunk of req) body += chunk;
     requests.push(JSON.parse(body));
     res.setHeader('Content-Type', 'text/event-stream');
+    if (body.includes('画流程图')) { res.end(`data: ${JSON.stringify({ type: 'delta', text: diagramReply })}\n\ndata: {"type":"done"}\n\n`); return; }
     if (requests.length === 2) {
       const split = markdownReply.indexOf('| Beta');
       res.write(`data: ${JSON.stringify({ type: 'delta', text: markdownReply.slice(0, split) })}\n\n`);
@@ -110,7 +114,10 @@ try {
   await page.locator('.pr-table-scroll table tbody tr').first().waitFor().catch(async (error) => { console.log('Chat requests:', requests.length, 'Errors:', errors, 'Panel:', await page.locator('#pr-panel').innerText()); throw error; });
   assert.equal(await page.locator('.pr-table-scroll th').count(), 5);
   assert.equal(await page.locator('.pr-table-scroll td .katex').count(), 2);
-  assert.match(await page.locator('.pr-pre code').textContent(), /\$not_math\$/);
+  assert.match(await page.locator('.pr-pre code').first().textContent(), /\$not_math\$/);
+  assert.equal(await page.locator('.pr-chart svg rect').count(), 2);
+  await page.locator('.pr-mermaid-done svg').waitFor();
+  assert.match(await page.locator('.pr-mermaid-done svg').textContent(), /推理分支/);
   assert.equal(await page.locator('.pr-pre .katex').count(), 0);
   assert.ok(await page.locator('.pr-table-scroll').evaluate((el) => el.scrollWidth > el.clientWidth));
   assert.ok(await page.locator('#pr-panel').evaluate((el) => el.scrollWidth <= el.clientWidth + 1));
@@ -231,12 +238,23 @@ try {
   assert.match(requests.at(-1).paper.text, /没有可提取的文字层/);
   assert.match(requests.at(-1).messages.at(-1).content, /解释这张图片/);
   await scan.close();
+  // On arXiv pages the panel runs as a content script; Mermaid must load there too.
+  await context.route('https://arxiv.org/abs/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body><h1 class="title">Diagram fixture</h1><p>Abstract text.</p></body></html>' }));
+  const abs = await context.newPage();
+  await abs.goto('https://arxiv.org/abs/1706.03762');
+  await abs.locator('#pr-input').waitFor({ state: 'attached' });
+  if (await abs.locator('#pr-launcher').isVisible()) await abs.locator('#pr-launcher').click();
+  await abs.locator('#pr-input').fill('请画流程图');
+  await abs.locator('#pr-send').click();
+  await abs.locator('.pr-mermaid-done svg').waitFor();
+  assert.match(await abs.locator('.pr-mermaid-done svg').textContent(), /物理词/);
+  await abs.close();
   // Invalid input is rejected without fetching an arbitrary URL.
   const bad = await context.newPage();
   await bad.goto(`chrome-extension://${id}/reader/reader.html?id=../../private`);
   await bad.locator('#reader-status.error').waitFor();
   assert.match(await bad.locator('#reader-status').textContent(), /无效/);
-  console.log('PASS: PDF redirect, text selection, full text, quoted chat, dynamic models/effort, zoom, paging, full history, Markdown tables/math, copying, image cropping/pixels/cancellation/persistence/follow-up and invalid-ID handling.');
+  console.log('PASS: PDF redirect, text selection, full text, quoted chat, dynamic models/effort, zoom, paging, full history, Markdown tables/math/charts/Mermaid (reader and arXiv page), copying, image cropping/pixels/cancellation/persistence/follow-up and invalid-ID handling.');
 } finally {
   await context?.close();
   await new Promise((resolve) => server.close(resolve));

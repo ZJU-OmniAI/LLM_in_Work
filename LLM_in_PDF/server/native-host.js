@@ -8,7 +8,7 @@ import { runModel } from './cli.js';
 import { buildPrompt } from './prompt.js';
 import { getModels } from './models.js';
 
-const VERSION = '0.9.2';
+const VERSION = '0.10.0';
 
 // Chrome 限制：发给插件的单条消息不能超过 1MB
 const MAX_MSG_BYTES = 1000 * 1024;
@@ -109,7 +109,7 @@ async function handle(msg) {
       send({ type: 'done', reqId: msg.reqId });
       return;
     }
-    const prompt = buildPrompt({ paper: p.paper || {}, messages, selection: p.selection || '', images: p.images });
+    const prompt = buildPrompt({ paper: p.paper || {}, messages, selection: p.selection || '', images: p.images, includeSystem: backend !== 'claude' });
 
     const ac = new AbortController();
     aborters.set(msg.reqId, ac);

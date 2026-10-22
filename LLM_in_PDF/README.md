@@ -27,7 +27,7 @@ Then open `chrome://extensions`, enable **Developer mode**, choose **Load unpack
 
 On **Windows**, native installation is not yet provided. Run `npm start` in this directory, keep the terminal open, and load the extension as above. The extension falls back to the loopback HTTP service at `http://localhost:8765`. This mode also works on macOS/Linux.
 
-The extension bundles PDF.js, Markdown-it and KaTeX. Installing from this checkout does not require an npm build or an npm install for normal use.
+The extension bundles PDF.js, Markdown-it, KaTeX and Mermaid. Installing from this checkout does not require an npm build or an npm install for normal use.
 
 ## Read and ask
 
@@ -41,7 +41,7 @@ The extension bundles PDF.js, Markdown-it and KaTeX. Installing from this checko
 
 The extension’s in-browser PDF view preserves PDF layout, extracts the text layer, and supports zoom, page navigation and search. Select text, click **问一下**, and send a question. For figures, charts or scans, choose **框选图片**, drag a rectangle on one page, and ask about the actual pixels. Up to four recent images accompany each request. Scanned PDFs support image questions but do not gain automatic full-document OCR.
 
-Use the backend, model and effort menus to choose Claude/Codex. Model lists come from the installed CLIs, including each Codex model's supported reasoning levels. Replies stream with Markdown tables, code and LaTeX formulas.
+Use the backend, model and effort menus to choose Claude/Codex. Model lists come from the installed CLIs, including each Codex model's supported reasoning levels. Replies stream with Markdown tables, code, LaTeX formulas, bar and line charts, and Mermaid flowcharts. Optionally, put a short research profile (your field and main papers) in `~/.llm_in_pdf/profile.md`, or point `LLM_IN_PDF_PROFILE` to another file; a full explanation then ends with a sentence on how the paper relates to your work.
 
 History is saved per document. Online documents use their source URL; local documents use their content fingerprint, so renamed copies share history and different files with the same name do not. Clear a conversation to archive it (up to ten archives per document). Copy the current conversation or all history as Markdown. Imported files persist locally across refreshes and can be removed independently of conversations.
 
@@ -87,4 +87,4 @@ Source: `extension/` (MV3 PDF view, panel and background), `server/` (native and
 
 ## License
 
-Project code is [MIT](../LICENSE). Bundled PDF.js is Apache-2.0; Markdown-it and KaTeX are MIT, with licenses preserved under `extension/vendor/`. The manifest contains only the public key needed for a stable extension ID; no private signing key is included or required.
+Project code is [MIT](../LICENSE). Bundled PDF.js is Apache-2.0; Markdown-it, KaTeX and Mermaid are MIT, with licenses preserved under `extension/vendor/`. The manifest contains only the public key needed for a stable extension ID; no private signing key is included or required.

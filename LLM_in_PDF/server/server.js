@@ -12,7 +12,7 @@ import { runModel } from './cli.js';
 import { buildPrompt } from './prompt.js';
 import { getModels } from './models.js';
 
-const VERSION = '0.9.2';
+const VERSION = '0.10.0';
 
 const extensionId = process.env.LLM_IN_PDF_EXTENSION_ID || 'acafiedlcaibhilacmadmiklkfhmlhjo';
 if (!/^[a-p]{32}$/.test(extensionId)) throw new Error('LLM_IN_PDF_EXTENSION_ID must contain exactly 32 letters a-p.');
@@ -102,7 +102,7 @@ const server = http.createServer(async (req, res) => {
     if (!messages.length) return sendJson(res, 400, { ok: false, error: '缺少 messages' });
 
     let prompt;
-    try { prompt = buildPrompt({ paper, messages, selection, images: body.images }); }
+    try { prompt = buildPrompt({ paper, messages, selection, images: body.images, includeSystem: backend !== 'claude' }); }
     catch (error) { return sendJson(res, 400, { ok: false, error: error.message }); }
 
     // 开 SSE

@@ -58,7 +58,7 @@ https://github.com/user-attachments/assets/08b40aef-50ba-4772-aff1-d24c1b488da0
 | 在哪里用 | Microsoft Word 桌面版 | Overleaf 的 Code Editor（`overleaf.com`、`cn.overleaf.com`） | Chrome / Chromium 中的 PDF 和论文网页 | Microsoft PowerPoint 桌面版 | Microsoft Excel 桌面版 |
 | 怎么审阅 | 正文、表格差异预览，以 Word 修订写入 | 每个选段各有一份 LaTeX 差异，整组写入、一次撤销 | 只读问答，不修改 PDF 原文 | 每个目标一份差异，只写入变化的字词，可一键撤销 | 每块区域一份单元格预览，只写入变化的单元格，可一键撤销 |
 | 一起修改 | 最多 8 个段落或表格 | 同一 `.tex` 文件里多个不相邻的选段 | 选择文字，或附带最近最多 4 张框选图片 | 最多 16 个文本框、表格或整页，可跨页 | 最多 8 块区域（合计 4,000 个单元格），可以是要填写的空白列 |
-| 调整格式 | — | — | PDF.js 保留排版，Markdown 表格与 KaTeX 公式 | 「调整版式」：边框、填充、字体字号、对齐、表格、背景，以及整页美化（拆成卡片、统一配色），可一键撤销 | — |
+| 调整格式 | — | — | PDF.js 保留排版，Markdown 表格、KaTeX 公式、统计图与 Mermaid 流程图 | 「调整版式」：边框、填充、字体字号、对齐、表格、背景，以及整页美化（拆成卡片、统一配色），可一键撤销 | — |
 | 提问 | 「文档问答」围绕全文提问 | 「问答」模式，可带上项目里的其他文件 | 全文、选段与实际图表像素 | 「演示文稿问答」，可附当前页截图 | 「表格问答」，回答注明单元格地址 |
 | 支持平台 | Windows、macOS | Windows、macOS、Linux 上的 Chrome、Edge、Brave 等 Chromium 浏览器 | macOS/Linux 原生桥；Windows 使用 HTTP 后端 | Windows、macOS | Windows、macOS |
 | 连接方式 | Office 加载项 → 本机 HTTPS 服务（`127.0.0.1:8377`）→ CLI | 浏览器扩展 → 原生消息（不占端口）→ CLI | 扩展 → 原生消息；可回退本机 HTTP（8765） | Office 加载项 → 本机 HTTPS 服务（`127.0.0.1:8387`）→ CLI | Office 加载项 → 本机 HTTPS 服务（`127.0.0.1:8397`）→ CLI |
@@ -180,7 +180,7 @@ LLM_in_Work/
 └── CONTRIBUTING.md    各子项目的测试和 CI
 ```
 
-各桥程序使用 Node 内置模块；LLM_in_PDF 随扩展打包了 PDF.js、Markdown-it、KaTeX 及许可证。离线测试使用模拟 CLI 和合成文档，[CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions) 在 Linux、macOS、Windows 上运行。详见[参与开发](CONTRIBUTING.md)和[更新记录](CHANGELOG.md)。
+各桥程序使用 Node 内置模块；LLM_in_PDF 随扩展打包了 PDF.js、Markdown-it、KaTeX、Mermaid 及许可证。离线测试使用模拟 CLI 和合成文档，[CI](https://github.com/ZJU-OmniAI/LLM_in_Work/actions) 在 Linux、macOS、Windows 上运行。详见[参与开发](CONTRIBUTING.md)和[更新记录](CHANGELOG.md)。
 
 维护者：[Chrome 商店发布包与操作指南](docs/chrome-store/README.zh-CN.md) 已整理 Overleaf 0.9.1 / PDF 0.9.2 版本包、中英文介绍、图片、权限说明和[隐私政策](docs/chrome-store/PRIVACY.md)。目前材料待提交审核，尚未宣称商店上架；上面的「快速开始」是开发版加载方式。
 
