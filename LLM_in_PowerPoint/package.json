@@ -1,6 +1,6 @@
 {
   "name": "llm-in-powerpoint",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "type": "module",
   "description": "LLM_in_PowerPoint — Review and apply AI edits to slides in desktop Microsoft PowerPoint with your local Claude Code or Codex CLI.",

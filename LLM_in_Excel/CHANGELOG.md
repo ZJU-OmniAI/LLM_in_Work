@@ -1,5 +1,11 @@
 # 更新记录
 
+## 0.1.3 — 2026-10-23
+
+- **Windows install fixes ([#18](https://github.com/ZJU-OmniAI/LLM_in_Work/issues/18)).** On Chinese (and other non-UTF-8) Windows, `install.ps1` read `manifest.xml` with the system code page and failed with an XML parse error; it now reads it as UTF-8. Running the installer again no longer stops at the folder-permission step with a `SeSecurityPrivilege` error: it writes back only the access rules instead of the whole security descriptor. The background service also reads `runtime.json` as UTF-8, so user names and paths with Chinese characters work.
+
+中文摘要：修复 Windows 安装问题（#18）：中文等非 UTF-8 系统上读取 `manifest.xml` 时按系统编码解码导致 XML 解析失败，现改为按 UTF-8 读取；再次运行安装脚本时不再在设置目录权限一步报 `SeSecurityPrivilege` 错误（只写回访问权限，不再写整份安全描述符）；后台服务也按 UTF-8 读取 `runtime.json`，用户名或路径含中文时可以正常启动。
+
 ## 0.1.2 — 2026-10-22
 
 - **Text size.** Settings has **A− / A+** next to the language menu. Text in the pane scales from 80% to 160% in 10% steps and the choice is remembered. The header stays the same size so its buttons fit narrow panes.

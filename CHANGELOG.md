@@ -1,5 +1,11 @@
 # 更新记录 / Changelog
 
+## 2026-10-23 — Word 0.7.6 · PowerPoint 0.3.3 · Excel 0.1.3 · Windows install fixes
+
+- Fixes [#18](https://github.com/ZJU-OmniAI/LLM_in_Work/issues/18): on Chinese and other non-UTF-8 Windows systems, `install.ps1` read `manifest.xml` with the ANSI code page and failed to parse it, and running the installer a second time stopped at the folder-permission step with a `SeSecurityPrivilege` error. The installers now read the manifest as UTF-8 and write back only the folder's access rules; the background service reads `runtime.json` as UTF-8. CI now also runs the Windows install test under PowerShell 7, and a static check keeps `Set-Acl` and encoding-less `Get-Content` out of the Windows scripts.
+
+中文：修复 #18：中文等非 UTF-8 的 Windows 上，安装脚本按系统编码读取 `manifest.xml` 导致解析失败；再次运行安装时在设置目录权限一步报 `SeSecurityPrivilege` 错误。现在按 UTF-8 读取清单、只写回目录的访问权限，后台服务也按 UTF-8 读取 `runtime.json`。CI 额外在 PowerShell 7 下跑一遍 Windows 安装测试，并用静态检查防止脚本里再出现 `Set-Acl` 或不指定编码的 `Get-Content`。
+
 ## 2026-10-22 — Text size in every assistant · PDF 0.10.1 · Overleaf 0.9.4 · Word 0.7.5 · PowerPoint 0.3.2 · Excel 0.1.2
 
 - Every panel has **A− / A+** to make its text larger or smaller (80%–160%, 10% steps). The choice is remembered. Only the panel content scales: the panel width, the page or document layout, and the header buttons stay the same. In LLM_in_PDF the buttons are in the panel header; in Overleaf, Word, PowerPoint and Excel they are in Settings next to the language menu.
