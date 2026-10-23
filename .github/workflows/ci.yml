@@ -45,6 +45,11 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: ./tools/test-windows-install.ps1
+      - name: Same smoke test under PowerShell 7
+        timeout-minutes: 3
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tools/test-windows-install.ps1
 
   powerpoint:
     name: PowerPoint (${{ matrix.os }}, Node 22)
@@ -78,6 +83,11 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: ./tools/test-windows-install.ps1
+      - name: Same smoke test under PowerShell 7
+        timeout-minutes: 3
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tools/test-windows-install.ps1
 
   excel:
     name: Excel (${{ matrix.os }}, Node 22)
@@ -110,6 +120,11 @@ jobs:
         timeout-minutes: 3
         if: runner.os == 'Windows'
         shell: powershell
+        run: ./tools/test-windows-install.ps1
+      - name: Same smoke test under PowerShell 7
+        timeout-minutes: 3
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: ./tools/test-windows-install.ps1
 
   overleaf:

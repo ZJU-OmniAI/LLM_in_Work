@@ -19,7 +19,15 @@ foreach ($Sid in @($Identity, [System.Security.Principal.SecurityIdentifier]'S-1
     $Rule = New-Object System.Security.AccessControl.FileSystemAccessRule($Sid, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
     $Acl.AddAccessRule($Rule)
 }
-Set-Acl -Path $Base -AclObject $Acl
+# Write back only the access rules (DACL). Set-Acl can also try to write the auditing
+# rules (SACL), which needs SeSecurityPrivilege and fails for ordinary users when the
+# installer runs again (issue #18). Directory.SetAccessControl persists only the
+# sections that changed; PowerShell 7 exposes the same call as FileSystemAclExtensions.
+if ($PSVersionTable.PSEdition -eq 'Core') {
+    [System.IO.FileSystemAclExtensions]::SetAccessControl([System.IO.DirectoryInfo]::new($Base), $Acl)
+} else {
+    [System.IO.Directory]::SetAccessControl($Base, $Acl)
+}
 
 $Pfx = Join-Path $CertDir 'localhost.pfx'
 if (!(Test-Path $Pfx)) {
@@ -79,7 +87,9 @@ foreach ($Cli in @('claude','codex')) {
 # Same current-user registration used by Microsoft's office-addin-dev-settings.
 $Registry = 'HKCU:\Software\Microsoft\Office\16.0\WEF\Developer'
 $Manifest = Join-Path $App 'manifest.xml'
-[xml]$Xml = Get-Content $Manifest
+# The manifest is UTF-8 without BOM and contains Chinese; Windows PowerShell 5.1 would
+# otherwise decode it with the ANSI code page (e.g. GBK) and fail to parse it.
+[xml]$Xml = Get-Content -LiteralPath $Manifest -Raw -Encoding UTF8
 $AddinId = $Xml.OfficeApp.Id
 New-Item -Path $Registry -Force | Out-Null
 New-ItemProperty -Path $Registry -Name $AddinId -Value $Manifest -PropertyType String -Force | Out-Null

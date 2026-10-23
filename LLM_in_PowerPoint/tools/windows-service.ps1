@@ -42,6 +42,7 @@ if ($Action -eq 'Uninstall') {
 }
 if ($Action -in @('Start','Restart')) {
     if ($Action -eq 'Start' -and $Running) { Write-Host 'Already running.'; return }
-    $Config = Get-Content (Join-Path $Base 'runtime.json') -Raw | ConvertFrom-Json
+    # runtime.json is UTF-8 and may hold non-ASCII paths (for example a Chinese user name).
+    $Config = Get-Content -LiteralPath (Join-Path $Base 'runtime.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     Start-Process -FilePath $Config.node -ArgumentList ('"' + $Runner + '" "' + $Base + '"') -WorkingDirectory $Base -WindowStyle Hidden
 }

@@ -1,6 +1,6 @@
 {
   "name": "llm-in-excel",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "type": "module",
   "description": "LLM_in_Excel — Review and apply AI edits to cells in desktop Microsoft Excel with your local Claude Code or Codex CLI.",

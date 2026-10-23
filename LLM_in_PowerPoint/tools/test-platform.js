@@ -44,3 +44,15 @@ test('stop terminates the CLI and its child process', async () => {
     assert.fail('CLI descendant survived cancellation');
   } finally { try { process.kill(grandchild, 'SIGKILL'); } catch {} }
 });
+
+test('Windows scripts read UTF-8 explicitly and write only the access rules (issue #18)', async () => {
+  const { readFile } = await import('node:fs/promises');
+  for (const file of ['install.ps1', 'tools/windows-service.ps1']) {
+    const source = await readFile(new URL(`../${file}`, import.meta.url), 'utf8');
+    const code = source.split(/\r?\n/).filter((line) => !line.trim().startsWith('#')).join('\n');
+    // Windows PowerShell 5.1 decodes BOM-less files with the ANSI code page unless told otherwise.
+    for (const line of code.split('\n').filter((l) => /\bGet-Content\b/.test(l))) assert.match(line, /-Encoding UTF8\b/, `${file}: ${line.trim()}`);
+    // Set-Acl can require SeSecurityPrivilege when it rewrites the whole security descriptor.
+    assert.doesNotMatch(code, /\bSet-Acl\b/, file);
+  }
+});
