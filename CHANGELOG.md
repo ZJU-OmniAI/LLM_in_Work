@@ -1,5 +1,11 @@
 # 更新记录 / Changelog
 
+## 2026-10-23 — LLM_in_PDF 0.10.2 · Explain the problem a paper solves
+
+- Full explanations now start from the problem the paper solves, built from its title, abstract and introduction. They first explain the title's key concepts in plain words with an example from the paper. Then they cover where current approaches fall short, the core question in one sentence, why the most direct approach fails (with a counterexample), and what each name in the title refers to. This section gets its own length budget (about 500–700 Chinese characters); the critique is capped at about 600, so the rest of the answer does not grow. On Harness-Zero and four other papers, a judge rated the problem section 12/12 on six criteria (previously 7–8/12) and clearer than alphaXiv's.
+
+中文：整体解读会先结合标题、摘要和引言讲透论文要解决什么问题：用大白话和论文里的例子解释标题中的概念，再讲现状的不足、一句话的核心问题、最直接的做法为什么不行（附反例），以及标题里的名字各指什么。这一节单独给篇幅（约 500–700 字），评价一节限 600 字以内，其余部分不变长。在 Harness-Zero 等 5 篇论文上，评审按 6 项给"问题"一节打分，从 7–8/12 提高到 12/12，并认为比 alphaXiv 讲得更清楚。
+
 ## 2026-10-23 — Word 0.7.6 · PowerPoint 0.3.3 · Excel 0.1.3 · Windows install fixes
 
 - Fixes [#18](https://github.com/ZJU-OmniAI/LLM_in_Work/issues/18): on Chinese and other non-UTF-8 Windows systems, `install.ps1` read `manifest.xml` with the ANSI code page and failed to parse it, and running the installer a second time stopped at the folder-permission step with a `SeSecurityPrivilege` error. The installers now read the manifest as UTF-8 and write back only the folder's access rules; the background service reads `runtime.json` as UTF-8. CI now also runs the Windows install test under PowerShell 7, and a static check keeps `Set-Acl` and encoding-less `Get-Content` out of the Windows scripts.

@@ -1,6 +1,6 @@
 {
   "name": "llm-in-pdf",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "LLM_in_PDF — interactively read local PDFs and arXiv papers in Chrome with your local Claude Code or Codex agent; ask about selected passages and figures.",
   "type": "module",
   "private": true,
