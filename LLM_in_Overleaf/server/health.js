@@ -1,5 +1,5 @@
 // 健康检查：只检查 CLI 能否启动和登录状态，不调用模型生成，不返回账户信息。
-import { CLAUDE_BIN, CODEX_BIN } from './config.js';
+import { getCliRuntime } from './runtime.js';
 import { runProcess } from './process.js';
 
 async function inspect(backend, bin) {
@@ -31,6 +31,7 @@ async function inspect(backend, bin) {
     label: loggedIn === true ? '已登录' : '登录状态待确认' };
 }
 
-export function getHealth(backend) {
-  return backend === 'codex' ? inspect('codex', CODEX_BIN) : inspect('claude', CLAUDE_BIN);
+export async function getHealth(backend) {
+  const name = backend === 'codex' ? 'codex' : 'claude';
+  return inspect(name, (await getCliRuntime(name)).bin);
 }

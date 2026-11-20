@@ -78,8 +78,12 @@ else
 fi
 
 # ---- 3) 启动垫片：把安装这一刻的代理设置烤进去（launchd/Word 拉起的进程不带 ~/.zshrc 的代理）----
-CLAUDE_PATH="${LLM_IN_WORD_CLAUDE_BIN:-${WORD_EDIT_CLAUDE_BIN:-$(command -v claude || true)}}"
-CODEX_PATH="${LLM_IN_WORD_CODEX_BIN:-${WORD_EDIT_CODEX_BIN:-$(command -v codex || true)}}"
+# 显式设置的 *_BIN 固定使用那一份；没设置时只把这个终端找到的路径记作候选（*_DETECTED），
+# 服务会和其他已安装的副本比版本、用最新的一份（npm 旧版不会挡住 ChatGPT 应用自带的新版 Codex）。
+CLAUDE_PATH="${LLM_IN_WORD_CLAUDE_BIN:-${WORD_EDIT_CLAUDE_BIN:-}}"
+CLAUDE_FOUND="$(command -v claude || true)"
+CODEX_PATH="${LLM_IN_WORD_CODEX_BIN:-${WORD_EDIT_CODEX_BIN:-}}"
+CODEX_FOUND="$(command -v codex || true)"
 # 用 printf %q 生成安全的 shell 字面量，不 eval 代理值，也不把凭证打印到日志。
 {
   printf '#!/bin/zsh\n# 由 install.sh 生成；代理或 CLI 路径变化后重跑安装。\n'
@@ -87,8 +91,10 @@ CODEX_PATH="${LLM_IN_WORD_CODEX_BIN:-${WORD_EDIT_CODEX_BIN:-$(command -v codex |
     val="$(printenv "$v" || true)"
     if [ -n "$val" ]; then printf 'export %s=%q\n' "$v" "$val"; fi
   done
-  if [ -n "$CLAUDE_PATH" ]; then printf 'export LLM_IN_WORD_CLAUDE_BIN=%q\n' "$CLAUDE_PATH"; fi
-  if [ -n "$CODEX_PATH" ]; then printf 'export LLM_IN_WORD_CODEX_BIN=%q\n' "$CODEX_PATH"; fi
+  if [ -n "$CLAUDE_PATH" ]; then printf 'export LLM_IN_WORD_CLAUDE_BIN=%q\n' "$CLAUDE_PATH"
+  elif [ -n "$CLAUDE_FOUND" ]; then printf 'export LLM_IN_WORD_CLAUDE_DETECTED=%q\n' "$CLAUDE_FOUND"; fi
+  if [ -n "$CODEX_PATH" ]; then printf 'export LLM_IN_WORD_CODEX_BIN=%q\n' "$CODEX_PATH"
+  elif [ -n "$CODEX_FOUND" ]; then printf 'export LLM_IN_WORD_CODEX_DETECTED=%q\n' "$CODEX_FOUND"; fi
   printf 'export LLM_IN_WORD_DATA_DIR=%q\n' "$BASE"
   for v in LLM_IN_WORD_TIMEOUT_MS LLM_IN_WORD_MAX_CHARS; do
     val="$(printenv "$v" || true)"

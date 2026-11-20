@@ -203,8 +203,8 @@ Installers persist these for the background service; set them before running `np
 
 | Environment variable | Purpose | Default |
 | --- | --- | --- |
-| `LLM_IN_POWERPOINT_CLAUDE_BIN` | Claude executable or JS entry point | Automatic discovery |
-| `LLM_IN_POWERPOINT_CODEX_BIN` | Codex executable or JS entry point | Automatic discovery |
+| `LLM_IN_POWERPOINT_CLAUDE_BIN` | Claude executable or JS entry point | Newest working installed copy |
+| `LLM_IN_POWERPOINT_CODEX_BIN` | Codex executable or JS entry point | Newest working installed copy |
 | `LLM_IN_POWERPOINT_TIMEOUT_MS` | Total time allowed for one CLI request | `300000` |
 | `LLM_IN_POWERPOINT_MAX_CHARS` | Server-side cap on presentation text | `120000` |
 | `LLM_IN_POWERPOINT_DATA_DIR` | Data directory for direct server runs | `~/.llm_in_powerpoint` |

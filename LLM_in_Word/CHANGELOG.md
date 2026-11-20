@@ -1,5 +1,11 @@
 # 更新记录
 
+## 0.7.7 — 2026-11-21
+
+- **Newly released Codex models appear.** The model list lacked new Codex models such as GPT-6.2-Sol: the service ran the `codex` the installer had found in your terminal, usually an older npm copy, while the Codex CLI inside the ChatGPT desktop app is updated with the app and lists newer models. The service now asks every installed Claude Code / Codex copy for its version and runs the newest one that starts (pre-releases such as `0.169.0-alpha.11` are ordered correctly). Copies that fail to start are skipped, and a CLI update is picked up within ten minutes without restarting. `LLM_IN_WORD_CLAUDE_BIN` / `LLM_IN_WORD_CODEX_BIN` still pin one copy; the path the installer finds is recorded only as a candidate (`LLM_IN_WORD_*_DETECTED`). Run `npm run update` once so the background service stops pinning the old path.
+
+中文摘要：修复模型列表里没有 GPT-6.2-Sol 等新 Codex 模型的问题。原因是服务固定使用安装时在终端里找到的 `codex`（通常是 npm 装的旧版），而 ChatGPT 桌面应用自带的 Codex 会随应用更新、能看到新模型。现在服务会询问每一份已安装的 Claude Code / Codex 的版本，用能正常启动的最新一份（正确比较 `0.169.0-alpha.11` 这类预发布版本）；启动失败的副本自动跳过，CLI 升级后最迟 10 分钟生效、无需重启。显式设置 `LLM_IN_WORD_CLAUDE_BIN` / `LLM_IN_WORD_CODEX_BIN` 仍会固定使用那一份；安装脚本找到的路径只作为候选（`LLM_IN_WORD_*_DETECTED`）。更新后运行一次 `npm run update`，让后台服务不再固定旧路径。
+
 ## 0.7.6 — 2026-10-23
 
 - **Windows install fixes ([#18](https://github.com/ZJU-OmniAI/LLM_in_Work/issues/18)).** On Chinese (and other non-UTF-8) Windows, `install.ps1` read `manifest.xml` with the system code page and failed with an XML parse error; it now reads it as UTF-8. Running the installer again no longer stops at the folder-permission step with a `SeSecurityPrivilege` error: it writes back only the access rules instead of the whole security descriptor. The background service also reads `runtime.json` as UTF-8, so user names and paths with Chinese characters work.

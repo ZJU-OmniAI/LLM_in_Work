@@ -3,7 +3,8 @@
 import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { CLAUDE_BIN, CODEX_BIN, DATA_DIR, codexEffort } from './config.js';
+import { DATA_DIR, codexEffort } from './config.js';
+import { getCliRuntime } from './runtime.js';
 import { runProcess, classifyError } from './process.js';
 
 function eventCollector(onEvent) {
@@ -46,7 +47,7 @@ export async function runClaude({ prompt, model, effort, signal, sessionId, resu
   if (resume) args.push('--resume', resume);
   else if (sessionId) args.push('--session-id', sessionId);
   let finalResult = '', resultError = false;
-  const result = await runProcess(CLAUDE_BIN, args, {
+  const result = await runProcess((await getCliRuntime('claude')).bin, args, {
     cwd: DATA_DIR, input: prompt, signal,
     onSpawn: () => events.emit('status', '模型已启动，正在生成'),
     onLine(line) {
@@ -84,7 +85,7 @@ export async function runCodex({ prompt, model, effort, images = [], signal, res
     args.push('-');
     const emitted = new Map();
     let turnFailed = false;
-    const result = await runProcess(CODEX_BIN, args, {
+    const result = await runProcess((await getCliRuntime('codex')).bin, args, {
       cwd: workdir, input: prompt, signal,
       onSpawn: () => events.emit('status', '模型已启动，正在生成'),
       onLine(line) {

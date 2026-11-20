@@ -4,10 +4,10 @@
 
 import os from 'node:os';
 import path from 'node:path';
-import { accessSync, constants, readdirSync, existsSync } from 'node:fs';
+import { readdirSync, existsSync } from 'node:fs';
 
 // The legacy data directory and environment names remain readable during upgrades.
-const setting = (name) => process.env[`LLM_IN_WORD_${name}`] || process.env[`WORD_EDIT_${name}`];
+export const setting = (name) => process.env[`LLM_IN_WORD_${name}`] || process.env[`WORD_EDIT_${name}`];
 const defaultData = existsSync(path.join(os.homedir(), '.word_edit'))
   ? path.join(os.homedir(), '.word_edit') : path.join(os.homedir(), '.llm_in_word');
 export const DATA_DIR = setting('DATA_DIR') || defaultData;
@@ -18,23 +18,9 @@ export const PORT = Number(setting('PORT') || 8377);
 // HTTPS 证书位置（install.sh 生成并加入钥匙串信任；缺证书时退回 HTTP 方便调试）
 export const CERT_DIR = setting('CERT_DIR') || path.join(DATA_DIR, 'cert');
 
-// CLI 可执行文件名。默认用名字（靠 PATH 找），也可用环境变量指定绝对路径。
 export const REQUEST_TIMEOUT_MS = Math.max(1000, Number(setting('TIMEOUT_MS')) || 300000);
 
-export function resolveBin(name) {
-  const override = setting(`${name.toUpperCase()}_BIN`);
-  if (override) return override;
-  for (const dir of spawnEnv().PATH.split(path.delimiter)) {
-    const extensions = process.platform === 'win32' ? ['.exe', '.cmd', '.bat', ''] : [''];
-    for (const ext of extensions) {
-      const candidate = path.join(dir, name + ext);
-      try { accessSync(candidate, constants.X_OK); return candidate; } catch {}
-    }
-  }
-  return name;
-}
-export const CLAUDE_BIN = resolveBin('claude');
-export const CODEX_BIN = resolveBin('codex');
+// 用哪个 claude / codex 可执行文件由 runtime.js 决定（多份并存时用版本最新的一份）。
 
 // 发给模型的"文档全文"最大字符数。约 3 万 token，够长且不爆上下文。
 export const MAX_FULLTEXT_CHARS = Number(setting('MAX_CHARS') || 120000);

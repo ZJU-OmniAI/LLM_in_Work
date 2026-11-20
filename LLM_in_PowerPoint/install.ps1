@@ -74,12 +74,12 @@ foreach ($Name in @('HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','NO_PROXY','LLM_IN_PO
 foreach ($Cli in @('claude','codex')) {
     $Key = 'LLM_IN_POWERPOINT_' + $Cli.ToUpperInvariant() + '_BIN'
     $Value = [Environment]::GetEnvironmentVariable($Key)
-    if (!$Value) {
-        # Prefer native executables; an npm .cmd shim is resolved by server/launch.js.
-        $Command = Get-Command "$Cli.exe", "$Cli.cmd" -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($Command) { $Value = $Command.Source }
-    }
-    if ($Value) { $Config.env[$Key] = $Value }
+    if ($Value) { $Config.env[$Key] = $Value; continue }
+    # Without an explicit path, record what this shell finds only as a candidate: the server
+    # compares it with the other installed copies and runs the newest one.
+    # Prefer native executables; an npm .cmd shim is resolved by server/launch.js.
+    $Command = Get-Command "$Cli.exe", "$Cli.cmd" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($Command) { $Config.env['LLM_IN_POWERPOINT_' + $Cli.ToUpperInvariant() + '_DETECTED'] = $Command.Source }
 }
 [IO.File]::WriteAllText((Join-Path $Base 'runtime.json'), ($Config | ConvertTo-Json -Depth 4))
 
