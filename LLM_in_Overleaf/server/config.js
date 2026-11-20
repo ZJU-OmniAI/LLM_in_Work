@@ -4,9 +4,9 @@
 
 import os from 'node:os';
 import path from 'node:path';
-import { accessSync, constants, readdirSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 
-const setting = (name) => process.env[`LLM_IN_OVERLEAF_${name}`];
+export const setting = (name) => process.env[`LLM_IN_OVERLEAF_${name}`];
 
 // 本机数据目录：Claude 会话按工作目录归档，首轮和续轮必须用同一个 cwd 才能找到会话。
 export const DATA_DIR = setting('DATA_DIR') || (process.platform === 'win32'
@@ -69,17 +69,4 @@ export function spawnEnv() {
   return env;
 }
 
-// CLI 可执行文件。默认按 PATH 查找（Windows 同时认 .exe/.cmd），也可用环境变量指定绝对路径。
-export function resolveBinary(name, override = setting(`${name.toUpperCase()}_BIN`)) {
-  if (override) return override;
-  const extensions = process.platform === 'win32' ? ['.exe', '.cmd', '.bat', ''] : [''];
-  for (const dir of spawnEnv().PATH.split(path.delimiter)) {
-    for (const ext of extensions) {
-      const candidate = path.join(dir, name + ext);
-      try { accessSync(candidate, constants.X_OK); return candidate; } catch {}
-    }
-  }
-  return name;
-}
-export const CLAUDE_BIN = resolveBinary('claude');
-export const CODEX_BIN = resolveBinary('codex');
+// 用哪个 claude / codex 可执行文件由 runtime.js 决定（多份并存时用版本最新的一份）。

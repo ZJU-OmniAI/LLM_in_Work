@@ -1,5 +1,11 @@
 # 更新记录
 
+## 0.9.5 — 2026-11-21
+
+- **Newly released Codex models appear.** The bridge ran the first `codex` on PATH, usually an older npm copy, so new models such as GPT-6.2-Sol were missing; the Codex CLI inside the ChatGPT desktop app is updated with the app and lists them. The bridge now asks every installed Claude Code / Codex copy for its version and runs the newest one that starts. Copies that fail to start are skipped. `LLM_IN_OVERLEAF_CLAUDE_BIN` / `LLM_IN_OVERLEAF_CODEX_BIN` still pin one copy; on Windows the installer records the path it finds only as a candidate (`LLM_IN_OVERLEAF_*_DETECTED`).
+
+中文摘要：修复模型列表里没有 GPT-6.2-Sol 等新 Codex 模型的问题：原先按 PATH 用第一个找到的 `codex`（通常是 npm 装的旧版），而 ChatGPT 桌面应用自带的 Codex 会随应用更新。现在本机桥会询问每一份已安装的 Claude Code / Codex 的版本，用能正常启动的最新一份，启动失败的副本自动跳过。显式设置 `LLM_IN_OVERLEAF_CLAUDE_BIN` / `LLM_IN_OVERLEAF_CODEX_BIN` 仍固定使用那一份；Windows 安装脚本找到的路径只作为候选。
+
 ## 0.9.4 — 2026-10-22
 
 - **Text size.** Settings has **A− / A+** next to the language menu. The panel's text scales from 80% to 160% in 10% steps without changing the panel width or Overleaf's layout, and the choice is remembered.

@@ -15,7 +15,8 @@ process.env.CODEX_HOME = mkdtempSync(path.join(os.tmpdir(), 'llm-in-overleaf-cod
 const { runCodex, runClaude } = await import('../server/cli.js');
 const { getModels } = await import('../server/models.js');
 const { getHealth } = await import('../server/health.js');
-const { resolveBinary, spawnEnv } = await import('../server/config.js');
+const { spawnEnv } = await import('../server/config.js');
+const { getCliRuntime } = await import('../server/runtime.js');
 const { runProcess, classifyError } = await import('../server/process.js');
 async function run(prompt, options = {}) {
   const events = [];
@@ -23,7 +24,11 @@ async function run(prompt, options = {}) {
   return events;
 }
 const text = (events) => events.filter((e) => e.kind === 'text').map((e) => e.data).join('');
-test('explicit CLI path wins', () => assert.equal(resolveBinary('codex', '/custom/codex'), '/custom/codex'));
+test('explicit CLI path wins', async () => {
+  const runtime = await getCliRuntime('codex');
+  assert.equal(runtime.bin, fixture);
+  assert.equal(runtime.overridden, true);
+});
 test('PATH includes the Codex CLI bundled with the Codex and ChatGPT desktop apps', { skip: process.platform !== 'darwin' }, () => {
   const dirs = spawnEnv().PATH.split(path.delimiter);
   for (const app of ['Codex.app', 'ChatGPT.app']) assert.ok(dirs.includes(`/Applications/${app}/Contents/Resources/codex-cli/bin`), app);

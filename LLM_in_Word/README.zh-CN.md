@@ -196,8 +196,8 @@ launchctl kickstart -k gui/$(id -u)/com.llm_in_word.server
 
 | 环境变量 | 用途 | 默认值 |
 | --- | --- | --- |
-| `LLM_IN_WORD_CLAUDE_BIN` | Claude 可执行文件或 JS 入口 | 自动发现 |
-| `LLM_IN_WORD_CODEX_BIN` | Codex 可执行文件或 JS 入口 | 自动发现 |
+| `LLM_IN_WORD_CLAUDE_BIN` | Claude 可执行文件或 JS 入口 | 自动：用已安装副本里版本最新的一份 |
+| `LLM_IN_WORD_CODEX_BIN` | Codex 可执行文件或 JS 入口 | 自动：用已安装副本里版本最新的一份 |
 | `LLM_IN_WORD_TIMEOUT_MS` | 单次 CLI 总超时，毫秒 | `300000` |
 | `LLM_IN_WORD_MAX_CHARS` | 服务端正文字符上限 | `120000` |
 | `LLM_IN_WORD_DATA_DIR` | 直接启动时的数据目录 | `~/.llm_in_word`，或现有 `~/.word_edit` |

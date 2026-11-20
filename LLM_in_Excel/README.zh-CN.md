@@ -145,8 +145,8 @@ Windows：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\windo
 
 | 环境变量 | 作用 | 默认值 |
 | --- | --- | --- |
-| `LLM_IN_EXCEL_CLAUDE_BIN` | Claude 可执行文件或 JS 入口 | 自动查找 |
-| `LLM_IN_EXCEL_CODEX_BIN` | Codex 可执行文件或 JS 入口 | 自动查找 |
+| `LLM_IN_EXCEL_CLAUDE_BIN` | Claude 可执行文件或 JS 入口 | 自动：用已安装副本里版本最新的一份 |
+| `LLM_IN_EXCEL_CODEX_BIN` | Codex 可执行文件或 JS 入口 | 自动：用已安装副本里版本最新的一份 |
 | `LLM_IN_EXCEL_TIMEOUT_MS` | 单次 CLI 请求的总时限 | `300000` |
 | `LLM_IN_EXCEL_MAX_CHARS` | 服务端对工作簿内容的上限 | `120000` |
 | `LLM_IN_EXCEL_DATA_DIR` | 直接运行服务时的数据目录 | `~/.llm_in_excel` |

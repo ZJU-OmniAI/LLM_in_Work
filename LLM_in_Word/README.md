@@ -201,8 +201,8 @@ For direct `node server/server.js` runs, set environment variables. Installers p
 
 | Environment variable | Purpose | Default |
 | --- | --- | --- |
-| `LLM_IN_WORD_CLAUDE_BIN` | Claude executable or JS entry point | Automatic discovery |
-| `LLM_IN_WORD_CODEX_BIN` | Codex executable or JS entry point | Automatic discovery |
+| `LLM_IN_WORD_CLAUDE_BIN` | Claude executable or JS entry point | Newest working installed copy |
+| `LLM_IN_WORD_CODEX_BIN` | Codex executable or JS entry point | Newest working installed copy |
 | `LLM_IN_WORD_TIMEOUT_MS` | Total time allowed for one CLI request | `300000` |
 | `LLM_IN_WORD_MAX_CHARS` | Server document text limit | `120000` |
 | `LLM_IN_WORD_DATA_DIR` | Data directory for direct server runs | `~/.llm_in_word`, or existing `~/.word_edit` |

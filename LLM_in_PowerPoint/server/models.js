@@ -3,18 +3,20 @@ import { spawnCli, killTree } from './launch.js';
 import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { CLAUDE_BIN, CODEX_BIN, DATA_DIR } from './config.js';
+import { DATA_DIR } from './config.js';
+import { getCliRuntime } from './runtime.js';
 
 // Claude 使用稳定别名，刷新列表不再启动四次模型生成请求。
 const CLAUDE_MODELS = [['sonnet', 'Sonnet · 自动版本'], ['opus', 'Opus · 自动版本'], ['haiku', 'Haiku · 自动版本']];
 const PROBE_TIMEOUT = 12000;
 
 // SDK initialize 只查询能力目录，不发送 user 消息或文档。
-function listClaudeModels() {
+async function listClaudeModels() {
+  const { bin } = await getCliRuntime('claude');
   return new Promise((resolve) => {
     let child;
     try {
-      child = spawnCli(CLAUDE_BIN, ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json',
+      child = spawnCli(bin, ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json',
         '--verbose', '--permission-mode', 'dontAsk', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}',
         '--disable-slash-commands', '--tools', '', '--no-session-persistence'],
       { cwd: DATA_DIR, stdio: ['pipe', 'pipe', 'ignore'] });
@@ -65,11 +67,12 @@ export function claudeCatalog(data) {
 }
 
 // 走 codex app-server 的 JSON-RPC：initialize → model/list，拿到列表即杀进程
-function listCodexModels() {
+async function listCodexModels() {
+  const { bin } = await getCliRuntime('codex');
   return new Promise((resolve) => {
     let child;
     try {
-      child = spawnCli(CODEX_BIN, ['app-server'], { stdio: ['pipe', 'pipe', 'ignore'] });
+      child = spawnCli(bin, ['app-server'], { stdio: ['pipe', 'pipe', 'ignore'] });
     } catch { resolve(null); return; }
     const send = (o) => { try { child.stdin.write(JSON.stringify(o) + '\n'); } catch {} };
     let buf = '';

@@ -1,4 +1,5 @@
-import { CLAUDE_BIN, CODEX_BIN, DATA_DIR, spawnEnv } from './config.js';
+import { DATA_DIR, spawnEnv } from './config.js';
+import { getCliRuntime } from './runtime.js';
 import { runProcess } from './process.js';
 
 async function inspect(backend, bin) {
@@ -20,7 +21,7 @@ let cache, pending;
 export function getHealth(force = false) {
   if (pending) return pending;
   if (!force && cache && Date.now() - cache.at < 30000) return Promise.resolve(cache.data);
-  pending = Promise.all([inspect('claude', CLAUDE_BIN), inspect('codex', CODEX_BIN)]).then(([claude, codex]) => {
+  pending = Promise.all(['claude', 'codex'].map(async (name) => inspect(name, (await getCliRuntime(name)).bin))).then(([claude, codex]) => {
     const env = spawnEnv();
     // 不返回 token、账户信息或带凭证的代理 URL。
     const data = { ok: true, backends: { claude, codex }, proxyConfigured: !!(env.HTTPS_PROXY || env.https_proxy || env.ALL_PROXY || env.all_proxy),

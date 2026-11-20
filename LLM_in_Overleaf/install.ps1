@@ -56,12 +56,12 @@ foreach ($Name in @('HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY', 'CODEX
 foreach ($Cli in @('claude', 'codex')) {
     $Key = 'LLM_IN_OVERLEAF_' + $Cli.ToUpperInvariant() + '_BIN'
     $Value = [Environment]::GetEnvironmentVariable($Key)
-    if (!$Value) {
-        # Prefer native executables; an npm .cmd shim is resolved to its JS entry by server\launch.js.
-        $Command = Get-Command "$Cli.exe", "$Cli.cmd" -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($Command) { $Value = $Command.Source }
-    }
-    if ($Value) { $Lines += Format-BatchValue $Key $Value }
+    if ($Value) { $Lines += Format-BatchValue $Key $Value; continue }
+    # Without an explicit path, record what this shell finds only as a candidate: the bridge
+    # compares it with the other installed copies and runs the newest one.
+    # Prefer native executables; an npm .cmd shim is resolved to its JS entry by server\launch.js.
+    $Command = Get-Command "$Cli.exe", "$Cli.cmd" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($Command) { $Lines += Format-BatchValue ('LLM_IN_OVERLEAF_' + $Cli.ToUpperInvariant() + '_DETECTED') $Command.Source }
 }
 $Lines += '"' + $Node + '" "' + $HostScript + '" %*'
 if (($Lines -join "`n") -match '[^\x00-\x7F]') {
